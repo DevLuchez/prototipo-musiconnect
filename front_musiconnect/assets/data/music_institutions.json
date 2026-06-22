@@ -1,0 +1,105 @@
+{
+  "institutions": [
+    {"id": "juilliard", "name": "The Juilliard School", "category": "music_school", "lat": 40.7745, "lng": -73.9842, "city": "Nova York", "country": "EUA"},
+    {"id": "berklee", "name": "Berklee College of Music", "category": "music_school", "lat": 42.3467, "lng": -71.0864, "city": "Boston", "country": "EUA"},
+    {"id": "carnegie_hall", "name": "Carnegie Hall", "category": "concert_hall", "lat": 40.7651, "lng": -73.9797, "city": "Nova York", "country": "EUA"},
+    {"id": "lincoln_center", "name": "Lincoln Center for the Performing Arts", "category": "concert_hall", "lat": 40.7725, "lng": -73.9836, "city": "Nova York", "country": "EUA"},
+    {"id": "new_england_conservatory", "name": "New England Conservatory", "category": "music_school", "lat": 42.3428, "lng": -71.0866, "city": "Boston", "country": "EUA"},
+    {"id": "hollywood_bowl", "name": "Hollywood Bowl", "category": "concert_hall", "lat": 34.1122, "lng": -118.3392, "city": "Los Angeles", "country": "EUA"},
+    {"id": "metropolitan_opera", "name": "Metropolitan Opera House", "category": "theatre", "lat": 40.7728, "lng": -73.9836, "city": "Nova York", "country": "EUA"},
+    {"id": "chicago_symphony", "name": "Chicago Symphony Center", "category": "concert_hall", "lat": 41.8801, "lng": -87.6247, "city": "Chicago", "country": "EUA"},
+    {"id": "san_francisco_conservatory", "name": "San Francisco Conservatory of Music", "category": "music_school", "lat": 37.7760, "lng": -122.4193, "city": "San Francisco", "country": "EUA"},
+    {"id": "peabody_institute", "name": "Peabody Institute - Johns Hopkins", "category": "music_school", "lat": 39.2959, "lng": -76.6105, "city": "Baltimore", "country": "EUA"},
+
+    {"id": "royal_academy", "name": "Royal Academy of Music", "category": "music_school", "lat": 51.5238, "lng": -0.1541, "city": "Londres", "country": "Reino Unido"},
+    {"id": "royal_albert_hall", "name": "Royal Albert Hall", "category": "concert_hall", "lat": 51.5009, "lng": -0.1773, "city": "Londres", "country": "Reino Unido"},
+    {"id": "royal_college_music", "name": "Royal College of Music", "category": "music_school", "lat": 51.4994, "lng": -0.1748, "city": "Londres", "country": "Reino Unido"},
+    {"id": "barbican", "name": "Barbican Centre", "category": "concert_hall", "lat": 51.5200, "lng": -0.0927, "city": "Londres", "country": "Reino Unido"},
+    {"id": "guildhall", "name": "Guildhall School of Music & Drama", "category": "music_school", "lat": 51.5196, "lng": -0.0953, "city": "Londres", "country": "Reino Unido"},
+    {"id": "royal_northern", "name": "Royal Northern College of Music", "category": "music_school", "lat": 53.4648, "lng": -2.2322, "city": "Manchester", "country": "Reino Unido"},
+    {"id": "royal_conservatoire_scotland", "name": "Royal Conservatoire of Scotland", "category": "music_school", "lat": 55.8639, "lng": -4.2528, "city": "Glasgow", "country": "Reino Unido"},
+
+    {"id": "berlin_philharmonie", "name": "Berliner Philharmonie", "category": "concert_hall", "lat": 52.5100, "lng": 13.3695, "city": "Berlim", "country": "Alemanha"},
+    {"id": "hochschule_berlin", "name": "Universität der Künste Berlin", "category": "music_school", "lat": 52.5145, "lng": 13.3310, "city": "Berlim", "country": "Alemanha"},
+    {"id": "elbphilharmonie", "name": "Elbphilharmonie Hamburg", "category": "concert_hall", "lat": 53.5413, "lng": 9.9844, "city": "Hamburgo", "country": "Alemanha"},
+    {"id": "hochschule_frankfurt", "name": "Hochschule für Musik Frankfurt", "category": "music_school", "lat": 50.1155, "lng": 8.6728, "city": "Frankfurt", "country": "Alemanha"},
+    {"id": "hochschule_munich", "name": "Hochschule für Musik und Theater München", "category": "music_school", "lat": 48.1462, "lng": 11.5739, "city": "Munique", "country": "Alemanha"},
+
+    {"id": "musikverein", "name": "Wiener Musikverein", "category": "concert_hall", "lat": 48.2007, "lng": 16.3726, "city": "Viena", "country": "Áustria"},
+    {"id": "vienna_opera", "name": "Wiener Staatsoper", "category": "theatre", "lat": 48.2030, "lng": 16.3694, "city": "Viena", "country": "Áustria"},
+    {"id": "mdw_vienna", "name": "Universität für Musik und darstellende Kunst Wien", "category": "music_school", "lat": 48.1955, "lng": 16.3742, "city": "Viena", "country": "Áustria"},
+
+    {"id": "cnsmdp", "name": "Conservatoire National Supérieur de Musique de Paris", "category": "music_school", "lat": 48.8688, "lng": 2.3753, "city": "Paris", "country": "França"},
+    {"id": "palais_garnier", "name": "Opéra National de Paris - Palais Garnier", "category": "theatre", "lat": 48.8719, "lng": 2.3316, "city": "Paris", "country": "França"},
+    {"id": "philharmonie_paris", "name": "Philharmonie de Paris", "category": "concert_hall", "lat": 48.8944, "lng": 2.3937, "city": "Paris", "country": "França"},
+    {"id": "opera_bastille", "name": "Opéra Bastille", "category": "theatre", "lat": 48.8529, "lng": 2.3694, "city": "Paris", "country": "França"},
+
+    {"id": "la_scala", "name": "Teatro alla Scala", "category": "theatre", "lat": 45.4674, "lng": 9.1895, "city": "Milão", "country": "Itália"},
+    {"id": "santa_cecilia", "name": "Accademia Nazionale di Santa Cecilia", "category": "concert_hall", "lat": 41.9030, "lng": 12.4722, "city": "Roma", "country": "Itália"},
+    {"id": "san_carlo", "name": "Teatro di San Carlo", "category": "theatre", "lat": 40.8363, "lng": 14.2490, "city": "Nápoles", "country": "Itália"},
+    {"id": "fenice", "name": "Teatro La Fenice", "category": "theatre", "lat": 45.4336, "lng": 12.3313, "city": "Veneza", "country": "Itália"},
+    {"id": "conservatorio_verdi", "name": "Conservatorio di Musica Giuseppe Verdi", "category": "music_school", "lat": 45.4665, "lng": 9.1870, "city": "Milão", "country": "Itália"},
+
+    {"id": "bolshoi", "name": "Teatro Bolshoi", "category": "theatre", "lat": 55.7601, "lng": 37.6186, "city": "Moscou", "country": "Rússia"},
+    {"id": "moscow_conservatory", "name": "Conservatório de Moscou P. I. Tchaikovsky", "category": "music_school", "lat": 55.7531, "lng": 37.5939, "city": "Moscou", "country": "Rússia"},
+    {"id": "mariinsky", "name": "Teatro Mariinsky", "category": "theatre", "lat": 59.9259, "lng": 30.2966, "city": "São Petersburgo", "country": "Rússia"},
+
+    {"id": "sydney_opera", "name": "Sydney Opera House", "category": "concert_hall", "lat": -33.8568, "lng": 151.2153, "city": "Sydney", "country": "Austrália"},
+    {"id": "hamer_hall", "name": "Hamer Hall - Arts Centre Melbourne", "category": "concert_hall", "lat": -37.8210, "lng": 144.9694, "city": "Melbourne", "country": "Austrália"},
+    {"id": "acon_sydney", "name": "Australian Conservatorium of Music", "category": "music_school", "lat": -33.8593, "lng": 151.2136, "city": "Sydney", "country": "Austrália"},
+
+    {"id": "suntory_hall", "name": "Suntory Hall", "category": "concert_hall", "lat": 35.6731, "lng": 139.7348, "city": "Tóquio", "country": "Japão"},
+    {"id": "nhk_hall", "name": "NHK Hall", "category": "concert_hall", "lat": 35.6645, "lng": 139.6960, "city": "Tóquio", "country": "Japão"},
+    {"id": "tokyo_arts_music", "name": "Tokyo University of the Arts - Music", "category": "music_school", "lat": 35.7139, "lng": 139.7731, "city": "Tóquio", "country": "Japão"},
+    {"id": "toho_gakuen", "name": "Toho Gakuen School of Music", "category": "music_school", "lat": 35.6764, "lng": 139.5617, "city": "Tóquio", "country": "Japão"},
+
+    {"id": "seoul_arts_center", "name": "Seoul Arts Center", "category": "concert_hall", "lat": 37.4734, "lng": 126.9811, "city": "Seul", "country": "Coreia do Sul"},
+    {"id": "karts", "name": "Korea National University of Arts", "category": "music_school", "lat": 37.5748, "lng": 126.9912, "city": "Seul", "country": "Coreia do Sul"},
+    {"id": "sejong_center", "name": "Sejong Center for the Performing Arts", "category": "concert_hall", "lat": 37.5741, "lng": 126.9766, "city": "Seul", "country": "Coreia do Sul"},
+
+    {"id": "ccom_beijing", "name": "Central Conservatory of Music Beijing", "category": "music_school", "lat": 39.9358, "lng": 116.3213, "city": "Pequim", "country": "China"},
+    {"id": "shanghai_symphony", "name": "Shanghai Symphony Orchestra Hall", "category": "concert_hall", "lat": 31.2178, "lng": 121.4663, "city": "Xangai", "country": "China"},
+    {"id": "shanghai_conservatory", "name": "Shanghai Conservatory of Music", "category": "music_school", "lat": 31.1999, "lng": 121.4491, "city": "Xangai", "country": "China"},
+    {"id": "national_centre_arts_beijing", "name": "National Centre for the Performing Arts", "category": "concert_hall", "lat": 39.9047, "lng": 116.3906, "city": "Pequim", "country": "China"},
+
+    {"id": "rmc_toronto", "name": "Royal Conservatory of Music", "category": "music_school", "lat": 43.6672, "lng": -79.3942, "city": "Toronto", "country": "Canadá"},
+    {"id": "place_des_arts", "name": "Place des Arts", "category": "concert_hall", "lat": 45.5089, "lng": -73.5683, "city": "Montreal", "country": "Canadá"},
+    {"id": "u_toronto_music", "name": "University of Toronto Faculty of Music", "category": "music_school", "lat": 43.6631, "lng": -79.3956, "city": "Toronto", "country": "Canadá"},
+
+    {"id": "teatro_colon", "name": "Teatro Colón", "category": "theatre", "lat": -34.6009, "lng": -58.3834, "city": "Buenos Aires", "country": "Argentina"},
+    {"id": "una_argentina", "name": "Universidad Nacional de las Artes", "category": "music_school", "lat": -34.6012, "lng": -58.3852, "city": "Buenos Aires", "country": "Argentina"},
+
+    {"id": "theatro_municipal_sp", "name": "Theatro Municipal de São Paulo", "category": "theatre", "lat": -23.5455, "lng": -46.6388, "city": "São Paulo", "country": "Brasil"},
+    {"id": "sala_sao_paulo", "name": "Sala São Paulo", "category": "concert_hall", "lat": -23.5363, "lng": -46.6388, "city": "São Paulo", "country": "Brasil"},
+    {"id": "eca_usp", "name": "ECA-USP - Escola de Comunicações e Artes (Música)", "category": "music_school", "lat": -23.5574, "lng": -46.7308, "city": "São Paulo", "country": "Brasil"},
+    {"id": "baccarelli", "name": "Instituto Baccarelli", "category": "music_school", "lat": -23.5505, "lng": -46.7018, "city": "São Paulo", "country": "Brasil"},
+    {"id": "theatro_municipal_rj", "name": "Theatro Municipal do Rio de Janeiro", "category": "theatre", "lat": -22.9088, "lng": -43.1770, "city": "Rio de Janeiro", "country": "Brasil"},
+    {"id": "escola_musica_ufrj", "name": "Escola de Música da UFRJ", "category": "music_school", "lat": -22.9056, "lng": -43.1731, "city": "Rio de Janeiro", "country": "Brasil"},
+    {"id": "unicamp_artes", "name": "Instituto de Artes - UNICAMP", "category": "music_school", "lat": -22.8181, "lng": -47.0692, "city": "Campinas", "country": "Brasil"},
+    {"id": "scar_joinville", "name": "SCAR - Sociedade Cultural Artística de Joinville", "category": "concert_hall", "lat": -26.3044, "lng": -48.8493, "city": "Joinville", "country": "Brasil"},
+    {"id": "fundacao_cultural_joinville", "name": "Fundação Cultural de Joinville", "category": "arts_centre", "lat": -26.3083, "lng": -48.8450, "city": "Joinville", "country": "Brasil"},
+    {"id": "conservatorio_mpb_joinville", "name": "Escola de Música MPB Joinville", "category": "music_school", "lat": -26.2950, "lng": -48.8430, "city": "Joinville", "country": "Brasil"},
+    {"id": "funceb_salvador", "name": "Escola de Música da FUNCEB", "category": "music_school", "lat": -12.9808, "lng": -38.5012, "city": "Salvador", "country": "Brasil"},
+    {"id": "escola_musica_bh", "name": "Escola de Música da UFMG", "category": "music_school", "lat": -19.8671, "lng": -43.9653, "city": "Belo Horizonte", "country": "Brasil"},
+    {"id": "palacio_artes_bh", "name": "Palácio das Artes", "category": "concert_hall", "lat": -19.9242, "lng": -43.9385, "city": "Belo Horizonte", "country": "Brasil"},
+    {"id": "embap_curitiba", "name": "EMBAP - Escola de Música e Belas Artes do Paraná", "category": "music_school", "lat": -25.4296, "lng": -49.2711, "city": "Curitiba", "country": "Brasil"},
+    {"id": "opus_porto_alegre", "name": "Escola de Música OPUS", "category": "music_school", "lat": -30.0346, "lng": -51.2177, "city": "Porto Alegre", "country": "Brasil"},
+
+    {"id": "concertgebouw", "name": "Concertgebouw Amsterdam", "category": "concert_hall", "lat": 52.3562, "lng": 4.8766, "city": "Amsterdã", "country": "Países Baixos"},
+    {"id": "koninklijk_conservatorium", "name": "Koninklijk Conservatorium", "category": "music_school", "lat": 52.0802, "lng": 4.3123, "city": "Haia", "country": "Países Baixos"},
+
+    {"id": "sibelius_academy", "name": "Sibelius Academy", "category": "music_school", "lat": 60.1750, "lng": 24.9354, "city": "Helsinque", "country": "Finlândia"},
+    {"id": "royal_swedish_conservatory", "name": "Royal College of Music Stockholm", "category": "music_school", "lat": 59.3410, "lng": 18.0617, "city": "Estocolmo", "country": "Suécia"},
+    {"id": "norwegian_academy_music", "name": "Norwegian Academy of Music", "category": "music_school", "lat": 59.9244, "lng": 10.7306, "city": "Oslo", "country": "Noruega"},
+
+    {"id": "real_conservatorio_madrid", "name": "Real Conservatorio Superior de Música de Madrid", "category": "music_school", "lat": 40.4198, "lng": -3.6921, "city": "Madri", "country": "Espanha"},
+    {"id": "liceu_barcelona", "name": "Gran Teatre del Liceu", "category": "theatre", "lat": 41.3797, "lng": 2.1737, "city": "Barcelona", "country": "Espanha"},
+    {"id": "auditori_barcelona", "name": "L'Auditori de Barcelona", "category": "concert_hall", "lat": 41.3962, "lng": 2.1827, "city": "Barcelona", "country": "Espanha"},
+
+    {"id": "sangit_natak", "name": "Sangeet Natak Akademi", "category": "arts_centre", "lat": 28.6139, "lng": 77.2095, "city": "Nova Delhi", "country": "Índia"},
+    {"id": "music_academy_chennai", "name": "The Music Academy Chennai", "category": "concert_hall", "lat": 13.0603, "lng": 80.2573, "city": "Chennai", "country": "Índia"},
+
+    {"id": "cairo_opera", "name": "Cairo Opera House", "category": "theatre", "lat": 30.0444, "lng": 31.2243, "city": "Cairo", "country": "Egito"},
+    {"id": "cape_philharmonic", "name": "Artscape Theatre Centre", "category": "concert_hall", "lat": -33.9249, "lng": 18.4241, "city": "Cidade do Cabo", "country": "África do Sul"}
+  ]
+}

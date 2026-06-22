@@ -1,0 +1,36 @@
+# ─── Variáveis de ambiente (NUNCA commitar) ───────────────────────────────────
+back_musiconnect/.env
+**/.env
+
+# ─── Python ───────────────────────────────────────────────────────────────────
+back_musiconnect/venv/
+back_musiconnect/__pycache__/
+back_musiconnect/**/__pycache__/
+back_musiconnect/**/*.pyc
+back_musiconnect/.pytest_cache/
+back_musiconnect/*.egg-info/
+back_musiconnect/dist/
+back_musiconnect/.mypy_cache/
+
+# ─── Flutter / Dart ───────────────────────────────────────────────────────────
+front_musiconnect/build/
+front_musiconnect/.dart_tool/
+front_musiconnect/.flutter-plugins
+front_musiconnect/.flutter-plugins-dependencies
+front_musiconnect/.packages
+front_musiconnect/.pub-cache/
+front_musiconnect/.pub/
+front_musiconnect/ios/Pods/
+front_musiconnect/ios/.symlinks/
+front_musiconnect/macos/Pods/
+front_musiconnect/macos/.symlinks/
+
+# ─── IDEs ─────────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.iml
+*.iws
+
+# ─── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
