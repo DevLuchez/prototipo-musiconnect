@@ -56,7 +56,7 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
     super.dispose();
   }
 
-  // ── Carga inicial: verifica backend e carrega área inicial ────
+  // ── Carga inicial: verifica backend e carrega TODAS as instituições ──
 
   Future<void> _initialLoad() async {
     final online = await _apiService.isReachable();
@@ -71,8 +71,26 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
       return;
     }
 
-    // Raio de 200km na abertura → mostra todas as instituições da região imediatamente
-    await _fetchFromBackend(_mapCenter, radiusM: 200000);
+    // Carrega TODAS as instituições do banco de uma só vez (sem filtro de raio)
+    // → marcadores aparecem imediatamente ao abrir o mapa, em qualquer zoom
+    setState(() {
+      _isLoading = true;
+      _status = 'Carregando todas as instituições...';
+    });
+
+    final places = await _apiService.fetchAll(limit: 5000);
+    if (!mounted) return;
+
+    for (final p in places) {
+      final mid = MarkerId(p.id);
+      _markers[mid] = _buildMarker(p, fromBackend: true);
+    }
+    _backendCount = _markers.length;
+
+    setState(() {
+      _isLoading = false;
+      _status = '${_markers.length} instituições no mapa';
+    });
   }
 
   // ── Busca no backend (fonte primária) ─────────────────────────

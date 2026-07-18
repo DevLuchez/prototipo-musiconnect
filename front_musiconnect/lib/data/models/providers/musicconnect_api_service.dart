@@ -47,6 +47,35 @@ class MusicConnectApiService {
     return [];
   }
 
+  /// Busca TODAS as instituições do banco sem filtro geoespacial.
+  /// Usado na carga inicial do mapa para exibir todos os marcadores
+  /// imediatamente, independentemente de zoom ou localização.
+  Future<List<PlaceModel>> fetchAll({int limit = 5000}) async {
+    final uri = Uri.parse(ApiConfig.all).replace(queryParameters: {
+      'limit': limit.toString(),
+    });
+
+    try {
+      print('[MusicConnectAPI] GET $uri (todas as instituições)');
+      final response = await http.get(uri).timeout(_timeout);
+      print('[MusicConnectAPI] Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> body = json.decode(response.body) as List<dynamic>;
+        print('[MusicConnectAPI] Total retornado: ${body.length} instituições');
+        return body
+            .map((e) => PlaceModel.tryFromBackend(e as Map<String, dynamic>))
+            .whereType<PlaceModel>()
+            .toList();
+      }
+
+      print('[MusicConnectAPI] Erro HTTP ${response.statusCode}');
+    } catch (e) {
+      print('[MusicConnectAPI] Exceção em fetchAll: $e');
+    }
+    return [];
+  }
+
   /// Verifica se o backend está acessível.
   Future<bool> isReachable() async {
     try {
