@@ -15,7 +15,7 @@ def get_nearby_institutions(
     lat: float = Query(..., description="Latitude do centro da busca"),
     lng: float = Query(..., description="Longitude do centro da busca"),
     radius_m: int = Query(50_000, ge=1_000, le=500_000, description="Raio em metros (1km a 500km)"),
-    limit: int = Query(500, ge=1, le=2000, description="Máximo de resultados"),
+    limit: int = Query(500, ge=1, le=5000, description="Máximo de resultados"),
     db: Session = Depends(get_db),
 ) -> List[InstitutionOut]:
     """
@@ -42,6 +42,27 @@ def get_nearby_institutions(
     """)
 
     rows = db.execute(sql, {"lat": lat, "lng": lng, "radius_m": radius_m, "limit": limit})
+    return [InstitutionOut(**row._mapping) for row in rows]
+
+
+@router.get("/all", response_model=List[InstitutionOut])
+def get_all_institutions(
+    limit: int = Query(5000, ge=1, le=10000, description="Máximo de resultados (padrão: 5000)"),
+    db: Session = Depends(get_db),
+) -> List[InstitutionOut]:
+    """
+    Retorna TODAS as instituições do banco, sem filtro geoespacial.
+
+    Usado pela carga inicial do mapa Flutter para exibir todos os marcadores
+    imediatamente ao abrir o app, independentemente de zoom ou posição.
+    """
+    sql = text("""
+        SELECT osm_id, name, address, lat, lng, category, source
+        FROM institutions
+        ORDER BY name
+        LIMIT :limit
+    """)
+    rows = db.execute(sql, {"limit": limit})
     return [InstitutionOut(**row._mapping) for row in rows]
 
 

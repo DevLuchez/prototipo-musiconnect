@@ -17,7 +17,7 @@
 
 ---
 
-## Sobre o Projeto
+## Sobre o Projeto | Portifólio
 
 O **MusiConnect** é um aplicativo mobile com **Inteligência Artificial** projetado para mitigar a carga cognitiva e a evasão de estudantes de música em seus processos de profissionalização. O projeto foi desenvolvido como parte das atividades acadêmicas do PAC (Projeto de Aprendizagem Colaborativa) do curso de Engenharia de Software.
 
