@@ -36,8 +36,6 @@ OSM_TAGS = [
     ("amenity", "theatre"),
     ("leisure", "music_venue"),
     ("amenity", "arts_centre"),
-    ("amenity", "nightclub"),
-    ("shop", "musical_instrument"),
 ]
 
 # Grade global: células de 30° de latitude x 45° de longitude
