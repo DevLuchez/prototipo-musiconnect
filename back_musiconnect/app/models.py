@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Float, DateTime, Index, func
+from sqlalchemy import Column, String, Float, DateTime, Boolean, Text, Index, func
 from geoalchemy2 import Geography
 from app.database import Base
 
@@ -24,7 +24,7 @@ class Institution(Base):
     lat = Column(Float, nullable=False)
     lng = Column(Float, nullable=False)
 
-    # Categorias: music_school, concert_hall, theatre, music_venue, etc.
+    # Categorias: music_school, concert_hall, theatre, music_venue, arts_centre
     category = Column(String, nullable=False, default="music")
 
     # Fonte de onde veio (osm, google_places, curated)
@@ -38,6 +38,22 @@ class Institution(Base):
 
     # Timestamp da última atualização via ETL
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    # ── Campos de validação cruzada (MusicBrainz + Wikidata) ─────────────────
+    # True se confirmada por MusicBrainz ou Wikidata
+    verified = Column(Boolean, nullable=False, default=False)
+
+    # Site oficial (enriquecido via MusicBrainz ou Wikidata)
+    website = Column(String, nullable=True)
+
+    # Descrição curta da instituição (enriquecida via Wikidata, útil para RAG)
+    description = Column(Text, nullable=True)
+
+    # ID único no MusicBrainz (ex: "a2d3f7e0-...")
+    mb_id = Column(String, nullable=True, unique=True)
+
+    # ID único no Wikidata (ex: "Q123456")
+    wikidata_id = Column(String, nullable=True, unique=True)
 
 
 # Índice espacial GIST — essencial para ST_DWithin ser rápido em milhares de registros

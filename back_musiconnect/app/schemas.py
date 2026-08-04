@@ -13,6 +13,11 @@ class InstitutionOut(BaseModel):
     category: str
     source: str
 
+    # Campos de validação cruzada
+    verified: bool = False
+    website: Optional[str] = None
+    description: Optional[str] = None
+
     model_config = {"from_attributes": True}
 
 

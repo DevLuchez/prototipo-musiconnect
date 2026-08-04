@@ -27,10 +27,10 @@ def get_nearby_institutions(
     if not (-90 <= lat <= 90) or not (-180 <= lng <= 180):
         raise HTTPException(status_code=422, detail="Coordenadas inválidas.")
 
-    # ST_DWithin com Geography calcula distância real em metros (não graus)
     sql = text("""
         SELECT
-            osm_id, name, address, lat, lng, category, source
+            osm_id, name, address, lat, lng, category, source,
+            verified, website, description
         FROM institutions
         WHERE ST_DWithin(
             location,
@@ -42,7 +42,7 @@ def get_nearby_institutions(
     """)
 
     rows = db.execute(sql, {"lat": lat, "lng": lng, "radius_m": radius_m, "limit": limit})
-    return [InstitutionOut(**row._mapping) for row in rows]
+    return [InstitutionOut(**row) for row in rows.mappings()]
 
 
 @router.get("/all", response_model=List[InstitutionOut])
@@ -57,13 +57,14 @@ def get_all_institutions(
     imediatamente ao abrir o app, independentemente de zoom ou posição.
     """
     sql = text("""
-        SELECT osm_id, name, address, lat, lng, category, source
+        SELECT osm_id, name, address, lat, lng, category, source,
+               verified, website, description
         FROM institutions
         ORDER BY name
         LIMIT :limit
     """)
     rows = db.execute(sql, {"limit": limit})
-    return [InstitutionOut(**row._mapping) for row in rows]
+    return [InstitutionOut(**row) for row in rows.mappings()]
 
 
 @router.get("/stats")

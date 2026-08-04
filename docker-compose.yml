@@ -1,0 +1,56 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# MusicConnect — Docker Compose
+#
+# Sobe dois serviços:
+#   db  → PostgreSQL 16 + PostGIS (banco de dados geoespacial)
+#   api → FastAPI (servidor da aplicação)
+#
+# Como usar:
+#   docker compose up --build        ← primeira vez
+#   docker compose up                ← execuções seguintes
+#   docker compose down              ← parar tudo
+#   docker compose down -v           ← parar e apagar os dados do banco
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── PostgreSQL 16 com extensão PostGIS ────────────────────────────────────
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: musiconnect_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: musiconnect
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      # Volume nomeado: dados persistem entre restarts do container
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      # Expõe na porta 5433 localmente (5432 já usada pelo PostgreSQL local)
+      # Para conectar via pgAdmin: host=localhost, porta=5433
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d musiconnect"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── FastAPI + Uvicorn ──────────────────────────────────────────────────────
+  api:
+    build:
+      context: ./back_musiconnect
+      dockerfile: Dockerfile
+    container_name: musiconnect_api
+    restart: unless-stopped
+    environment:
+      # Dentro do Docker, o hostname do banco é o nome do serviço ("db")
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/musiconnect
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

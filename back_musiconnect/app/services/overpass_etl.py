@@ -182,9 +182,18 @@ async def _fetch_cell(
 
 
 def _upsert_batch(db: Session, records: list[dict]) -> int:
-    """Faz upsert de um lote de registros — nunca duplica pelo osm_id."""
+    """Faz upsert de um lote de registros — nunca duplica pelo osm_id.
+
+    Em conflito, atualiza apenas os campos geoespaciais/descritivos do OSM.
+    Campos de validação (verified, mb_id, wikidata_id, website, description)
+    NÃO são sobrescritos — preservam dados já preenchidos pelos validators.
+    """
     if not records:
         return 0
+
+    # Garante que verified=False está presente em registros novos
+    for r in records:
+        r.setdefault("verified", False)
 
     stmt = (
         pg_insert(Institution)
@@ -192,13 +201,15 @@ def _upsert_batch(db: Session, records: list[dict]) -> int:
         .on_conflict_do_update(
             index_elements=["osm_id"],
             set_={
-                "name": pg_insert(Institution).excluded.name,
-                "address": pg_insert(Institution).excluded.address,
-                "lat": pg_insert(Institution).excluded.lat,
-                "lng": pg_insert(Institution).excluded.lng,
-                "category": pg_insert(Institution).excluded.category,
-                "location": pg_insert(Institution).excluded.location,
+                "name":       pg_insert(Institution).excluded.name,
+                "address":    pg_insert(Institution).excluded.address,
+                "lat":        pg_insert(Institution).excluded.lat,
+                "lng":        pg_insert(Institution).excluded.lng,
+                "category":   pg_insert(Institution).excluded.category,
+                "location":   pg_insert(Institution).excluded.location,
                 "updated_at": pg_insert(Institution).excluded.updated_at,
+                # verified, mb_id, wikidata_id, website, description
+                # são omitidos intencionalmente para preservar validações
             },
         )
     )
