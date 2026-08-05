@@ -21,7 +21,12 @@ from app.models import Institution
 
 logger = logging.getLogger(__name__)
 
-OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+# Mirrors públicos do Overpass API — rotacionados automaticamente em caso de falha
+OVERPASS_MIRRORS = [
+    "https://overpass.kumi.systems/api/interpreter",     # Suíça (geralmente o mais estável)
+    "https://overpass-api.de/api/interpreter",           # Servidor principal (pode sobrecarregar)
+    "https://overpass.openstreetmap.ru/api/interpreter", # Mirror russo
+]
 
 # User-Agent obrigatório para o servidor público do Overpass
 HEADERS = {
@@ -127,57 +132,65 @@ async def _fetch_cell(
     lng_w: float,
     lng_e: float,
 ) -> list[dict]:
-    """Busca uma célula da grade com retry automático em caso de 429 ou timeout."""
+    """Busca uma célula da grade com retry e rotação automática de mirrors Overpass."""
     query = _build_query(lat_s, lat_n, lng_w, lng_e)
+    cell_label = f"[{lat_s},{lng_w}->{lat_n},{lng_e}]"
 
-    # Tempos de espera entre tentativas: 15s, 30s, 60s, 120s
-    backoff_waits = [15, 30, 60, 120]
+    # Backoff entre tentativas dentro do mesmo mirror: 15s, 30s, 60s
+    backoff_waits = [15, 30, 60]
 
-    for attempt, wait in enumerate(backoff_waits + [None], start=1):
-        try:
-            resp = await client.post(
-                OVERPASS_URL,
-                data={"data": query},
-                headers=HEADERS,
-                timeout=90,
-            )
-            resp.raise_for_status()
-            elements = resp.json().get("elements", [])
-            logger.info(
-                f"  Celula [{lat_s},{lng_w}->{lat_n},{lng_e}]: {len(elements)} elementos"
-            )
-            return [r for elem in elements if (r := _parse_element(elem))]
+    for mirror_idx, mirror_url in enumerate(OVERPASS_MIRRORS):
+        logger.debug(f"  Mirror {mirror_idx + 1}/{len(OVERPASS_MIRRORS)}: {mirror_url}")
 
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 429:
+        for attempt, wait in enumerate(backoff_waits + [None], start=1):
+            try:
+                resp = await client.post(
+                    mirror_url,
+                    data={"data": query},
+                    headers=HEADERS,
+                    timeout=90,
+                )
+                resp.raise_for_status()
+                elements = resp.json().get("elements", [])
+                logger.info(f"  Celula {cell_label}: {len(elements)} elementos (mirror {mirror_idx + 1})")
+                return [r for elem in elements if (r := _parse_element(elem))]
+
+            except httpx.HTTPStatusError as e:
+                code = e.response.status_code
+                if code in (429, 503):
+                    if wait is not None:
+                        logger.warning(
+                            f"  {code} na celula {cell_label} (mirror {mirror_idx + 1}) "
+                            f"— tentativa {attempt}/{len(backoff_waits)}, aguardando {wait}s..."
+                        )
+                        await asyncio.sleep(wait)
+                    else:
+                        logger.warning(
+                            f"  {code} persistente no mirror {mirror_idx + 1} — tentando próximo..."
+                        )
+                        break  # próximo mirror
+                else:
+                    logger.warning(f"  Falha HTTP {code} na celula {cell_label}: {e}")
+                    break  # próximo mirror
+
+            except (httpx.TimeoutException, httpx.ConnectError) as e:
                 if wait is not None:
                     logger.warning(
-                        f"  429 na celula [{lat_s},{lng_w}] — tentativa {attempt}/4, "
-                        f"aguardando {wait}s..."
+                        f"  Timeout na celula {cell_label} (mirror {mirror_idx + 1}) "
+                        f"— tentativa {attempt}/{len(backoff_waits)}, aguardando {wait}s..."
                     )
                     await asyncio.sleep(wait)
                 else:
-                    logger.error(f"  429 persistente na celula [{lat_s},{lng_w}] — pulando.")
-                    return []
-            else:
-                logger.warning(f"  Falha HTTP na celula [{lat_s},{lng_w}]: {e}")
-                return []
+                    logger.warning(
+                        f"  Timeout persistente no mirror {mirror_idx + 1} — tentando próximo..."
+                    )
+                    break  # próximo mirror
 
-        except (httpx.TimeoutException, httpx.ConnectError) as e:
-            if wait is not None:
-                logger.warning(
-                    f"  Timeout/conexao na celula [{lat_s},{lng_w}] — tentativa {attempt}/4, "
-                    f"aguardando {wait}s..."
-                )
-                await asyncio.sleep(wait)
-            else:
-                logger.error(f"  Timeout persistente na celula [{lat_s},{lng_w}] — pulando.")
-                return []
+            except Exception as e:
+                logger.warning(f"  Falha inesperada na celula {cell_label}: {e}")
+                break  # próximo mirror
 
-        except Exception as e:
-            logger.warning(f"  Falha inesperada na celula [{lat_s},{lng_w}]: {e}")
-            return []
-
+    logger.error(f"  Todos os mirrors falharam para {cell_label} — pulando.")
     return []
 
 
