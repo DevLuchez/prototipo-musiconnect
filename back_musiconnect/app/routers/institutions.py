@@ -30,7 +30,7 @@ def get_nearby_institutions(
     sql = text("""
         SELECT
             osm_id, name, address, lat, lng, category, source,
-            verified, website, description
+            verified, website, description, mb_id, wikidata_id
         FROM institutions
         WHERE ST_DWithin(
             location,
@@ -58,7 +58,7 @@ def get_all_institutions(
     """
     sql = text("""
         SELECT osm_id, name, address, lat, lng, category, source,
-               verified, website, description
+               verified, website, description, mb_id, wikidata_id
         FROM institutions
         ORDER BY name
         LIMIT :limit

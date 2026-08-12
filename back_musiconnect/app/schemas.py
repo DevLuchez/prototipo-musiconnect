@@ -17,6 +17,8 @@ class InstitutionOut(BaseModel):
     verified: bool = False
     website: Optional[str] = None
     description: Optional[str] = None
+    mb_id: Optional[str] = None       # MusicBrainz Place ID
+    wikidata_id: Optional[str] = None  # Wikidata QID (ex: Q4944615)
 
     model_config = {"from_attributes": True}
 
