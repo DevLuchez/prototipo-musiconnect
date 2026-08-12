@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../data/models/place_model.dart';
 import '../../data/models/providers/musicconnect_api_service.dart';
 
@@ -312,6 +313,13 @@ class _DetailSheet extends StatelessWidget {
   final PlaceModel place;
   const _DetailSheet({required this.place});
 
+  Future<void> _openUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
@@ -319,27 +327,82 @@ class _DetailSheet extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Handle
             Center(child: Container(width: 40, height: 4,
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(color: Colors.grey[300],
                     borderRadius: BorderRadius.circular(2)))),
+
+            // Nome
             Row(children: [
               const Icon(Icons.music_note, color: Colors.purple),
               const SizedBox(width: 8),
               Expanded(child: Text(place.name,
                   style: Theme.of(context).textTheme.titleLarge)),
             ]),
-            const SizedBox(height: 8),
-            Chip(label: Text(place.categoryLabel),
+            const SizedBox(height: 10),
+
+            // Categoria + badge verificado
+            Wrap(spacing: 8, children: [
+              Chip(
+                label: Text(place.categoryLabel),
                 backgroundColor: Colors.purple[50],
-                labelStyle: const TextStyle(color: Colors.purple)),
+                labelStyle: const TextStyle(color: Colors.purple),
+              ),
+              if (place.verified)
+                Chip(
+                  avatar: const Icon(Icons.verified, size: 16, color: Colors.white),
+                  label: const Text('Verificado',
+                      style: TextStyle(color: Colors.white, fontSize: 12)),
+                  backgroundColor: Colors.green[600],
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                ),
+            ]),
+
+            // Endereço
             if (place.address != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               Row(children: [
                 const Icon(Icons.location_on, size: 16, color: Colors.grey),
                 const SizedBox(width: 4),
                 Expanded(child: Text(place.address!,
                     style: const TextStyle(color: Colors.grey))),
+              ]),
+            ],
+
+            // Descrição
+            if (place.description != null) ...[
+              const SizedBox(height: 10),
+              Text(place.description!,
+                  style: TextStyle(color: Colors.grey[700], fontSize: 13)),
+            ],
+
+            // Links externos
+            if (place.website != null || place.wikidataId != null || place.mbId != null) ...[
+              const SizedBox(height: 14),
+              const Divider(),
+              const SizedBox(height: 6),
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                if (place.website != null)
+                  ActionChip(
+                    avatar: const Icon(Icons.language, size: 16),
+                    label: const Text('Site oficial'),
+                    onPressed: () => _openUrl(place.website!),
+                  ),
+                if (place.wikidataId != null)
+                  ActionChip(
+                    avatar: const Icon(Icons.open_in_new, size: 16),
+                    label: const Text('Wikidata'),
+                    onPressed: () => _openUrl(
+                        'https://www.wikidata.org/wiki/${place.wikidataId}'),
+                  ),
+                if (place.mbId != null)
+                  ActionChip(
+                    avatar: const Icon(Icons.album, size: 16),
+                    label: const Text('MusicBrainz'),
+                    onPressed: () => _openUrl(
+                        'https://musicbrainz.org/place/${place.mbId}'),
+                  ),
               ]),
             ],
           ],

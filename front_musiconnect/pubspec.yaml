@@ -31,7 +31,8 @@ dependencies:
   flutter:
     sdk: flutter
   google_maps_flutter: ^2.5.0
-  http: ^1.1.0  # Para buscar os dados da Places API
+  http: ^1.1.0           # Para buscar os dados da Places API
+  url_launcher: ^6.3.1   # Para abrir links de website/Wikidata/MusicBrainz
 
 
   # The following adds the Cupertino Icons font to your application.

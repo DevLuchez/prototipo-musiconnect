@@ -6,6 +6,13 @@ class PlaceModel {
   final double lng;
   final String category; // ex: "music_school", "concert_hall", etc.
 
+  // Campos de validação cruzada (MusicBrainz + Wikidata)
+  final bool verified;
+  final String? website;
+  final String? description;
+  final String? wikidataId; // QID ex: "Q4944615" → wikidata.org/wiki/Q4944615
+  final String? mbId;       // MBID ex: "8b3d3188..." → musicbrainz.org/place/...
+
   PlaceModel({
     required this.id,
     required this.name,
@@ -13,12 +20,16 @@ class PlaceModel {
     required this.lat,
     required this.lng,
     required this.category,
+    this.verified = false,
+    this.website,
+    this.description,
+    this.wikidataId,
+    this.mbId,
   });
 
   // ── MusiConnect Backend API ───────────────────────────────────
 
   /// Cria um PlaceModel a partir da resposta do backend FastAPI.
-  /// Campos esperados: osm_id, name, address, lat, lng, category, source.
   static PlaceModel? tryFromBackend(Map<String, dynamic> json) {
     try {
       return PlaceModel.fromBackend(json);
@@ -39,6 +50,11 @@ class PlaceModel {
       lat: lat,
       lng: lng,
       category: json['category'] as String? ?? 'music',
+      verified: json['verified'] as bool? ?? false,
+      website: json['website'] as String?,
+      description: json['description'] as String?,
+      wikidataId: json['wikidata_id'] as String?,
+      mbId: json['mb_id'] as String?,
     );
   }
 
