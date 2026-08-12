@@ -95,7 +95,8 @@ def _best_match(
 
         coords = place.get("coordinates")
         if coords and coords.get("latitude") and coords.get("longitude"):
-            dist = _haversine_m(lat, lng, coords["latitude"], coords["longitude"])
+            # MusicBrainz retorna coordenadas como string — converter para float
+            dist = _haversine_m(lat, lng, float(coords["latitude"]), float(coords["longitude"]))
             if dist > 500:
                 continue
             score = sim * 0.7 + (1 - min(dist, 500) / 500) * 0.3
@@ -130,7 +131,7 @@ async def run_musicbrainz_validation() -> dict:
     rows = db.execute(
         text(
             "SELECT osm_id, name, lat, lng, category "
-            "FROM institutions WHERE verified = FALSE ORDER BY name"
+            "FROM institutions WHERE verified = FALSE AND category IN ('concert_hall', 'music_venue') ORDER BY name"
         )
     ).fetchall()
 
