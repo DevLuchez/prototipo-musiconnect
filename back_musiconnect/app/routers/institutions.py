@@ -47,7 +47,7 @@ def get_nearby_institutions(
 
 @router.get("/all", response_model=List[InstitutionOut])
 def get_all_institutions(
-    limit: int = Query(5000, ge=1, le=10000, description="Máximo de resultados (padrão: 5000)"),
+    limit: int = Query(10000, ge=1, le=100000, description="Máximo de resultados (padrão: 10000)"),
     db: Session = Depends(get_db),
 ) -> List[InstitutionOut]:
     """
