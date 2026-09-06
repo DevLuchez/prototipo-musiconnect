@@ -248,7 +248,7 @@ class OpportunityCard extends StatelessWidget {
         Icon(Icons.access_time_rounded, size: 11, color: Colors.grey[400]),
         const SizedBox(width: 3),
         Text(text, style: TextStyle(fontSize: 11, color: Colors.grey[500])),
-      ],1
+      ],
     );
   }
 }
