@@ -1,4 +1,8 @@
-from sqlalchemy import Column, String, Float, DateTime, Boolean, Text, Index, func
+from sqlalchemy import (
+    Column, String, Float, DateTime, Boolean, Text, Index,
+    Integer, Date, func
+)
+from sqlalchemy.dialects.postgresql import ARRAY
 from geoalchemy2 import Geography
 from app.database import Base
 
@@ -58,3 +62,65 @@ class Institution(Base):
 
 # Índice espacial GIST — essencial para ST_DWithin ser rápido em milhares de registros
 Index("ix_institutions_location", Institution.location, postgresql_using="gist")
+
+
+class Opportunity(Base):
+    """
+    Representa uma oportunidade musical coletada pelos scrapers.
+
+    Tipos: audicao, emprego, curso, competicao
+    Níveis: iniciante, intermediario, avancado, profissional
+    """
+
+    __tablename__ = "opportunities"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    title = Column(Text, nullable=False)
+
+    # Tipo de oportunidade
+    type = Column(String(50), nullable=True)
+
+    # URL original — usada como chave de deduplicação (UPSERT)
+    source_url = Column(Text, nullable=True, unique=True)
+
+    # Nome da fonte (ex: "DOU", "Funarte", "Musical Chairs")
+    source_name = Column(String(100), nullable=True)
+
+    # Lista de instrumentos exigidos (ex: ["violino", "piano"])
+    instruments = Column(ARRAY(String), nullable=True)
+
+    # Nível de experiência exigido
+    level = Column(String(50), nullable=True)
+
+    # Prazo de inscrição
+    deadline = Column(Date, nullable=True)
+
+    # Localização
+    country = Column(String(100), nullable=True)
+    state = Column(String(100), nullable=True)
+    city = Column(String(100), nullable=True)
+
+    # True para oportunidades online/remotas
+    is_remote = Column(Boolean, nullable=True, default=False)
+
+    description = Column(Text, nullable=True)
+
+    # Texto bruto original (reservado para RAG na Fase 2)
+    raw_text = Column(Text, nullable=True)
+
+    scraped_at = Column(DateTime, server_default=func.now())
+
+    # False quando prazo expirou, fonte removeu, ou usuário reportou
+    is_active = Column(Boolean, nullable=False, default=True)
+
+    # Confiança do LLM na extração (0.0–1.0). Abaixo de 0.80 não é exibido.
+    # Fontes estruturadas (API oficial) recebem 1.0 por padrão.
+    llm_confidence = Column(Float, nullable=False, default=1.0)
+
+    # Instituição organizadora (ex: "Orquestra Sinfônica do Estado de SP")
+    # Diferente de source_name (plataforma onde foi encontrado)
+    institution = Column(Text, nullable=True)
+
+    # Data/hora em que o LLM enriqueceu o registro (NULL = ainda não processado)
+    enriched_at = Column(DateTime, nullable=True)

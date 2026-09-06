@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'presentation/screens/map_explorer_screen.dart';
+import 'presentation/screens/matcher_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,7 +22,7 @@ class MusicConnectApp extends StatelessWidget {
       title: 'MusiConnect',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF7C3AED),
+          seedColor: const Color(0xFFDF2881),
           brightness: Brightness.light,
         ),
         useMaterial3: true,
@@ -93,11 +94,12 @@ class _MainNavigationState extends State<MainNavigation>
     final screens = <Widget>[
       _buildPlaceholder('Dashboard'),
       const MapExplorerScreen(),
-      _buildPlaceholder('Matcher'),
+      MatcherScreen(onSwitchToMap: () => setState(() => _selectedIndex = 1)),
       _buildPlaceholder('Perfil'),
     ];
 
     return Scaffold(
+      backgroundColor: Colors.white,
       // ── Header global ──────────────────────────────────────────
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(kToolbarHeight),

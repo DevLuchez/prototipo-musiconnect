@@ -1,5 +1,6 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
+from datetime import date, datetime
 
 
 class InstitutionOut(BaseModel):
@@ -23,6 +24,16 @@ class InstitutionOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class InstitutionCreate(BaseModel):
+    """Schema de entrada para criação de instituição via geocodificação."""
+
+    name: str
+    city: Optional[str] = None
+    country: Optional[str] = None
+    address: Optional[str] = None
+    category: str = "music"
+
+
 class NearbySearchParams(BaseModel):
     """Parâmetros da busca por proximidade."""
 
@@ -30,3 +41,28 @@ class NearbySearchParams(BaseModel):
     lng: float
     radius_m: int = 50_000   # raio padrão: 50km
     limit: int = 500          # máximo de resultados por chamada
+
+
+class OpportunityOut(BaseModel):
+    """Schema de saída de oportunidade — o que o Flutter recebe na aba Matcher."""
+
+    id: int
+    title: str
+    type: Optional[str] = None
+    source_url: Optional[str] = None
+    source_name: Optional[str] = None
+    instruments: Optional[List[str]] = None
+    level: Optional[str] = None
+    deadline: Optional[date] = None
+    country: Optional[str] = None
+    state: Optional[str] = None
+    city: Optional[str] = None
+    is_remote: Optional[bool] = None
+    description: Optional[str] = None
+    institution: Optional[str] = None
+    scraped_at: Optional[datetime] = None
+    enriched_at: Optional[datetime] = None
+    is_active: bool = True
+    llm_confidence: float = 1.0
+
+    model_config = {"from_attributes": True}

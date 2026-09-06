@@ -76,6 +76,23 @@ class MusicConnectApiService {
     return [];
   }
 
+  /// Busca o total real de instituições catalogadas no banco (independente
+  /// de quantas já foram carregadas/renderizadas no mapa).
+  /// Retorna null em caso de erro.
+  Future<int?> fetchTotalCount() async {
+    try {
+      final response =
+          await http.get(Uri.parse(ApiConfig.stats)).timeout(_timeout);
+      if (response.statusCode == 200) {
+        final body = json.decode(response.body) as Map<String, dynamic>;
+        return body['total'] as int?;
+      }
+    } catch (e) {
+      print('[MusicConnectAPI] Exceção em fetchTotalCount: $e');
+    }
+    return null;
+  }
+
   /// Verifica se o backend está acessível.
   Future<bool> isReachable() async {
     try {

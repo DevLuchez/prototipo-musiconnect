@@ -13,6 +13,61 @@ const String _mapStyle = '''
 ]
 ''';
 
+// Paleta e tipografia padronizadas com o botão/modal de filtro da aba
+// Matcher (ver filter_modal.dart) — mesmo rosa, mesmo tom de fundo,
+// mesmo estilo de cabeçalho e de botões de ação.
+const _pink = Color(0xFFEC4899);
+const _pinkTint = Color(0xFFFFFFFF);
+const _pinkIcon = Color(0xFFDF2881);
+const _sheetHeaderStyle = TextStyle(
+  fontSize: 18,
+  fontWeight: FontWeight.w800,
+  color: Color(0xFF111827),
+);
+
+/// Grupo de filtro por tipo de instituição — espelha as cores/rótulos da
+/// legenda e agrupa categorias OSM equivalentes (ex: concert_hall + arts_centre).
+class _CategoryFilter {
+  final String key;
+  final String label;
+  final Color color;
+  final Set<String> categories;
+
+  const _CategoryFilter({
+    required this.key,
+    required this.label,
+    required this.color,
+    required this.categories,
+  });
+}
+
+const List<_CategoryFilter> _categoryFilters = [
+  _CategoryFilter(
+    key: 'music_school',
+    label: 'Escola de Música / Conservatório',
+    color: Colors.purple,
+    categories: {'music_school'},
+  ),
+  _CategoryFilter(
+    key: 'concert_hall',
+    label: 'Casa de Shows / Centro Cultural',
+    color: Colors.pink,
+    categories: {'concert_hall', 'arts_centre'},
+  ),
+  _CategoryFilter(
+    key: 'theatre',
+    label: 'Teatro / Ópera',
+    color: Colors.deepPurple,
+    categories: {'theatre'},
+  ),
+  _CategoryFilter(
+    key: 'music_venue',
+    label: 'Local de Música ao Vivo',
+    color: Colors.orange,
+    categories: {'music_venue'},
+  ),
+];
+
 class MapExplorerScreen extends StatefulWidget {
   const MapExplorerScreen({super.key});
   @override
@@ -33,7 +88,7 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
 
   bool _isLoading = true;
   bool _backendOffline = false;
-  int _backendCount = 0;
+  int? _dbTotalCount;
 
   // Busca
   final TextEditingController _searchController = TextEditingController();
@@ -41,16 +96,17 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
   List<PlaceModel> _searchResults = [];
   bool _showSearchResults = false;
 
+  // Filtro por tipo de instituição — por padrão, todos os tipos ativos
+  // (nenhum filtro aplicado, todos os marcadores aparecem).
+  Set<String> _activeFilterKeys =
+      _categoryFilters.map((f) => f.key).toSet();
+
   static final Map<String, double> _hues = {
-    'music_school':       BitmapDescriptor.hueViolet,
-    'concert_hall':       BitmapDescriptor.hueRose,
-    'theatre':            BitmapDescriptor.hueMagenta,
-    'nightclub':          BitmapDescriptor.hueBlue,
-    'music_venue':        BitmapDescriptor.hueOrange,
-    'studio':             BitmapDescriptor.hueYellow,
-    'arts_centre':        BitmapDescriptor.hueRose,
-    'music':              BitmapDescriptor.hueCyan,
-    'musical_instrument': BitmapDescriptor.hueCyan,
+    'music_school': BitmapDescriptor.hueViolet,
+    'concert_hall': BitmapDescriptor.hueRose,
+    'arts_centre':  BitmapDescriptor.hueRose,
+    'theatre':      BitmapDescriptor.hueMagenta,
+    'music_venue':  BitmapDescriptor.hueOrange,
   };
 
   @override
@@ -85,12 +141,13 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
     setState(() => _isLoading = true);
 
     final places = await _apiService.fetchAll(limit: 5000);
+    final total = await _apiService.fetchTotalCount();
     if (!mounted) return;
 
     for (final p in places) {
       _addPlace(p, fromBackend: true);
     }
-    _backendCount = _markers.length;
+    _dbTotalCount = total;
 
     setState(() => _isLoading = false);
   }
@@ -112,11 +169,9 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
 
     if (!mounted) return;
 
-    int newCount = 0;
     for (final p in places) {
-      if (_addPlace(p, fromBackend: true)) newCount++;
+      _addPlace(p, fromBackend: true);
     }
-    _backendCount += newCount;
 
     setState(() => _isLoading = false);
   }
@@ -184,32 +239,6 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
     });
   }
 
-  // ── Ações do menu ⋮ ──────────────────────────────────────────
-
-  Future<void> _openGoogleMaps() async {
-    final url = Uri.parse(
-      'https://www.google.com/maps/@${_mapCenter.latitude},${_mapCenter.longitude},14z',
-    );
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Não foi possível abrir o Google Maps')),
-        );
-      }
-    }
-  }
-
-  void _openFavorites() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Pins favoritos em breve!'),
-        duration: Duration(seconds: 2),
-      ),
-    );
-  }
-
   // ── Eventos do mapa ───────────────────────────────────────────
 
   void _onMapCreated(GoogleMapController c) {
@@ -227,6 +256,167 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
         _fetchFromBackend(_mapCenter);
       }
     });
+  }
+
+  // ── Filtro por tipo ──────────────────────────────────────────────
+
+  /// Marcadores exibidos no mapa, considerando o filtro de tipo ativo.
+  /// Com todos os tipos selecionados (padrão), mostra tudo — inclusive
+  /// categorias fora dos grupos conhecidos (ex.: ruído de tags do OSM).
+  Set<Marker> get _visibleMarkers {
+    if (_activeFilterKeys.length == _categoryFilters.length) {
+      return Set.of(_markers.values);
+    }
+    final allowedCategories = <String>{
+      for (final f in _categoryFilters)
+        if (_activeFilterKeys.contains(f.key)) ...f.categories,
+    };
+    return _places
+        .where((p) => allowedCategories.contains(p.category))
+        .map((p) => _markers[MarkerId(p.id)])
+        .whereType<Marker>()
+        .toSet();
+  }
+
+  void _openCategoryFilter() {
+    // Seleção provisória — só é aplicada de fato (setState no estado da
+    // tela, que filtra os marcadores) quando o usuário toca em "Aplicar".
+    final draftKeys = Set<String>.of(_activeFilterKeys);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => StatefulBuilder(
+        builder: (context, setModalState) {
+          void toggle(String key, bool value) {
+            setModalState(() {
+              if (value) {
+                draftKeys.add(key);
+              } else {
+                draftKeys.remove(key);
+              }
+            });
+          }
+
+          return Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Cabeçalho ────────────────────────────────────
+                Center(
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 10, bottom: 8),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: Text('Filtrar por tipo de instituição', style: _sheetHeaderStyle),
+                ),
+                const Divider(height: 1),
+
+                // ── Lista de tipos ───────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    children: [
+                      for (final f in _categoryFilters)
+                        CheckboxListTile(
+                          value: draftKeys.contains(f.key),
+                          onChanged: (v) => toggle(f.key, v ?? false),
+                          controlAffinity: ListTileControlAffinity.leading,
+                          contentPadding: EdgeInsets.zero,
+                          activeColor: _pink,
+                          title: Row(children: [
+                            Container(
+                              width: 14,
+                              height: 14,
+                              decoration: BoxDecoration(
+                                  color: f.color, shape: BoxShape.circle),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                                child: Text(f.label,
+                                    style: const TextStyle(fontSize: 14))),
+                          ]),
+                        ),
+                    ],
+                  ),
+                ),
+
+                // ── Rodapé fixo ──────────────────────────────────
+                const Divider(height: 1),
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    20,
+                    12,
+                    20,
+                    MediaQuery.of(context).viewInsets.bottom + 12,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            setModalState(() {
+                              draftKeys
+                                ..clear()
+                                ..addAll(_categoryFilters.map((f) => f.key));
+                            });
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF6B7280),
+                            side: const BorderSide(color: Color(0xFFE5E7EB)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          child: const Text('Limpar tudo'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            setState(() => _activeFilterKeys = draftKeys);
+                            Navigator.of(context).pop();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _pink,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          child: const Text(
+                            'Aplicar',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
   }
 
   // ── Marcadores ────────────────────────────────────────────────
@@ -248,8 +438,7 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
   void _showDetail(PlaceModel p) {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      backgroundColor: Colors.transparent,
       builder: (_) => _DetailSheet(place: p),
     );
   }
@@ -270,7 +459,7 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
             onMapCreated: _onMapCreated,
             initialCameraPosition:
                 CameraPosition(target: _mapCenter, zoom: 12.0),
-            markers: Set.of(_markers.values),
+            markers: _visibleMarkers,
             style: _mapStyle,
             myLocationEnabled: false,
             myLocationButtonEnabled: false,
@@ -312,68 +501,109 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Barra principal
-                Container(
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.12),
-                        blurRadius: 12,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      // Menu ⋮
-                      _SearchMenuButton(
-                        onGoogleMaps: _openGoogleMaps,
-                        onFavorites: _openFavorites,
-                      ),
-                      // Divisor vertical
-                      Container(
-                        width: 1,
-                        height: 24,
-                        color: Colors.grey[200],
-                      ),
-                      // Campo de busca
-                      Expanded(
+                // Barra principal + botão de filtro
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Container(
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 10,
+                              offset: const Offset(1, 1),
+                            ),
+                          ],
+                        ),
                         child: TextField(
                           controller: _searchController,
                           focusNode: _searchFocus,
                           onChanged: _onSearchChanged,
+                          textAlignVertical: TextAlignVertical.center,
                           decoration: InputDecoration(
                             hintText:
                                 'Busque por localização ou instituição...',
                             hintStyle: TextStyle(
+                              fontSize: 13.5,
                               color: Colors.grey[400],
-                              fontSize: 13,
                             ),
+                            prefixIcon: Icon(Icons.search_rounded,
+                                size: 18, color: Colors.grey[400]),
+                            prefixIconConstraints:
+                                const BoxConstraints(minWidth: 40, minHeight: 0),
+                            suffixIcon: _showSearchResults
+                                ? GestureDetector(
+                                    onTap: _clearSearch,
+                                    child: Icon(Icons.close_rounded,
+                                        size: 16, color: Colors.grey[400]),
+                                  )
+                                : null,
+                            suffixIconConstraints:
+                                const BoxConstraints(minWidth: 40, minHeight: 0),
                             border: InputBorder.none,
+                            isCollapsed: true,
                             contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 14),
-                            isDense: true,
+                                horizontal: 12, vertical: 11),
                           ),
-                          style: const TextStyle(fontSize: 14),
                         ),
                       ),
-                      // Ícone de busca ou limpar
-                      Padding(
-                        padding: const EdgeInsets.only(right: 10),
-                        child: _showSearchResults
-                            ? GestureDetector(
-                                onTap: _clearSearch,
-                                child: Icon(Icons.close,
-                                    color: Colors.grey[500], size: 20),
-                              )
-                            : Icon(Icons.search,
-                                color: Colors.grey[400], size: 20),
+                    ),
+                    const SizedBox(width: 10),
+                    // Botão de filtro por tipo
+                    GestureDetector(
+                      onTap: _openCategoryFilter,
+                      child: Container(
+                        height: 42,
+                        width: 42,
+                        decoration: BoxDecoration(
+                          color: _pinkTint,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 10,
+                              offset: const Offset(1, 1),
+                            ),
+                          ],
+                        ),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            const Icon(Icons.tune_rounded,
+                                size: 20, color: _pinkIcon),
+                            if (_activeFilterKeys.length <
+                                _categoryFilters.length)
+                              Positioned(
+                                top: 6,
+                                right: 6,
+                                child: Container(
+                                  width: 14,
+                                  height: 14,
+                                  decoration: const BoxDecoration(
+                                    color: _pink,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '${_categoryFilters.length - _activeFilterKeys.length}',
+                                      style: const TextStyle(
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
 
                 // Lista de resultados
@@ -421,14 +651,14 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
                                         width: 32,
                                         height: 32,
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFF7C3AED)
+                                          color: const Color(0xFFDF2881)
                                               .withOpacity(0.1),
                                           borderRadius:
                                               BorderRadius.circular(8),
                                         ),
                                         child: const Icon(
-                                          Icons.music_note_rounded,
-                                          color: Color(0xFF7C3AED),
+                                          Icons.business_rounded,
+                                          color: Color(0xFFDF2881),
                                           size: 16,
                                         ),
                                       ),
@@ -488,48 +718,58 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
               ),
             ),
 
-          // ── Botões flutuantes (direita) ────────────────────────
+          // ── Botão de legenda (esquerda) ─────────────────────────
           Positioned(
             bottom: 16,
-            right: 16,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Indicador de loading (pós-carga inicial)
-                if (_isLoading && _markers.isNotEmpty)
-                  Container(
-                    width: 40,
-                    height: 40,
-                    margin: const EdgeInsets.only(bottom: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                            color: Colors.black.withOpacity(0.12),
-                            blurRadius: 8)
-                      ],
-                    ),
-                    child: const Padding(
-                      padding: EdgeInsets.all(10),
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Color(0xFF7C3AED)),
-                    ),
+            left: 16,
+            child: Tooltip(
+              message: 'Legenda',
+              child: GestureDetector(
+                onTap: _showLegend,
+                child: Container(
+                  height: 42,
+                  width: 42,
+                  decoration: BoxDecoration(
+                    color: _pinkTint,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(1, 1),
+                      ),
+                    ],
                   ),
-                // Botão de legenda
-                FloatingActionButton.small(
-                  heroTag: 'legend_fab',
-                  onPressed: _showLegend,
-                  backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFF7C3AED),
-                  elevation: 4,
-                  tooltip: 'Legenda',
-                  child: const Icon(Icons.legend_toggle_rounded, size: 20),
+                  child: const Icon(Icons.legend_toggle_rounded,
+                      size: 20, color: _pinkIcon),
                 ),
-              ],
+              ),
             ),
           ),
+
+          // ── Indicador de loading (direita, pós-carga inicial) ───
+          if (_isLoading && _markers.isNotEmpty)
+            Positioned(
+              bottom: 16,
+              right: 16,
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black.withOpacity(0.12), blurRadius: 8)
+                  ],
+                ),
+                child: const Padding(
+                  padding: EdgeInsets.all(10),
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Color(0xFFDF2881)),
+                ),
+              ),
+            ),
 
         ],
       ),
@@ -541,42 +781,59 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
   void _showLegend() {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── Cabeçalho ──────────────────────────────────────────
             Center(
               child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(2))),
-            ),
-            Text('Legenda', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 12),
-            _legendItem(Colors.purple, 'Escola de Música / Conservatório'),
-            _legendItem(Colors.pink, 'Casa de Shows / Centro Cultural'),
-            _legendItem(Colors.deepPurple, 'Teatro / Ópera'),
-            _legendItem(Colors.blue, 'Nightclub'),
-            _legendItem(Colors.orange, 'Local de Música ao Vivo'),
-            _legendItem(Colors.cyan, 'Loja de Instrumentos / Música'),
-            const Divider(),
-            Row(children: [
-              const Icon(Icons.storage, size: 14, color: Colors.grey),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  '$_backendCount instituições carregadas do banco de dados',
-                  style: const TextStyle(color: Colors.grey, fontSize: 11),
+                margin: const EdgeInsets.only(top: 10, bottom: 8),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-            ]),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: Text('Legenda', style: _sheetHeaderStyle),
+            ),
+            const Divider(height: 1),
+
+            // ── Itens ────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final f in _categoryFilters)
+                    _legendItem(f.color, f.label),
+                  const Divider(height: 24),
+                  Row(children: [
+                    const Icon(Icons.storage, size: 14, color: Colors.grey),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        _dbTotalCount != null
+                            ? '$_dbTotalCount instituições catalogadas na base de dados.'
+                            : 'Carregando total de instituições catalogadas...',
+                        style:
+                            const TextStyle(color: Colors.grey, fontSize: 11),
+                      ),
+                    ),
+                  ]),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -596,74 +853,6 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
       );
 }
 
-// ── Widget: botão de menu ⋮ ───────────────────────────────────────
-
-class _SearchMenuButton extends StatelessWidget {
-  final VoidCallback onGoogleMaps;
-  final VoidCallback onFavorites;
-
-  const _SearchMenuButton({
-    required this.onGoogleMaps,
-    required this.onFavorites,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return PopupMenuButton<String>(
-      icon: Icon(Icons.more_vert_rounded, color: Colors.grey[600], size: 22),
-      tooltip: 'Opções do mapa',
-      offset: const Offset(0, 44),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 8,
-      onSelected: (value) {
-        if (value == 'google_maps') {
-          onGoogleMaps();
-        } else if (value == 'favorites') {
-          onFavorites();
-        }
-      },
-      itemBuilder: (_) => [
-        PopupMenuItem<String>(
-          value: 'google_maps',
-          child: Row(children: [
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: const Icon(Icons.map_rounded,
-                  color: Colors.blue, size: 16),
-            ),
-            const SizedBox(width: 10),
-            const Text('Google Maps',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-          ]),
-        ),
-        PopupMenuItem<String>(
-          value: 'favorites',
-          child: Row(children: [
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: Colors.pink.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: const Icon(Icons.favorite_rounded,
-                  color: Colors.pink, size: 16),
-            ),
-            const SizedBox(width: 10),
-            const Text('Pins favoritos',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-          ]),
-        ),
-      ],
-    );
-  }
-}
-
 // ── Widget: sheet de detalhes ─────────────────────────────────────
 
 class _DetailSheet extends StatelessWidget {
@@ -677,110 +866,135 @@ class _DetailSheet extends StatelessWidget {
     }
   }
 
+  void _openInGoogleMaps() => _openUrl(
+      'https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lng}');
+
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+  Widget build(BuildContext context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Handle
+            // ── Cabeçalho ──────────────────────────────────────────
             Center(
               child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(2))),
-            ),
-
-            // Nome
-            Row(children: [
-              const Icon(Icons.music_note, color: Color(0xFF7C3AED)),
-              const SizedBox(width: 8),
-              Expanded(
-                  child: Text(place.name,
-                      style: Theme.of(context).textTheme.titleLarge)),
-            ]),
-            const SizedBox(height: 10),
-
-            // Categoria + badge verificado
-            Wrap(spacing: 8, children: [
-              Chip(
-                label: Text(place.categoryLabel),
-                backgroundColor: const Color(0xFF7C3AED).withOpacity(0.08),
-                labelStyle: const TextStyle(color: Color(0xFF7C3AED)),
-                side: BorderSide.none,
-              ),
-              if (place.verified)
-                Chip(
-                  avatar: const Icon(Icons.verified,
-                      size: 16, color: Colors.white),
-                  label: const Text('Verificado',
-                      style:
-                          TextStyle(color: Colors.white, fontSize: 12)),
-                  backgroundColor: Colors.green[600],
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 4),
-                  side: BorderSide.none,
+                margin: const EdgeInsets.only(top: 10, bottom: 8),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
                 ),
-            ]),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: Row(children: [
+                const Icon(Icons.business_rounded, color: Color(0xFFDF2881)),
+                const SizedBox(width: 8),
+                Expanded(child: Text(place.name, style: _sheetHeaderStyle)),
+              ]),
+            ),
+            const Divider(height: 1),
 
-            // Endereço
-            if (place.address != null) ...[
-              const SizedBox(height: 10),
-              Row(children: [
-                const Icon(Icons.location_on,
-                    size: 16, color: Colors.grey),
-                const SizedBox(width: 4),
-                Expanded(
-                    child: Text(place.address!,
+            // ── Detalhes ─────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Categoria + badge verificado
+                  Wrap(spacing: 8, children: [
+                    Chip(
+                      label: Text(place.categoryLabel,
+                          style: const TextStyle(fontSize: 13)),
+                      backgroundColor:
+                          const Color(0xFFDF2881).withOpacity(0.08),
+                      labelStyle: const TextStyle(color: Color(0xFFDF2881)),
+                      side: BorderSide.none,
+                    ),
+                    if (place.verified)
+                      Chip(
+                        avatar: const Icon(Icons.verified,
+                            size: 16, color: Colors.white),
+                        label: const Text('Verificado',
+                            style:
+                                TextStyle(color: Colors.white, fontSize: 12)),
+                        backgroundColor: Colors.green[600],
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        side: BorderSide.none,
+                      ),
+                  ]),
+
+                  // Endereço + botão "Ver no Google Maps"
+                  const SizedBox(height: 12),
+                  Row(children: [
+                    const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        place.address ?? 'Endereço não disponível',
+                        style: const TextStyle(
+                            color: Colors.grey, fontSize: 13),
+                      ),
+                    ),
+                  ]),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: _openInGoogleMaps,
+                    icon: const Icon(Icons.map_rounded, size: 16),
+                    label: const Text('Ver no Google Maps'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFFDF2881),
+                      side: const BorderSide(color: Color(0xFFDF2881)),
+                      textStyle: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w600),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 8),
+                    ),
+                  ),
+
+                  // Descrição
+                  if (place.description != null) ...[
+                    const SizedBox(height: 14),
+                    Text(place.description!,
                         style:
-                            const TextStyle(color: Colors.grey))),
-              ]),
-            ],
+                            TextStyle(color: Colors.grey[700], fontSize: 13)),
+                  ],
 
-            // Descrição
-            if (place.description != null) ...[
-              const SizedBox(height: 10),
-              Text(place.description!,
-                  style: TextStyle(
-                      color: Colors.grey[700], fontSize: 13)),
-            ],
-
-            // Links externos
-            if (place.website != null ||
-                place.wikidataId != null ||
-                place.mbId != null) ...[
-              const SizedBox(height: 14),
-              const Divider(),
-              const SizedBox(height: 6),
-              Wrap(spacing: 8, runSpacing: 8, children: [
-                if (place.website != null)
-                  ActionChip(
-                    avatar:
-                        const Icon(Icons.language, size: 16),
-                    label: const Text('Site oficial'),
-                    onPressed: () => _openUrl(place.website!),
-                  ),
-                if (place.wikidataId != null)
-                  ActionChip(
-                    avatar:
-                        const Icon(Icons.open_in_new, size: 16),
-                    label: const Text('Wikidata'),
-                    onPressed: () => _openUrl(
-                        'https://www.wikidata.org/wiki/${place.wikidataId}'),
-                  ),
-                if (place.mbId != null)
-                  ActionChip(
-                    avatar: const Icon(Icons.album, size: 16),
-                    label: const Text('MusicBrainz'),
-                    onPressed: () => _openUrl(
-                        'https://musicbrainz.org/place/${place.mbId}'),
-                  ),
-              ]),
-            ],
+                  // Links externos
+                  if (place.website != null || place.wikidataId != null) ...[
+                    const SizedBox(height: 14),
+                    const Divider(height: 1),
+                    const SizedBox(height: 12),
+                    Wrap(spacing: 8, runSpacing: 8, children: [
+                      if (place.website != null)
+                        ActionChip(
+                          avatar: const Icon(Icons.open_in_new, size: 16),
+                          label: const Text('Saiba mais',
+                              style: TextStyle(fontSize: 13)),
+                          onPressed: () => _openUrl(place.website!),
+                        ),
+                      if (place.wikidataId != null)
+                        ActionChip(
+                          avatar: const Icon(Icons.open_in_new, size: 16),
+                          label: const Text('Wikidata',
+                              style: TextStyle(fontSize: 13)),
+                          onPressed: () => _openUrl(
+                              'https://www.wikidata.org/wiki/${place.wikidataId}'),
+                        ),
+                    ]),
+                  ],
+                ],
+              ),
+            ),
           ],
         ),
       );

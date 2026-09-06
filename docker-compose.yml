@@ -43,9 +43,14 @@ services:
       dockerfile: Dockerfile
     container_name: musiconnect_api
     restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     environment:
       # Dentro do Docker, o hostname do banco é o nome do serviço ("db")
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/musiconnect
+      # LLM — Google Gemini para enriquecimento de oportunidades
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
     ports:
       - "8000:8000"
     depends_on:
