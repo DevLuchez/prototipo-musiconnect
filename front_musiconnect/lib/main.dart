@@ -1,7 +1,22 @@
+import 'dart:async';
+
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'data/models/providers/auth_service.dart';
+import 'presentation/screens/auth/login_screen.dart';
+import 'presentation/screens/auth/reset_password_screen.dart';
+import 'presentation/screens/auth/welcome_screen.dart';
 import 'presentation/screens/map_explorer_screen.dart';
 import 'presentation/screens/matcher_screen.dart';
+import 'presentation/screens/profile/profile_screen.dart';
+import 'presentation/widgets/auth/auth_common.dart';
+
+/// Chave global do Navigator — o deep link de confirmação de e-mail pode
+/// chegar a qualquer momento (app em qualquer tela, ou recém-aberto por
+/// causa do link), então a navegação em resposta a ele precisa de um
+/// contexto que não depende de qual widget está montado no momento.
+final navigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,12 +27,86 @@ void main() {
   runApp(const MusicConnectApp());
 }
 
-class MusicConnectApp extends StatelessWidget {
+class MusicConnectApp extends StatefulWidget {
   const MusicConnectApp({super.key});
+
+  @override
+  State<MusicConnectApp> createState() => _MusicConnectAppState();
+}
+
+class _MusicConnectAppState extends State<MusicConnectApp> {
+  final _appLinks = AppLinks();
+  final _authService = AuthService();
+  StreamSubscription<Uri>? _linkSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    // Link de confirmação de e-mail: musiconnect://confirm?token=...
+    // (esquema customizado — sem domínio próprio verificado, Universal/App
+    // Links não são possíveis; ver AndroidManifest.xml/Info.plist).
+    _linkSubscription = _appLinks.uriLinkStream.listen(_handleIncomingLink);
+  }
+
+  @override
+  void dispose() {
+    _linkSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _handleIncomingLink(Uri uri) async {
+    if (uri.scheme != 'musiconnect') return;
+    final token = uri.queryParameters['token'];
+    if (token == null) return;
+
+    switch (uri.host) {
+      case 'confirm':
+        await _handleConfirmLink(token);
+      case 'reset-password':
+        _handleResetPasswordLink(token);
+    }
+  }
+
+  Future<void> _handleConfirmLink(String token) async {
+    final confirmed = await _authService.confirm(token);
+    final context = navigatorKey.currentContext;
+    if (context == null || !context.mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AuthDialog.message(
+        title: confirmed ? 'Cadastro concluído!' : 'Link inválido',
+        message: confirmed
+            ? 'Seu usuário foi cadastrado com sucesso. Faça login para continuar.'
+            : 'Esse link de confirmação não é mais válido. Tente reenviar o e-mail pelo app.',
+        primaryLabel: confirmed ? 'Ir para o login' : 'OK',
+        onPrimary: () {
+          Navigator.of(context).pop();
+          if (confirmed) {
+            navigatorKey.currentState?.pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const LoginScreen()),
+              (route) => false,
+            );
+          }
+        },
+      ),
+    );
+  }
+
+  // A validade do token (existe? não expirou?) só é checada quando o
+  // usuário efetivamente envia a nova senha — a tela mostra o erro do
+  // backend nesse momento, sem precisar de uma checagem antecipada aqui.
+  void _handleResetPasswordLink(String token) {
+    navigatorKey.currentState?.push(
+      MaterialPageRoute(builder: (_) => ResetPasswordScreen(token: token)),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'MusiConnect',
       theme: ThemeData(
@@ -28,13 +117,40 @@ class MusicConnectApp extends StatelessWidget {
         useMaterial3: true,
         fontFamily: 'Roboto',
       ),
-      home: const MainNavigation(),
+      home: _AuthGate(authService: _authService),
+    );
+  }
+}
+
+/// Decide a tela inicial com base na sessão persistida localmente: valida
+/// o token salvo (se houver) contra o backend e já abre direto em
+/// [MainNavigation] se ainda for válido — sem exigir login de novo a cada
+/// abertura do app.
+class _AuthGate extends StatelessWidget {
+  final AuthService authService;
+  const _AuthGate({required this.authService});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<AuthUser?>(
+      future: authService.getCurrentUser(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Scaffold(
+            backgroundColor: Colors.white,
+            body: Center(child: AuthLogo(fontSize: 26)),
+          );
+        }
+        final user = snapshot.data;
+        return user != null ? MainNavigation(user: user) : const WelcomeScreen();
+      },
     );
   }
 }
 
 class MainNavigation extends StatefulWidget {
-  const MainNavigation({super.key});
+  final AuthUser user;
+  const MainNavigation({super.key, required this.user});
 
   @override
   State<MainNavigation> createState() => _MainNavigationState();
@@ -95,7 +211,7 @@ class _MainNavigationState extends State<MainNavigation>
       _buildPlaceholder('Dashboard'),
       const MapExplorerScreen(),
       MatcherScreen(onSwitchToMap: () => setState(() => _selectedIndex = 1)),
-      _buildPlaceholder('Perfil'),
+      ProfileScreen(user: widget.user),
     ];
 
     return Scaffold(
@@ -132,23 +248,9 @@ class _MainNavigationState extends State<MainNavigation>
                 );
               },
             ),
-            // Logo centralizada
-            title: ShaderMask(
-              shaderCallback: (bounds) => const LinearGradient(
-                colors: [Color(0xFF7C3AED), Color(0xFFEC4899)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ).createShader(bounds),
-              child: const Text(
-                'MusiConnect',
-                style: TextStyle(
-                  color: Colors.white, // masked by shader
-                  fontWeight: FontWeight.w700,
-                  fontSize: 20,
-                  letterSpacing: 0.3,
-                ),
-              ),
-            ),
+            // Logo centralizada — mesmo estilo (preto + rosa) das telas
+            // iniciais, em vez do texto em gradiente que só era usado aqui.
+            title: const AuthLogo(fontSize: 20),
             centerTitle: true,
             // Ícone musical animado
             actions: [

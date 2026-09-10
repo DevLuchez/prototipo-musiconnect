@@ -51,6 +51,9 @@ services:
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/musiconnect
       # LLM — Google Gemini para enriquecimento de oportunidades
       GEMINI_API_KEY: ${GEMINI_API_KEY}
+      # E-mail de confirmação de cadastro (Resend)
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL}
     ports:
       - "8000:8000"
     depends_on:

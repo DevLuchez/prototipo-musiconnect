@@ -138,14 +138,20 @@ class OpportunitiesService {
       if (response.statusCode == 200) {
         final Map<String, dynamic> body =
             json.decode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+        // Ordena em ordem alfabética explicitamente — não depende da ordem
+        // que o backend devolve.
         List<String> asStringList(String key) =>
-            (body[key] as List<dynamic>? ?? []).map((e) => e.toString()).toList();
+            (body[key] as List<dynamic>? ?? [])
+                .map((e) => e.toString())
+                .toList()
+              ..sort();
         final states = (body['states'] as List<dynamic>? ?? [])
             .map((e) => FilterOption(
                   value: (e as Map<String, dynamic>)['value'] as String,
                   label: e['label'] as String,
                 ))
-            .toList();
+            .toList()
+          ..sort((a, b) => a.label.compareTo(b.label));
         return FilterOptions(
           instruments: asStringList('instruments'),
           countries: asStringList('countries'),

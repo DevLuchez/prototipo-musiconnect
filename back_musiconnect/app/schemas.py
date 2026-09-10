@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from datetime import date, datetime
 
@@ -66,3 +66,86 @@ class OpportunityOut(BaseModel):
     llm_confidence: float = 1.0
 
     model_config = {"from_attributes": True}
+
+
+class SignupIn(BaseModel):
+    """Schema de entrada do cadastro — dados coletados nos 3 passos do wizard."""
+
+    email: EmailStr
+    password: str
+    name: str
+
+    instruments: List[str] = []
+    is_professional: bool = False
+    is_student: bool = False
+
+    country: Optional[str] = None
+    state: Optional[str] = None
+    city: Optional[str] = None
+
+
+class ResendIn(BaseModel):
+    email: EmailStr
+
+
+class LoginIn(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class ForgotPasswordIn(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordIn(BaseModel):
+    token: str
+    password: str
+
+
+class ChangePasswordIn(BaseModel):
+    current_password: str
+    new_password: str
+
+
+class DeleteAccountIn(BaseModel):
+    # Confirmação de senha antes de excluir — ação irreversível.
+    password: str
+
+
+class ProfileUpdateIn(BaseModel):
+    """Edição de perfil — substitui o registro inteiro (mesmo padrão do
+    signup). E-mail fica de fora: trocar e-mail exigiria reconfirmação,
+    um fluxo à parte que não existe ainda."""
+
+    name: str
+    instruments: List[str] = []
+    is_professional: bool = False
+    is_student: bool = False
+    country: Optional[str] = None
+    state: Optional[str] = None
+    city: Optional[str] = None
+
+
+class UserOut(BaseModel):
+    id: int
+    email: str
+    name: str
+    instruments: List[str] = []
+    is_professional: bool = False
+    is_student: bool = False
+    country: Optional[str] = None
+    state: Optional[str] = None
+    city: Optional[str] = None
+    # Só vem preenchido nas respostas de login/troca de senha — o cliente
+    # usa esse valor pra atualizar o token guardado localmente.
+    token: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class ConfirmIn(BaseModel):
+    token: str
+
+
+class ConfirmStatusOut(BaseModel):
+    confirmed: bool

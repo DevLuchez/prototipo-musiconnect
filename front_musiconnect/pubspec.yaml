@@ -33,11 +33,19 @@ dependencies:
   google_maps_flutter: ^2.5.0
   http: ^1.1.0           # Para buscar os dados da Places API
   url_launcher: ^6.3.1   # Para abrir links de website/Wikidata/MusicBrainz
+  # Versão fixa (sem ^): 6.4.x exige um mecanismo do Gradle do Flutter mais
+  # novo que o SDK instalado aqui (3.24.4) fornece — quebra o build Android
+  # com "unknown property 'flutter'". 6.3.2 é da mesma época do SDK.
+  app_links: 6.3.2
 
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  flutter_secure_storage: 9.2.4
+  # pinned — 5.2.2 usa Color.withValues(), API mais nova que o SDK Flutter
+  # instalado (3.24.4) não tem, quebrando a compilação.
+  flutter_spinkit: 5.2.1
 
 dev_dependencies:
   flutter_test:

@@ -124,3 +124,52 @@ class Opportunity(Base):
 
     # Data/hora em que o LLM enriqueceu o registro (NULL = ainda não processado)
     enriched_at = Column(DateTime, nullable=True)
+
+
+class User(Base):
+    """
+    Usuário cadastrado no app (fluxo de Cadastre-se do Flutter).
+
+    O registro já é criado no signup (com email_confirmed=False) — o
+    `confirmation_token` é o que valida o dono do e-mail. Confirmar não
+    cria um segundo registro; só marca este como confirmado.
+    """
+
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    email = Column(String, nullable=False, unique=True, index=True)
+    password_hash = Column(String, nullable=False)
+
+    # Nome de exibição — só cosmético (ex: "Olá, Laura"), não substitui o
+    # e-mail em nada relacionado a login/autenticação.
+    name = Column(String, nullable=False)
+
+    # Sessão — token opaco sem expiração (mesmo padrão do token de
+    # confirmação), gerado no login e invalidado no logout ou ao trocar de
+    # senha por qualquer via.
+    session_token = Column(String, nullable=True, unique=True, index=True)
+
+    # Passo 1: interesses
+    instruments = Column(ARRAY(String), nullable=True)
+    is_professional = Column(Boolean, nullable=False, default=False)
+    is_student = Column(Boolean, nullable=False, default=False)
+
+    # Passo 2: localização
+    country = Column(String, nullable=True)
+    state = Column(String, nullable=True)
+    city = Column(String, nullable=True)
+
+    # Confirmação de e-mail
+    email_confirmed = Column(Boolean, nullable=False, default=False)
+    confirmation_token = Column(String, nullable=True, unique=True, index=True)
+    confirmation_sent_at = Column(DateTime, nullable=True)
+    confirmed_at = Column(DateTime, nullable=True)
+
+    # Esqueci minha senha — token de uso único que expira em 30min
+    # (diferente do de confirmação, que não expira).
+    password_reset_token = Column(String, nullable=True, unique=True, index=True)
+    password_reset_sent_at = Column(DateTime, nullable=True)
+
+    created_at = Column(DateTime, server_default=func.now())

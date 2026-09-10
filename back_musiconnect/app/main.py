@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine
 from app.models import Base
+from app.routers import auth
 from app.routers import institutions
 from app.routers import opportunities
 from app.routers import scheduler as scheduler_router
@@ -72,6 +73,7 @@ app.add_middleware(
     expose_headers=["X-Total-Count"],
 )
 
+app.include_router(auth.router)
 app.include_router(institutions.router)
 app.include_router(opportunities.router)
 app.include_router(scheduler_router.router)

@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/config/api_config.dart';
 import '../../data/models/opportunity_model.dart';
+import '../widgets/app_loading_indicator.dart';
 
 const _pink = Color(0xFFEC4899);
 const _purple = Color(0xFFDF2881);
@@ -589,14 +590,7 @@ class _AddToMapSheetState extends State<_AddToMapSheet> {
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   child: _loading
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
+                      ? const AppLoadingIndicator(size: 18, color: Colors.white)
                       : const Text(
                           'Adicionar ao mapa',
                           style: TextStyle(fontWeight: FontWeight.w700),
@@ -751,14 +745,7 @@ class _AddressRow extends StatelessWidget {
                       border: Border.all(color: _purple.withOpacity(0.3)),
                     ),
                     child: loading
-                        ? const SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(
-                              color: _purple,
-                              strokeWidth: 2,
-                            ),
-                          )
+                        ? const AppLoadingIndicator(size: 14, color: _purple)
                         : const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/text_utils.dart';
 import '../../data/models/providers/opportunities_service.dart';
 
 const _pink = Color(0xFFEC4899);
@@ -544,6 +545,23 @@ class _PickerFieldState extends State<_PickerField> {
     super.dispose();
   }
 
+  // RawAutocomplete só recalcula sua lista interna de opções quando o
+  // valor do campo de texto muda de verdade — nunca só porque a lista
+  // `available` (recomputada a cada build a partir de widget.selectedValues)
+  // mudou. Sem isso, um item recém-selecionado (ou removido) só refletia
+  // na lista na seleção seguinte. Agendamos pro fim do frame (depois que
+  // este widget já recebeu a seleção atualizada) um vaivém de texto
+  // imperceptível que força o recálculo, sem mexer no foco nem no texto
+  // visível.
+  void _refreshOptionsCache() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final current = _controller.value;
+      _controller.value = current.copyWith(text: String.fromCharCode(0x200B));
+      _controller.value = current;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     // Só oferece como sugestão o que ainda não foi selecionado.
@@ -565,7 +583,10 @@ class _PickerFieldState extends State<_PickerField> {
                   children: widget.selectedValues
                       .map((v) => _RemovableChip(
                             label: widget.selectedLabel(v),
-                            onRemove: () => widget.onToggle(v),
+                            onRemove: () {
+                              widget.onToggle(v);
+                              _refreshOptionsCache();
+                            },
                           ))
                       .toList(),
                 ),
@@ -575,12 +596,12 @@ class _PickerFieldState extends State<_PickerField> {
               focusNode: _focusNode,
               displayStringForOption: (o) => o.label,
               optionsBuilder: (textEditingValue) {
-                final query = textEditingValue.text.toLowerCase();
+                final query = normalizeForSearch(textEditingValue.text);
                 // Vazio (campo só recebeu foco, sem digitar nada) mostra
                 // todas as opções disponíveis — funciona como um dropdown.
                 if (query.isEmpty) return available;
                 return available
-                    .where((o) => o.label.toLowerCase().contains(query));
+                    .where((o) => normalizeForSearch(o.label).contains(query));
               },
               onSelected: (selection) {
                 widget.onToggle(selection.value);
@@ -588,6 +609,7 @@ class _PickerFieldState extends State<_PickerField> {
                 // digitação/seleção do próximo filtro.
                 _controller.clear();
                 _focusNode.unfocus();
+                _refreshOptionsCache();
               },
               fieldViewBuilder: (context, controller, focusNode, _) {
                 return Container(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../data/models/opportunity_model.dart';
 import '../../data/models/providers/opportunities_service.dart';
+import '../widgets/app_loading_indicator.dart';
 import '../widgets/opportunity_card.dart';
 import '../widgets/filter_modal.dart';
 import 'opportunity_detail_screen.dart';
@@ -364,7 +365,7 @@ class _OpportunityListScreenState extends State<OpportunityListScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(color: _pink, strokeWidth: 2.5),
+            AppLoadingIndicator(size: 28, color: _pink),
             SizedBox(height: 16),
             Text(
               'Carregando oportunidades...',

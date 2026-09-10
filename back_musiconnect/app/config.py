@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     # LLM — Google Gemini para enriquecimento de oportunidades
     gemini_api_key: Optional[str] = None
 
+    # E-mail de confirmação de cadastro (Resend)
+    resend_api_key: Optional[str] = None
+    resend_from_email: str = "onboarding@resend.dev"
+
     class Config:
         env_file = ".env"
 

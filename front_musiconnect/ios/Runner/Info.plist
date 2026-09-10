@@ -45,5 +45,20 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- Deep link de confirmação de e-mail (musiconnect://confirm?token=...).
+	     Esquema de URL customizado — sem domínio próprio verificado,
+	     Universal Links (https://) não são possíveis; ver
+	     app/services/email_service.py no backend. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.musiconnect.confirm</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>musiconnect</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

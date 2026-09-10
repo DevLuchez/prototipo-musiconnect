@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../data/models/opportunity_model.dart';
 import '../../data/models/providers/opportunities_service.dart';
+import '../widgets/app_loading_indicator.dart';
 import '../widgets/opportunity_card.dart';
 import '../widgets/opportunity_carousel_section.dart';
 import '../widgets/filter_modal.dart';
@@ -522,7 +523,7 @@ class _MatcherScreenState extends State<MatcherScreen>
   Widget _buildCategoriesBrowser() {
     if (_categoriesLoading) {
       return const Center(
-        child: CircularProgressIndicator(color: _pink, strokeWidth: 2.5),
+        child: AppLoadingIndicator(size: 28, color: _pink),
       );
     }
 
@@ -567,7 +568,7 @@ class _MatcherScreenState extends State<MatcherScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(color: _pink, strokeWidth: 2.5),
+            AppLoadingIndicator(size: 28, color: _pink),
             SizedBox(height: 16),
             Text(
               'Carregando oportunidades...',

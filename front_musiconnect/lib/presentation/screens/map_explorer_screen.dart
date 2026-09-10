@@ -4,6 +4,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../data/models/place_model.dart';
 import '../../data/models/providers/musicconnect_api_service.dart';
+import '../widgets/app_loading_indicator.dart';
 
 const String _mapStyle = '''
 [
@@ -705,16 +706,32 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
 
           // ── Carregamento inicial ───────────────────────────────
           if (_isLoading && _markers.isEmpty)
-            const Center(
-              child: Card(
-                child: Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 12),
-                    Text('Carregando mapa musical global...'),
-                  ]),
+            Center(
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.12),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
+                child: const Column(mainAxisSize: MainAxisSize.min, children: [
+                  AppLoadingIndicator(size: 34),
+                  SizedBox(height: 14),
+                  Text(
+                    'Carregando instituições globais...',
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF111827),
+                    ),
+                  ),
+                ]),
               ),
             ),
 
@@ -764,9 +781,8 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
                   ],
                 ),
                 child: const Padding(
-                  padding: EdgeInsets.all(10),
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Color(0xFFDF2881)),
+                  padding: EdgeInsets.all(9),
+                  child: AppLoadingIndicator(size: 20),
                 ),
               ),
             ),
