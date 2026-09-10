@@ -8,33 +8,33 @@ import 'signup_screen.dart';
 class _OnboardingPage {
   final String title;
   final String subtitle;
-  final IconData icon;
+  final String image;
 
   const _OnboardingPage({
     required this.title,
     required this.subtitle,
-    required this.icon,
+    required this.image,
   });
 }
 
 const _pages = [
   _OnboardingPage(
-    title: 'Personalize sua experiência',
+    title: 'Seu perfil, seu ritmo',
     subtitle:
-        'Preencha seu perfil para encontrarmos as oportunidades mais compatíveis com você.',
-    icon: Icons.person_outline_rounded,
+        'Monte seu perfil e receba recomendações que têm tudo a ver com você.',
+    image: 'assets/images/onboarding_profile.png',
   ),
   _OnboardingPage(
-    title: 'Explore oportunidades ao redor do mundo',
+    title: 'Oportunidades mundiais',
     subtitle:
-        'Use o mapa interativo para encontrar diversas instituições ao redor do mundo em um único lugar.',
-    icon: Icons.public_rounded,
+        'Explore o mapa interativo e descubra instituições ao redor do globo.',
+    image: 'assets/images/onboarding_global.png',
   ),
   _OnboardingPage(
-    title: 'Sua oportunidade te espera',
+    title: 'Matching musical',
     subtitle:
-        'Encontre vagas, cursos, audições e diversas oportunidades selecionadas sob medida para você.',
-    icon: Icons.explore_outlined,
+        'Encontre oportunidades de carreira e estudo selecionadas sob medida para você.',
+    image: 'assets/images/onboarding_matching.png',
   ),
 ];
 
@@ -97,6 +97,25 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     );
   }
 
+  Widget _buildDots() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(_pages.length, (i) {
+        final active = i == _activeDot;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          margin: const EdgeInsets.symmetric(horizontal: 3),
+          width: active ? 20 : 6,
+          height: 6,
+          decoration: BoxDecoration(
+            color: active ? kAuthTextDark : Colors.grey[300],
+            borderRadius: BorderRadius.circular(3),
+          ),
+        );
+      }),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -119,7 +138,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   final page = _pages[index % _pages.length];
                   return Padding(
                     padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                    // Bloco de texto+imagem centralizado como um todo na
+                    // área do carrossel — a folga (quando a imagem não
+                    // preenche toda a altura disponível) fica dividida
+                    // igualmente acima e abaixo, em vez de empilhada só de
+                    // um lado (texto-imagem ou imagem-bolinhas).
                     child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Text(
@@ -141,12 +166,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                             height: 1.4,
                           ),
                         ),
-                        const SizedBox(height: 20),
-                        Expanded(
-                          child: AuthImagePlaceholder(
-                            icon: page.icon,
-                            iconSize: 64,
-                          ),
+                        const SizedBox(height: 12),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxHeight: 260),
+                          child: Image.asset(page.image, fit: BoxFit.contain),
                         ),
                       ],
                     ),
@@ -155,22 +178,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(_pages.length, (i) {
-                final active = i == _activeDot;
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  width: active ? 20 : 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: active ? kAuthTextDark : Colors.grey[300],
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                );
-              }),
-            ),
+            _buildDots(),
             const SizedBox(height: 24),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),

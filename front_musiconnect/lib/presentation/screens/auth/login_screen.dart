@@ -126,11 +126,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    // Ilustração ainda não definida — placeholder cinza.
-                    const AuthImagePlaceholder(
+                    SizedBox(
                       height: 200,
-                      icon: Icons.music_note_rounded,
-                      iconSize: 56,
+                      width: double.infinity,
+                      child: Image.asset('assets/images/login.png', fit: BoxFit.contain),
                     ),
                     const SizedBox(height: 24),
                     AuthTextField(
