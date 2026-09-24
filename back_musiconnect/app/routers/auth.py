@@ -83,6 +83,19 @@ def get_current_user(
     return user
 
 
+def get_current_user_optional(
+    credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
+    db: Session = Depends(get_db),
+) -> User | None:
+    """Mesma resolução de `get_current_user`, mas devolve `None` (em vez de
+    401) quando o token está ausente ou inválido — usado por rotas que
+    continuam acessíveis sem login, mas se comportam diferente com um
+    usuário identificado (ex: match_percentage nas oportunidades)."""
+    if credentials is None:
+        return None
+    return db.query(User).filter(User.session_token == credentials.credentials).first()
+
+
 @router.post("/signup", status_code=201)
 async def signup(data: SignupIn, db: Session = Depends(get_db)):
     """

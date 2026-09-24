@@ -43,6 +43,23 @@ class NearbySearchParams(BaseModel):
     limit: int = 500          # máximo de resultados por chamada
 
 
+class MatchBreakdownOut(BaseModel):
+    """Detalhamento do match_percentage — cada campo é quantos pontos esse
+    fator contribuiu, de um máximo próprio (`*_max`, pesos diferentes por
+    fator); a soma dos quatro é o match_percentage."""
+
+    instrument: int
+    affinity: int
+    location: int
+    confidence: int
+    instrument_max: int
+    affinity_max: int
+    location_max: int
+    confidence_max: int
+
+    model_config = {"from_attributes": True}
+
+
 class OpportunityOut(BaseModel):
     """Schema de saída de oportunidade — o que o Flutter recebe na aba Matcher."""
 
@@ -64,6 +81,11 @@ class OpportunityOut(BaseModel):
     enriched_at: Optional[datetime] = None
     is_active: bool = True
     llm_confidence: float = 1.0
+
+    # Percentual de compatibilidade (0-100) com o usuário logado — None
+    # quando a requisição não veio autenticada.
+    match_percentage: Optional[int] = None
+    match_breakdown: Optional[MatchBreakdownOut] = None
 
     model_config = {"from_attributes": True}
 

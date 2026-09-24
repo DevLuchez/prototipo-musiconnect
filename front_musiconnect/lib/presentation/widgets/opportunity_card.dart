@@ -42,6 +42,9 @@ class OpportunityCard extends StatelessWidget {
   // sobrar espaço em branco embaixo de tudo. Só funciona com altura fixa
   // vinda de fora; na lista vertical (altura livre) fica desligado.
   final bool expandToFill;
+  // Percentual de compatibilidade com o usuário logado (0-100) — null
+  // esconde a tag (ex: sem sessão, backend não calculou).
+  final int? matchPercentage;
 
   const OpportunityCard({
     super.key,
@@ -49,6 +52,7 @@ class OpportunityCard extends StatelessWidget {
     required this.onTap,
     this.margin = const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
     this.expandToFill = false,
+    this.matchPercentage,
   });
 
   @override
@@ -74,9 +78,10 @@ class OpportunityCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: expandToFill ? MainAxisSize.max : MainAxisSize.min,
             children: [
-              // ── Linha superior: prazo (alinhado à direita) ──────
+              // ── Linha superior: match (esquerda) + prazo (direita) ──
               Row(
                 children: [
+                  if (matchPercentage != null) _buildMatchTag(),
                   const Spacer(),
                   _buildDeadline(),
                 ],
@@ -212,6 +217,25 @@ class OpportunityCard extends StatelessWidget {
     final day = DateTime(deadline.year, deadline.month, deadline.day);
     final diff = day.difference(today).inDays;
     return diff >= 0 && diff < 7;
+  }
+
+  Widget _buildMatchTag() {
+    return Container(
+      margin: const EdgeInsets.only(right: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: _MatcherTheme.purple.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        '$matchPercentage% de match',
+        style: const TextStyle(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w700,
+          color: _MatcherTheme.purple,
+        ),
+      ),
+    );
   }
 
   Widget _buildDeadline() {

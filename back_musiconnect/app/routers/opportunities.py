@@ -19,8 +19,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.database import get_db, SessionLocal
-from app.models import Opportunity
+from app.models import Opportunity, User
 from app.schemas import OpportunityOut
+from app.routers.auth import get_current_user_optional
+from app.services.matching import compute_match_breakdown
 from app.services.scrapers.musical_chairs_scraper import scrape_musical_chairs
 from app.services.llm_enricher import enrich_opportunities
 
@@ -134,7 +136,7 @@ async def _run_full_scrape() -> dict:
 @router.get("/", response_model=List[OpportunityOut])
 def list_opportunities(
     response: Response,
-    type: Optional[str] = Query(None, description="Tipo: audicao, emprego, curso, competicao"),
+    type: Optional[List[str]] = Query(None, description="Tipo(s): audicao, emprego, curso, competicao"),
     source_name: Optional[str] = Query(None, description="Fonte: Funarte, Musical Chairs..."),
     instrument: Optional[List[str]] = Query(None, description="Instrumento(s) exigido(s) (ex: Violino)"),
     country: Optional[List[str]] = Query(None, description="País(es) (ex: Brasil)"),
@@ -144,6 +146,7 @@ def list_opportunities(
     only_active: bool = Query(True, description="Exibe apenas oportunidades com prazo vigente"),
     limit: int = Query(100, ge=1, le=500),
     db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional),
 ):
     """
     Lista oportunidades musicais para a aba Matcher.
@@ -178,18 +181,24 @@ def list_opportunities(
     # do order_by/limit para não ser afetado por eles.
     response.headers["X-Total-Count"] = str(query.count())
 
-    return (
+    items = (
         query
         .order_by(Opportunity.scraped_at.desc())
         .limit(limit)
         .all()
     )
+    if current_user:
+        for opp in items:
+            breakdown = compute_match_breakdown(current_user, opp)
+            opp.match_percentage = breakdown.total
+            opp.match_breakdown = breakdown
+    return items
 
 
 def _apply_filters(
     query,
     *,
-    type: Optional[str] = None,
+    type: Optional[List[str]] = None,
     source_name: Optional[str] = None,
     instrument: Optional[List[str]] = None,
     country: Optional[List[str]] = None,
@@ -202,7 +211,7 @@ def _apply_filters(
         Opportunity.llm_confidence >= 0.80
     )
     if type:
-        query = query.filter(Opportunity.type == type)
+        query = query.filter(Opportunity.type.in_(type))
     if source_name:
         query = query.filter(Opportunity.source_name == source_name)
     if instrument:
@@ -279,11 +288,19 @@ def get_filter_options(
 
 
 @router.get("/{opportunity_id}", response_model=OpportunityOut)
-def get_opportunity(opportunity_id: int, db: Session = Depends(get_db)):
+def get_opportunity(
+    opportunity_id: int,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional),
+):
     """Retorna os detalhes de uma oportunidade específica."""
     opp = db.query(Opportunity).filter(Opportunity.id == opportunity_id).first()
     if not opp:
         raise HTTPException(status_code=404, detail="Oportunidade não encontrada")
+    if current_user:
+        breakdown = compute_match_breakdown(current_user, opp)
+        opp.match_percentage = breakdown.total
+        opp.match_breakdown = breakdown
     return opp
 
 

@@ -1,24 +1,28 @@
 import 'package:flutter/material.dart';
 import '../../core/text_utils.dart';
+import '../../data/models/opportunity_model.dart';
 import '../../data/models/providers/opportunities_service.dart';
 
 const _pink = Color(0xFFEC4899);
 
 /// Modal de filtros da aba "Todas as oportunidades" (e da subpágina de
-/// categoria). Segue o protótipo: instrumento e localização (país/estado/
-/// cidade), com "Meu instrumento"/"Perto de Mim"/"Escala de Match" como
-/// prévia — dependem do perfil do usuário, que ainda não existe no app.
+/// categoria). Segue o protótipo: tipo, instrumento e localização (país/
+/// estado/cidade), com "Meu instrumento"/"Perto de Mim"/"Escala de Match"
+/// dependendo do perfil do usuário logado.
 ///
-/// Cada campo aceita múltiplos valores (chips), e os campos são cruzados
-/// entre si (busca facetada): escolher um instrumento estreita as opções
-/// de localização mostradas, e escolher uma localização estreita as
-/// opções de instrumento — o modal busca as opções de novo a cada
-/// mudança, usando [service].
+/// Instrumento e localização são cruzados entre si (busca facetada):
+/// escolher um instrumento estreita as opções de localização mostradas, e
+/// vice-versa — o modal busca as opções de novo a cada mudança, usando
+/// [service]. Tipo não entra nesse cruzamento (são só 4 valores fixos,
+/// não precisa buscar do backend).
 ///
-/// Fonte e Tipo de oportunidade saíram do modal: Tipo agora é navegado
-/// pelos carrosséis por categoria; Fonte só tinha "Musical Chairs" (pouco
-/// útil como filtro hoje).
+/// Fonte saiu do modal: só tinha "Musical Chairs" (pouco útil como filtro
+/// hoje).
 class FilterModal extends StatefulWidget {
+  // Escondido dentro da subpágina de uma categoria — o tipo já está
+  // travado pela navegação ali, filtrar de novo seria redundante.
+  final bool showTypeFilter;
+  final List<String> initialTypes;
   final List<String> initialInstruments;
   final List<String> initialCountries;
   final List<String> initialStates;
@@ -28,26 +32,58 @@ class FilterModal extends StatefulWidget {
   // sem esperar a primeira busca de opções responder.
   final Map<String, String> initialStateLabels;
   final OpportunitiesService service;
-  // Só true quando a aba "Minhas oportunidades" existir de verdade — até
-  // lá, fica escondido em "Todas as oportunidades".
-  final bool showMatchScale;
+  // Limites do slider "Escala de Match" — "Todas as oportunidades" usa
+  // 0-100 (livre, sem filtrar por padrão); "Minhas oportunidades" trava em
+  // 85-100 (nunca mostra abaixo do que a aba promete).
+  final double matchScaleMin;
+  final double matchScaleMax;
+  // Valor atual do range, pra manter a seleção ao reabrir o modal — default
+  // igual aos limites (ou seja, sem filtro ativo).
+  final RangeValues? initialMatchScale;
+
+  // "Meu instrumento" / "Perto de Mim": instrumentos e localização do
+  // perfil do usuário logado, usados quando o toggle correspondente está
+  // ligado. Opcionais e iguais nas duas abas — começam desligados
+  // (initialInstrumentToggle/initialLocationToggle), o usuário decide se
+  // liga.
+  final List<String> myInstruments;
+  final String? myCountry;
+  final String? myState;
+  final String? myCity;
+  final bool initialInstrumentToggle;
+  final bool initialLocationToggle;
+
   final void Function({
+    required List<String> types,
     required List<String> instruments,
     required List<String> countries,
     required List<String> states,
     required List<String> cities,
     required Map<String, String> stateLabels,
+    required RangeValues matchScale,
+    required bool instrumentToggle,
+    required bool locationToggle,
   }) onApply;
 
   const FilterModal({
     super.key,
+    this.showTypeFilter = true,
+    this.initialTypes = const [],
     this.initialInstruments = const [],
     this.initialCountries = const [],
     this.initialStates = const [],
     this.initialCities = const [],
     this.initialStateLabels = const {},
     required this.service,
-    this.showMatchScale = false,
+    this.matchScaleMin = 0,
+    this.matchScaleMax = 100,
+    this.initialMatchScale,
+    this.myInstruments = const [],
+    this.myCountry,
+    this.myState,
+    this.myCity,
+    this.initialInstrumentToggle = false,
+    this.initialLocationToggle = false,
     required this.onApply,
   });
 
@@ -56,6 +92,7 @@ class FilterModal extends StatefulWidget {
 }
 
 class _FilterModalState extends State<FilterModal> {
+  late List<String> _types = List.of(widget.initialTypes);
   late List<String> _instruments = List.of(widget.initialInstruments);
   late List<String> _countries = List.of(widget.initialCountries);
   late List<String> _states = List.of(widget.initialStates);
@@ -74,13 +111,33 @@ class _FilterModalState extends State<FilterModal> {
   bool _instrumentExpanded = true;
   bool _locationExpanded = true;
 
-  // Só cosmético enquanto showMatchScale for false — nada consome esse
-  // valor ainda (sem perfil de usuário, não existe "match" de verdade).
-  RangeValues _matchScale = const RangeValues(85, 100);
+  late RangeValues _matchScale = widget.initialMatchScale ??
+      RangeValues(widget.matchScaleMin, widget.matchScaleMax);
+
+  late bool _instrumentToggle = widget.initialInstrumentToggle;
+  late bool _locationToggle = widget.initialLocationToggle;
 
   @override
   void initState() {
     super.initState();
+    _refreshOptions();
+  }
+
+  void _setInstrumentToggle(bool value) {
+    setState(() {
+      _instrumentToggle = value;
+      _instruments = value ? List.of(widget.myInstruments) : [];
+    });
+    _refreshOptions();
+  }
+
+  void _setLocationToggle(bool value) {
+    setState(() {
+      _locationToggle = value;
+      _countries = value && widget.myCountry != null ? [widget.myCountry!] : [];
+      _states = value && widget.myState != null ? [widget.myState!] : [];
+      _cities = value && widget.myCity != null ? [widget.myCity!] : [];
+    });
     _refreshOptions();
   }
 
@@ -103,6 +160,14 @@ class _FilterModalState extends State<FilterModal> {
   }
 
   String _stateLabel(String code) => _stateLabels[code] ?? code;
+
+  void _toggleType(String key) {
+    setState(() {
+      _types = _types.contains(key)
+          ? _types.where((t) => t != key).toList()
+          : [..._types, key];
+    });
+  }
 
   void _toggle(List<String> current, String value, void Function(List<String>) apply) {
     final next = List<String>.of(current);
@@ -175,17 +240,70 @@ class _FilterModalState extends State<FilterModal> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                  const _DisabledToggleRow(
+                  _ToggleRow(
                     title: 'Meu instrumento',
-                    subtitle: 'Filtra pelo instrumento do seu perfil (em breve)',
+                    subtitle: 'Filtra pelo(s) instrumento(s) do seu perfil',
+                    value: _instrumentToggle,
+                    onChanged: _setInstrumentToggle,
                   ),
                   const Divider(height: 1),
-                  const _DisabledToggleRow(
+                  _ToggleRow(
                     title: 'Perto de Mim',
-                    subtitle: 'Filtra pela sua localização (em breve)',
+                    subtitle: 'Filtra pela localização do seu perfil',
+                    value: _locationToggle,
+                    onChanged: _setLocationToggle,
                   ),
 
-                  if (widget.showMatchScale) ...[
+                  const Divider(height: 1),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Escala de Match',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF111827),
+                          ),
+                        ),
+                        RangeSlider(
+                          values: _matchScale,
+                          min: widget.matchScaleMin,
+                          max: widget.matchScaleMax,
+                          activeColor: _pink,
+                          inactiveColor: const Color(0xFFE5E7EB),
+                          labels: RangeLabels(
+                            '${_matchScale.start.round()}%',
+                            '${_matchScale.end.round()}%',
+                          ),
+                          onChanged: (v) => setState(() => _matchScale = v),
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('${widget.matchScaleMin.round()}%',
+                                style: TextStyle(
+                                    fontSize: 11, color: Colors.grey[400])),
+                            Text(
+                              '${_matchScale.start.round()}% - ${_matchScale.end.round()}%',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF111827),
+                              ),
+                            ),
+                            Text('${widget.matchScaleMax.round()}%',
+                                style: TextStyle(
+                                    fontSize: 11, color: Colors.grey[400])),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  if (widget.showTypeFilter) ...[
                     const Divider(height: 1),
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -193,43 +311,48 @@ class _FilterModalState extends State<FilterModal> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'Escala de Match',
+                            'Tipo de oportunidade',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
                               color: Color(0xFF111827),
                             ),
                           ),
-                          RangeSlider(
-                            values: _matchScale,
-                            min: 0,
-                            max: 100,
-                            activeColor: _pink,
-                            inactiveColor: const Color(0xFFE5E7EB),
-                            labels: RangeLabels(
-                              '${_matchScale.start.round()}%',
-                              '${_matchScale.end.round()}%',
-                            ),
-                            onChanged: (v) => setState(() => _matchScale = v),
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text('0%',
-                                  style: TextStyle(
-                                      fontSize: 11, color: Colors.grey[400])),
-                              Text(
-                                '${_matchScale.start.round()}% - ${_matchScale.end.round()}%',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF111827),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: kOpportunityTypeLabels.entries.map((e) {
+                              final selected = _types.contains(e.key);
+                              return GestureDetector(
+                                onTap: () => _toggleType(e.key),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: selected
+                                        ? _pink.withOpacity(0.1)
+                                        : const Color(0xFFF3F4F6),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: selected
+                                          ? _pink
+                                          : Colors.transparent,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    e.value,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: selected
+                                          ? _pink
+                                          : const Color(0xFF374151),
+                                    ),
+                                  ),
                                 ),
-                              ),
-                              Text('100%',
-                                  style: TextStyle(
-                                      fontSize: 11, color: Colors.grey[400])),
-                            ],
+                              );
+                            }).toList(),
                           ),
                         ],
                       ),
@@ -239,6 +362,7 @@ class _FilterModalState extends State<FilterModal> {
                   const Divider(height: 1),
                   _CollapsibleHeader(
                     title: 'Instrumento',
+                    subtitle: _instrumentToggle ? 'Usando seu perfil' : null,
                     expanded: _instrumentExpanded,
                     onTap: () => setState(
                         () => _instrumentExpanded = !_instrumentExpanded),
@@ -246,28 +370,42 @@ class _FilterModalState extends State<FilterModal> {
                   if (_instrumentExpanded)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),
-                      child: _PickerField(
-                        options: _options.instruments
-                            .map((i) => FilterOption(value: i, label: i))
-                            .toList(),
-                        selectedValues: _instruments,
-                        selectedLabel: (v) => v,
-                        hint: 'Filtre instrumentos...',
-                        loading: _optionsLoading,
-                        onToggle: (v) => _toggle(
-                            _instruments, v, (n) => setState(() => _instruments = n)),
+                      child: IgnorePointer(
+                        ignoring: _instrumentToggle,
+                        child: Opacity(
+                          opacity: _instrumentToggle ? 0.5 : 1,
+                          child: _PickerField(
+                            options: _options.instruments
+                                .map((i) => FilterOption(value: i, label: i))
+                                .toList(),
+                            selectedValues: _instruments,
+                            selectedLabel: (v) => v,
+                            hint: 'Filtre instrumentos...',
+                            loading: _optionsLoading,
+                            onToggle: (v) => _toggle(_instruments, v,
+                                (n) => setState(() => _instruments = n)),
+                          ),
+                        ),
                       ),
                     ),
 
                   const Divider(height: 1),
                   _CollapsibleHeader(
                     title: 'Localização',
-                    subtitle: _locationSummary,
+                    subtitle:
+                        _locationToggle ? 'Usando seu perfil' : _locationSummary,
                     expanded: _locationExpanded,
                     onTap: () => setState(
                         () => _locationExpanded = !_locationExpanded),
                   ),
                   if (_locationExpanded) ...[
+                    IgnorePointer(
+                      ignoring: _locationToggle,
+                      child: Opacity(
+                        opacity: _locationToggle ? 0.5 : 1,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                     const Padding(
                       padding: EdgeInsets.only(top: 8, bottom: 6),
                       child: Text('País',
@@ -324,6 +462,10 @@ class _FilterModalState extends State<FilterModal> {
                           _toggle(_cities, v, (n) => setState(() => _cities = n)),
                     ),
                     const SizedBox(height: 12),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                   ],
                 ),
@@ -346,6 +488,11 @@ class _FilterModalState extends State<FilterModal> {
                   child: OutlinedButton(
                     onPressed: () {
                       setState(() {
+                        _matchScale =
+                            RangeValues(widget.matchScaleMin, widget.matchScaleMax);
+                        _types = [];
+                        _instrumentToggle = false;
+                        _locationToggle = false;
                         _instruments = [];
                         _countries = [];
                         _states = [];
@@ -370,11 +517,15 @@ class _FilterModalState extends State<FilterModal> {
                   child: ElevatedButton(
                     onPressed: () {
                       widget.onApply(
+                        types: _types,
                         instruments: _instruments,
                         countries: _countries,
                         states: _states,
                         cities: _cities,
                         stateLabels: Map.of(_stateLabels),
+                        matchScale: _matchScale,
+                        instrumentToggle: _instrumentToggle,
+                        locationToggle: _locationToggle,
                       );
                       Navigator.of(context).pop();
                     },
@@ -402,14 +553,20 @@ class _FilterModalState extends State<FilterModal> {
   }
 }
 
-/// Linha "Meu instrumento" / "Perto de Mim" — sempre desabilitada por
-/// enquanto: dependem do perfil do usuário (instrumento cadastrado,
-/// localização), que ainda não existe no app.
-class _DisabledToggleRow extends StatelessWidget {
+/// Linha "Meu instrumento" / "Perto de Mim" — checkbox que liga/desliga o
+/// filtro pelo perfil do usuário logado.
+class _ToggleRow extends StatelessWidget {
   final String title;
   final String subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
 
-  const _DisabledToggleRow({required this.title, required this.subtitle});
+  const _ToggleRow({
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -423,24 +580,24 @@ class _DisabledToggleRow extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Colors.grey[400],
+                    color: Color(0xFF111827),
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: TextStyle(fontSize: 11.5, color: Colors.grey[400]),
+                  style: TextStyle(fontSize: 11.5, color: Colors.grey[500]),
                 ),
               ],
             ),
           ),
           Checkbox(
-            value: false,
-            onChanged: null,
-            fillColor: WidgetStateProperty.all(const Color(0xFFE5E7EB)),
+            value: value,
+            onChanged: (v) => onChanged(v ?? false),
+            activeColor: _pink,
           ),
         ],
       ),

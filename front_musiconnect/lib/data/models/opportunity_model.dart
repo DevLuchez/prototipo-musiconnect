@@ -18,6 +18,45 @@ const Map<String, String> kOpportunityTypePluralLabels = {
   'audicao': 'audições',
 };
 
+/// Detalhamento do [OpportunityModel.matchPercentage] — quantos pontos cada
+/// fator contribuiu, de um máximo próprio (`*Max` — pesos diferentes por
+/// fator, não uma fração de 100 cada); a soma dos quatro `instrument`/
+/// `affinity`/`location`/`confidence` é o próprio matchPercentage
+/// (arredondamento feito por fator no backend, então bate exatamente, sem
+/// sobra).
+class MatchBreakdown {
+  final int instrument;
+  final int affinity;
+  final int location;
+  final int confidence;
+  final int instrumentMax;
+  final int affinityMax;
+  final int locationMax;
+  final int confidenceMax;
+
+  const MatchBreakdown({
+    required this.instrument,
+    required this.affinity,
+    required this.location,
+    required this.confidence,
+    required this.instrumentMax,
+    required this.affinityMax,
+    required this.locationMax,
+    required this.confidenceMax,
+  });
+
+  factory MatchBreakdown.fromJson(Map<String, dynamic> json) => MatchBreakdown(
+        instrument: json['instrument'] as int? ?? 0,
+        affinity: json['affinity'] as int? ?? 0,
+        location: json['location'] as int? ?? 0,
+        confidence: json['confidence'] as int? ?? 0,
+        instrumentMax: json['instrument_max'] as int? ?? 0,
+        affinityMax: json['affinity_max'] as int? ?? 0,
+        locationMax: json['location_max'] as int? ?? 0,
+        confidenceMax: json['confidence_max'] as int? ?? 0,
+      );
+}
+
 /// Modelo de uma oportunidade musical retornada pela API.
 class OpportunityModel {
   final int id;
@@ -37,6 +76,10 @@ class OpportunityModel {
   final double llmConfidence;
   final DateTime? deadline;
   final DateTime? scrapedAt;
+  // Percentual de compatibilidade (0-100) com o usuário logado, calculado
+  // pelo backend — null se a requisição não foi autenticada.
+  final int? matchPercentage;
+  final MatchBreakdown? matchBreakdown;
 
   const OpportunityModel({
     required this.id,
@@ -56,6 +99,8 @@ class OpportunityModel {
     this.llmConfidence = 0.0,
     this.deadline,
     this.scrapedAt,
+    this.matchPercentage,
+    this.matchBreakdown,
   });
 
   factory OpportunityModel.fromJson(Map<String, dynamic> json) {
@@ -90,6 +135,11 @@ class OpportunityModel {
           : null,
       scrapedAt: json['scraped_at'] != null
           ? DateTime.tryParse(json['scraped_at'] as String)
+          : null,
+      matchPercentage: json['match_percentage'] as int?,
+      matchBreakdown: json['match_breakdown'] != null
+          ? MatchBreakdown.fromJson(
+              json['match_breakdown'] as Map<String, dynamic>)
           : null,
     );
   }

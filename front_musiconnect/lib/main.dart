@@ -210,7 +210,10 @@ class _MainNavigationState extends State<MainNavigation>
     final screens = <Widget>[
       _buildPlaceholder('Dashboard'),
       const MapExplorerScreen(),
-      MatcherScreen(onSwitchToMap: () => setState(() => _selectedIndex = 1)),
+      MatcherScreen(
+        user: widget.user,
+        onSwitchToMap: () => setState(() => _selectedIndex = 1),
+      ),
       ProfileScreen(user: widget.user),
     ];
 

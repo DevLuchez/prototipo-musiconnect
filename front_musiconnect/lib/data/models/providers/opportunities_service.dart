@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../opportunity_model.dart';
 import '../../../core/config/api_config.dart';
+import 'auth_service.dart';
 
 /// Resultado de [OpportunitiesService.fetchOpportunities]: a página de
 /// resultados junto com o total real que atende aos filtros (antes do
@@ -46,20 +47,30 @@ class FilterOptions {
 class OpportunitiesService {
   static const Duration _timeout = Duration(seconds: 20);
 
+  final _authService = AuthService();
+
+  /// Header de autenticação, quando há sessão salva — permite ao backend
+  /// calcular `match_percentage` por oportunidade. Sem sessão, a listagem
+  /// continua funcionando normalmente, só sem o percentual de match.
+  Future<Map<String, String>> _authHeaders() async {
+    final token = await _authService.getStoredToken();
+    return {if (token != null) 'Authorization': 'Bearer $token'};
+  }
+
   /// Busca oportunidades com filtros opcionais.
   ///
   /// [q]         : filtro por título (busca parcial)
-  /// [type]      : filtra por tipo (ex: "audicao", "curso") — travado pela
-  ///               categoria (carrossel), não é mais escolhido no modal
-  /// [instruments]/[countries]/[states]/[cities]: cada um aceita vários
-  ///   valores (multi-seleção) — dentro do mesmo campo é OR, entre campos
-  ///   diferentes é AND
+  /// [types]/[instruments]/[countries]/[states]/[cities]: cada um aceita
+  ///   vários valores (multi-seleção) — dentro do mesmo campo é OR, entre
+  ///   campos diferentes é AND. [types] serve tanto pro tipo travado por
+  ///   categoria (carrossel/subpágina — um valor só) quanto pro filtro de
+  ///   "Tipo de oportunidade" escolhido no modal (múltiplos valores).
   /// [onlyActive]: se true, exclui oportunidades com prazo vencido
   /// [limit]     : máximo de resultados
   /// [offset]    : paginação
   Future<OpportunitiesResult> fetchOpportunities({
     String? q,
-    String? type,
+    List<String>? types,
     List<String>? instruments,
     List<String>? countries,
     List<String>? states,
@@ -73,7 +84,7 @@ class OpportunitiesService {
       'limit': limit.toString(),
       'offset': offset.toString(),
       if (q != null && q.isNotEmpty) 'q': q,
-      if (type != null && type.isNotEmpty) 'type': type,
+      if (types != null && types.isNotEmpty) 'type': types,
       if (instruments != null && instruments.isNotEmpty) 'instrument': instruments,
       if (countries != null && countries.isNotEmpty) 'country': countries,
       if (states != null && states.isNotEmpty) 'state': states,
@@ -85,7 +96,9 @@ class OpportunitiesService {
 
     try {
       print('[OpportunitiesService] GET $uri');
-      final response = await http.get(uri).timeout(_timeout);
+      final response = await http
+          .get(uri, headers: await _authHeaders())
+          .timeout(_timeout);
       print('[OpportunitiesService] Status: ${response.statusCode}');
 
       if (response.statusCode == 200) {

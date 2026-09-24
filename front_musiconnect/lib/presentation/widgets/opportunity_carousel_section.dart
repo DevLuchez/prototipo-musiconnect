@@ -77,6 +77,7 @@ class OpportunityCarouselSection extends StatelessWidget {
                 width: MediaQuery.of(context).size.width - 32,
                 child: OpportunityCard(
                   opportunity: opp,
+                  matchPercentage: opp.matchPercentage,
                   margin: const EdgeInsets.only(right: 12, bottom: 6, top: 2),
                   onTap: () => onCardTap(opp),
                   // Altura do card aqui é fixa (o SizedBox acima) — gruda
