@@ -45,13 +45,13 @@ class _CategoryFilter {
 const List<_CategoryFilter> _categoryFilters = [
   _CategoryFilter(
     key: 'music_school',
-    label: 'Escola de Música / Conservatório',
-    color: Colors.purple,
+    label: 'Escola de música / Conservatório',
+    color: Color.fromARGB(255, 39, 123, 176),
     categories: {'music_school'},
   ),
   _CategoryFilter(
     key: 'concert_hall',
-    label: 'Casa de Shows / Centro Cultural',
+    label: 'Centro cultural',
     color: Colors.pink,
     categories: {'concert_hall', 'arts_centre'},
   ),
@@ -63,7 +63,7 @@ const List<_CategoryFilter> _categoryFilters = [
   ),
   _CategoryFilter(
     key: 'music_venue',
-    label: 'Local de Música ao Vivo',
+    label: 'Local de música ao vivo',
     color: Colors.orange,
     categories: {'music_venue'},
   ),
@@ -85,7 +85,12 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
   final List<PlaceModel> _places = [];
   final Set<String> _loadedIds = {};
 
-  LatLng _mapCenter = const LatLng(-26.3044, -48.8493); // Joinville/SC
+  LatLng _mapCenter = const LatLng(-26.4855, -49.0669); // Jaraguá do Sul/SC
+
+  // Abaixo desse zoom os marcadores ficam ilegíveis (muito sobrepostos),
+  // então simplesmente ficam ocultos até o usuário aproximar o suficiente.
+  static const double _markersMinZoom = 7.0;
+  bool _showMarkers = true; // zoom inicial (12.0) já está acima do limite
 
   bool _isLoading = true;
   bool _backendOffline = false;
@@ -103,10 +108,10 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
       _categoryFilters.map((f) => f.key).toSet();
 
   static final Map<String, double> _hues = {
-    'music_school': BitmapDescriptor.hueViolet,
+    'music_school': BitmapDescriptor.hueAzure,
     'concert_hall': BitmapDescriptor.hueRose,
     'arts_centre':  BitmapDescriptor.hueRose,
-    'theatre':      BitmapDescriptor.hueMagenta,
+    'theatre':      BitmapDescriptor.hueViolet,
     'music_venue':  BitmapDescriptor.hueOrange,
   };
 
@@ -151,6 +156,7 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
     _dbTotalCount = total;
 
     setState(() => _isLoading = false);
+    _nudgeMapRedraw();
   }
 
   // ── Busca no backend (ao mover câmera) ────────────────────────
@@ -175,6 +181,20 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
     }
 
     setState(() => _isLoading = false);
+    // Sem nudge aqui: essa busca já é disparada por um movimento real de
+    // câmera do usuário, então o mapa já está ativo/repintando — nudgear de
+    // novo só reacionaria onCameraIdle e viraria um loop infinito de fetch.
+  }
+
+  /// Empurra a câmera 1px e volta, forçando o Android a repintar a
+  /// superfície nativa do GoogleMap — sem esse empurrão, marcadores
+  /// recém-adicionados via setState só aparecem depois que o usuário
+  /// toca/arrasta o mapa (bug conhecido do google_maps_flutter no Android).
+  void _nudgeMapRedraw() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _mapController?.moveCamera(CameraUpdate.scrollBy(1, 0));
+      _mapController?.moveCamera(CameraUpdate.scrollBy(-1, 0));
+    });
   }
 
   /// Adiciona uma instituição à lista e mapa de marcadores.
@@ -244,10 +264,25 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
 
   void _onMapCreated(GoogleMapController c) {
     _mapController = c;
+    // Confirma o zoom real assim que o mapa nativo está pronto: o primeiro
+    // onCameraMove pode reportar um zoom incorreto (view ainda sem
+    // dimensões finais), o que deixaria _showMarkers travado em false até
+    // o usuário mexer no mapa.
+    c.getZoomLevel().then((zoom) {
+      if (!mounted) return;
+      final showMarkers = zoom >= _markersMinZoom;
+      if (showMarkers != _showMarkers) {
+        setState(() => _showMarkers = showMarkers);
+      }
+    });
   }
 
   void _onCameraMove(CameraPosition pos) {
     _mapCenter = pos.target;
+    final showMarkers = pos.zoom >= _markersMinZoom;
+    if (showMarkers != _showMarkers) {
+      setState(() => _showMarkers = showMarkers);
+    }
   }
 
   void _onCameraIdle() {
@@ -460,7 +495,7 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
             onMapCreated: _onMapCreated,
             initialCameraPosition:
                 CameraPosition(target: _mapCenter, zoom: 12.0),
-            markers: _visibleMarkers,
+            markers: _showMarkers ? _visibleMarkers : const {},
             style: _mapStyle,
             myLocationEnabled: false,
             myLocationButtonEnabled: false,
@@ -485,7 +520,7 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Backend offline. Inicie o servidor FastAPI e reinicie o app.',
+                        'Houve um problema ao carregar os dados, favor contatar o suporte!',
                         style: TextStyle(color: Colors.white, fontSize: 12),
                       ),
                     ),
