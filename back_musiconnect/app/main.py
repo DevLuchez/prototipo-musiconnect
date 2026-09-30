@@ -12,6 +12,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine
+from app.migrations import run_migrations
 from app.models import Base
 from app.routers import auth
 from app.routers import institutions
@@ -41,6 +42,9 @@ async def lifespan(app: FastAPI):
     # Cria as tabelas no banco (incluindo a nova tabela 'opportunities')
     Base.metadata.create_all(bind=engine)
     logger.info("Tabelas verificadas/criadas no banco.")
+
+    # Colunas novas em tabelas que já existiam (create_all não faz isso)
+    run_migrations(engine)
 
     # Configura e inicia o scheduler
     scheduler = setup_scheduler()

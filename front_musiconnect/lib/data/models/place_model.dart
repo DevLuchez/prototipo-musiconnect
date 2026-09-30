@@ -9,9 +9,15 @@ class PlaceModel {
   // Campos de validação cruzada (MusicBrainz + Wikidata)
   final bool verified;
   final String? website;
-  final String? description;
+  final String? email;      // tag email do OpenStreetMap
   final String? wikidataId; // QID ex: "Q4944615" → wikidata.org/wiki/Q4944615
   final String? mbId;       // MBID ex: "8b3d3188..." → musicbrainz.org/place/...
+
+  // Só para instituições vindas do backend: osm_id cru (sem o prefixo
+  // "backend_" do [id]) e quantas oportunidades visíveis estão vinculadas
+  // ao pino — > 0 destaca o marcador no mapa.
+  final String? osmId;
+  final int activeOpportunitiesCount;
 
   PlaceModel({
     required this.id,
@@ -22,10 +28,14 @@ class PlaceModel {
     required this.category,
     this.verified = false,
     this.website,
-    this.description,
+    this.email,
     this.wikidataId,
     this.mbId,
+    this.osmId,
+    this.activeOpportunitiesCount = 0,
   });
+
+  bool get hasActiveOpportunities => activeOpportunitiesCount > 0;
 
   // ── MusiConnect Backend API ───────────────────────────────────
 
@@ -52,9 +62,11 @@ class PlaceModel {
       category: json['category'] as String? ?? 'music',
       verified: json['verified'] as bool? ?? false,
       website: json['website'] as String?,
-      description: json['description'] as String?,
+      email: json['email'] as String?,
       wikidataId: json['wikidata_id'] as String?,
       mbId: json['mb_id'] as String?,
+      osmId: json['osm_id'] as String?,
+      activeOpportunitiesCount: json['active_opportunities_count'] as int? ?? 0,
     );
   }
 
@@ -125,6 +137,7 @@ class PlaceModel {
       'music': 'Local Musical',
       'musical_instrument': 'Loja de Instrumentos',
       'arts_centre': 'Centro Cultural',
+      'music_org': 'Orquestra / Festival',
     };
     return labels[category] ?? 'Local Musical';
   }

@@ -43,6 +43,45 @@ class FilterOptions {
   });
 }
 
+/// Marcador "oportunidades por cidade" do mapa: oportunidades abertas de
+/// uma cidade cuja organizadora não tem localização exata (sem pino de
+/// instituição) — ver GET /api/opportunities/cities no backend.
+class CityOpportunities {
+  final int id;
+  final String city;
+  final String? state;
+  final String? country;
+  final double lat;
+  final double lng;
+  final int count;
+
+  const CityOpportunities({
+    required this.id,
+    required this.city,
+    this.state,
+    this.country,
+    required this.lat,
+    required this.lng,
+    required this.count,
+  });
+
+  factory CityOpportunities.fromJson(Map<String, dynamic> json) =>
+      CityOpportunities(
+        id: json['id'] as int,
+        city: json['city'] as String,
+        state: json['state'] as String?,
+        country: json['country'] as String?,
+        lat: (json['lat'] as num).toDouble(),
+        lng: (json['lng'] as num).toDouble(),
+        count: json['opportunities_count'] as int? ?? 0,
+      );
+
+  /// "Norfolk, VA, Estados Unidos"
+  String get label => [city, state, country]
+      .where((p) => p != null && p.isNotEmpty)
+      .join(', ');
+}
+
 /// Serviço para buscar oportunidades musicais da API MusiConnect.
 class OpportunitiesService {
   static const Duration _timeout = Duration(seconds: 20);
@@ -75,6 +114,7 @@ class OpportunitiesService {
     List<String>? countries,
     List<String>? states,
     List<String>? cities,
+    int? cityLocationId,
     bool onlyActive = true,
     int limit = 100,
     int offset = 0,
@@ -89,6 +129,7 @@ class OpportunitiesService {
       if (countries != null && countries.isNotEmpty) 'country': countries,
       if (states != null && states.isNotEmpty) 'state': states,
       if (cities != null && cities.isNotEmpty) 'city': cities,
+      if (cityLocationId != null) 'city_location_id': cityLocationId.toString(),
     };
 
     final uri = Uri.parse(ApiConfig.opportunities)
@@ -177,5 +218,49 @@ class OpportunitiesService {
       print('[OpportunitiesService] Exceção (filter-options): $e');
     }
     return const FilterOptions();
+  }
+
+  /// Marcadores "oportunidades por cidade" do mapa. Retorna lista vazia em
+  /// caso de erro.
+  Future<List<CityOpportunities>> fetchCities() async {
+    try {
+      final response = await http
+          .get(Uri.parse('${ApiConfig.opportunities}cities'))
+          .timeout(_timeout);
+      if (response.statusCode == 200) {
+        final List<dynamic> body =
+            json.decode(utf8.decode(response.bodyBytes)) as List<dynamic>;
+        return body
+            .map((e) => CityOpportunities.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      print('[OpportunitiesService] Erro HTTP ${response.statusCode} (cidades)');
+    } catch (e) {
+      print('[OpportunitiesService] Exceção (cidades): $e');
+    }
+    return [];
+  }
+
+  /// Oportunidades abertas vinculadas a um pino do mapa (osm_id) — usado
+  /// no detalhe da instituição. Retorna lista vazia em caso de erro.
+  Future<List<OpportunityModel>> fetchByInstitution(String osmId) async {
+    final uri = Uri.parse(
+        '${ApiConfig.institutions}/${Uri.encodeComponent(osmId)}/opportunities');
+    try {
+      final response = await http
+          .get(uri, headers: await _authHeaders())
+          .timeout(_timeout);
+      if (response.statusCode == 200) {
+        final List<dynamic> body =
+            json.decode(utf8.decode(response.bodyBytes)) as List<dynamic>;
+        return body
+            .map((e) => OpportunityModel.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      print('[OpportunitiesService] Erro HTTP ${response.statusCode} (por instituição)');
+    } catch (e) {
+      print('[OpportunitiesService] Exceção (por instituição): $e');
+    }
+    return [];
   }
 }

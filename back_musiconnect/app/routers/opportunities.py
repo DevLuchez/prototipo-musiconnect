@@ -3,6 +3,7 @@ Router de oportunidades musicais — aba Matcher do app Flutter.
 
 Endpoints:
   GET  /api/opportunities          — lista oportunidades ativas
+  GET  /api/opportunities/cities   — oportunidades agrupadas por cidade (mapa)
   GET  /api/opportunities/{id}     — detalhes de uma oportunidade
   POST /api/opportunities/scrape   — dispara full scraping manual (dev/admin)
   POST /api/opportunities/enrich   — enriquece oportunidades brutas via LLM (Gemini)
@@ -15,12 +16,13 @@ from datetime import date
 import pycountry
 from babel import Locale
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks, Response
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.database import get_db, SessionLocal
-from app.models import Opportunity, User
-from app.schemas import OpportunityOut
+from app.models import CityLocation, Opportunity, User
+from app.schemas import CityOpportunitiesOut, OpportunityOut
 from app.routers.auth import get_current_user_optional
 from app.services.matching import compute_match_breakdown
 from app.services.scrapers.musical_chairs_scraper import scrape_musical_chairs
@@ -143,6 +145,10 @@ def list_opportunities(
     state: Optional[List[str]] = Query(None, description="Estado(s)/província(s) (ex: SP)"),
     city: Optional[List[str]] = Query(None, description="Cidade(s) (ex: São Paulo)"),
     is_remote: Optional[bool] = Query(None, description="Apenas oportunidades remotas"),
+    city_location_id: Optional[int] = Query(
+        None,
+        description="Oportunidades do marcador de cidade do mapa (só as sem instituição localizada)",
+    ),
     only_active: bool = Query(True, description="Exibe apenas oportunidades com prazo vigente"),
     limit: int = Query(100, ge=1, le=500),
     db: Session = Depends(get_db),
@@ -171,11 +177,15 @@ def list_opportunities(
         is_remote=is_remote,
     )
 
-    if only_active:
-        # Exclui oportunidades com prazo já expirado
-        query = query.filter(
-            (Opportunity.deadline == None) | (Opportunity.deadline >= date.today())
+    if city_location_id is not None:
+        # Mesmo recorte do marcador de cidade (ver get_opportunities_by_city):
+        # as que têm pino de instituição aparecem lá, não na cidade.
+        query = query.filter(Opportunity.city_location_id == city_location_id).filter(
+            Opportunity.institution_id == None  # noqa: E711
         )
+
+    if only_active:
+        query = _only_open(query)
 
     # Total que atende aos filtros, independente do limit — calculado antes
     # do order_by/limit para não ser afetado por eles.
@@ -193,6 +203,13 @@ def list_opportunities(
             opp.match_percentage = breakdown.total
             opp.match_breakdown = breakdown
     return items
+
+
+def _only_open(query):
+    """Exclui oportunidades com prazo já expirado."""
+    return query.filter(
+        (Opportunity.deadline == None) | (Opportunity.deadline >= date.today())  # noqa: E711
+    )
 
 
 def _apply_filters(
@@ -285,6 +302,40 @@ def get_filter_options(
         "states": states,
         "cities": cities,
     }
+
+
+@router.get("/cities", response_model=List[CityOpportunitiesOut])
+def get_opportunities_by_city(db: Session = Depends(get_db)):
+    """
+    Marcadores "oportunidades por cidade" do mapa: uma entrada por cidade
+    com as oportunidades visíveis e abertas cuja organizadora NÃO tem pino
+    próprio (institution_id NULL) — as que têm aparecem no pino da
+    instituição. O vínculo à cidade é feito pelo resolvedor do pipeline.
+
+    Precisa vir ANTES de /{opportunity_id} no router.
+    """
+    rows = (
+        _only_open(_apply_filters(
+            db.query(CityLocation, func.count(Opportunity.id))
+            .join(Opportunity, Opportunity.city_location_id == CityLocation.id)
+        ))
+        .filter(Opportunity.institution_id == None)  # noqa: E711
+        .filter(Opportunity.is_remote.isnot(True))
+        .group_by(CityLocation.id)
+        .all()
+    )
+    return [
+        CityOpportunitiesOut(
+            id=city.id,
+            city=city.city,
+            state=city.state,
+            country=city.country,
+            lat=city.lat,
+            lng=city.lng,
+            opportunities_count=count,
+        )
+        for city, count in rows
+    ]
 
 
 @router.get("/{opportunity_id}", response_model=OpportunityOut)

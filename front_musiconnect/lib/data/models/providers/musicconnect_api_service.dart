@@ -76,19 +76,64 @@ class MusicConnectApiService {
     return [];
   }
 
-  /// Busca o total real de instituições catalogadas no banco (independente
-  /// de quantas já foram carregadas/renderizadas no mapa).
-  /// Retorna null em caso de erro.
-  Future<int?> fetchTotalCount() async {
+  /// Totais reais do banco (independente de quantas instituições já foram
+  /// carregadas/renderizadas no mapa): todas as catalogadas e as que têm
+  /// oportunidades abertas. Retorna null em caso de erro.
+  Future<({int total, int withOpportunities})?> fetchStats() async {
     try {
       final response =
           await http.get(Uri.parse(ApiConfig.stats)).timeout(_timeout);
       if (response.statusCode == 200) {
         final body = json.decode(response.body) as Map<String, dynamic>;
-        return body['total'] as int?;
+        return (
+          total: body['total'] as int? ?? 0,
+          withOpportunities: body['with_active_opportunities'] as int? ?? 0,
+        );
       }
     } catch (e) {
-      print('[MusicConnectAPI] Exceção em fetchTotalCount: $e');
+      print('[MusicConnectAPI] Exceção em fetchStats: $e');
+    }
+    return null;
+  }
+
+  /// Busca da barra do mapa em todas as instituições do banco (nome ou
+  /// endereço, sem diferenciar acentos). Retorna null em caso de erro, para
+  /// o mapa cair na busca local.
+  Future<List<PlaceModel>?> search(String query, {int limit = 8}) async {
+    final uri = Uri.parse('${ApiConfig.institutions}/search').replace(
+      queryParameters: {'q': query, 'limit': limit.toString()},
+    );
+    try {
+      final response = await http.get(uri).timeout(_timeout);
+      if (response.statusCode == 200) {
+        final List<dynamic> body =
+            json.decode(utf8.decode(response.bodyBytes)) as List<dynamic>;
+        return body
+            .map((e) => PlaceModel.tryFromBackend(e as Map<String, dynamic>))
+            .whereType<PlaceModel>()
+            .toList();
+      }
+      print('[MusicConnectAPI] Erro HTTP ${response.statusCode} em search');
+    } catch (e) {
+      print('[MusicConnectAPI] Exceção em search: $e');
+    }
+    return null;
+  }
+
+  /// Uma instituição pelo osm_id — usada quando o mapa precisa focar num
+  /// pino que ainda não foi carregado. Retorna null em caso de erro.
+  Future<PlaceModel?> fetchById(String osmId) async {
+    final uri = Uri.parse('${ApiConfig.institutions}/${Uri.encodeComponent(osmId)}');
+    try {
+      final response = await http.get(uri).timeout(_timeout);
+      if (response.statusCode == 200) {
+        return PlaceModel.tryFromBackend(
+          json.decode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>,
+        );
+      }
+      print('[MusicConnectAPI] Erro HTTP ${response.statusCode} em fetchById');
+    } catch (e) {
+      print('[MusicConnectAPI] Exceção em fetchById: $e');
     }
     return null;
   }

@@ -4,6 +4,7 @@ Router de monitoramento do scheduler.
 Endpoints:
   GET /scheduler/status      — jobs ativos e próximas execuções
   POST /scheduler/run-etl    — dispara ETL imediatamente (dev/testes)
+  POST /scheduler/resolve-institutions — vincula oportunidades ao mapa (backfill)
 """
 
 import logging
@@ -56,4 +57,21 @@ async def run_etl_now():
     return {
         "status": "started",
         "message": "ETL iniciado em background. Acompanhe via logs do container.",
+    }
+
+
+@router.post("/resolve-institutions")
+async def resolve_institutions_now():
+    """
+    Vincula ao mapa as oportunidades ainda sem institution_id, sem esperar o
+    pipeline diário. Serve também de backfill para as já existentes.
+    """
+    from app.services.institution_resolver import resolve_opportunity_institutions
+    import asyncio
+
+    asyncio.create_task(resolve_opportunity_institutions())
+
+    return {
+        "status": "started",
+        "message": "Resolução iniciada em background (~1s por geocodificação). Acompanhe via logs do container.",
     }

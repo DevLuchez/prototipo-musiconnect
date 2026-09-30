@@ -18,6 +18,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.database import SessionLocal
 from app.models import Institution
+from app.services.osm_contacts import extract_contacts, save_contacts
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +109,7 @@ def _parse_element(elem: dict) -> Optional[dict]:
             tags.get("addr:country"),
         ]
         address = ", ".join(p for p in addr_parts if p) or None
+        website, email = extract_contacts(tags)
 
         return {
             "osm_id": f"{elem_type}_{elem_id}",
@@ -116,6 +118,8 @@ def _parse_element(elem: dict) -> Optional[dict]:
             "lat": lat,
             "lng": lng,
             "category": category,
+            "website": website,
+            "email": email,
             "source": "osm",
             # Formato WKT que o PostGIS entende via GeoAlchemy2
             "location": f"SRID=4326;POINT({lng} {lat})",
@@ -198,7 +202,7 @@ def _upsert_batch(db: Session, records: list[dict]) -> int:
     """Faz upsert de um lote de registros — nunca duplica pelo osm_id.
 
     Em conflito, atualiza apenas os campos geoespaciais/descritivos do OSM.
-    Campos de validação (verified, mb_id, wikidata_id, website, description)
+    Campos de validação/contato (verified, mb_id, wikidata_id, website, email)
     NÃO são sobrescritos — preservam dados já preenchidos pelos validators.
     """
     if not records:
@@ -221,7 +225,7 @@ def _upsert_batch(db: Session, records: list[dict]) -> int:
                 "category":   pg_insert(Institution).excluded.category,
                 "location":   pg_insert(Institution).excluded.location,
                 "updated_at": pg_insert(Institution).excluded.updated_at,
-                # verified, mb_id, wikidata_id, website, description
+                # verified, mb_id, wikidata_id, website, email
                 # são omitidos intencionalmente para preservar validações
             },
         )
@@ -275,8 +279,15 @@ async def run_etl(concurrency: int = 4) -> dict:
             results = await asyncio.gather(*tasks)
 
             all_records = [r for result in results for r in result]
+            # Site/e-mail não entram no upsert: passam por save_contacts,
+            # que só grava site que responde (links mortos do OSM ficam fora).
+            contacts = {
+                r["osm_id"]: (r.pop("website"), r.pop("email")) for r in all_records
+            }
             inserted = _upsert_batch(db, all_records)
             total_inserted += inserted
+            sites, emails, dead = await save_contacts(db, contacts)
+            logger.info(f"  Contatos: +{sites} sites, +{emails} e-mails, {dead} sites fora do ar")
 
             logger.info(
                 f"Progresso: {i + len(batch)}/{len(cells)} células | "

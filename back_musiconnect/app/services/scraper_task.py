@@ -7,6 +7,7 @@ seguindo o mesmo padrão do etl_task.py.
 Pipeline:
   Etapa 1 — Scrapers: coleta oportunidades brutas das fontes externas
   Etapa 2 — Enrichment: LLM (Gemini) transforma os dados brutos em campos estruturados
+  Etapa 3 — Resolução: vincula cada oportunidade ao pino da sua instituição no mapa
 
 Fluxo diário:
   scheduler → run_all_scrapers() → salva no DB → enriquece com LLM → disponível na API
@@ -17,6 +18,7 @@ from datetime import datetime, timezone
 
 from app.services.scrapers.musical_chairs_scraper import scrape_musical_chairs
 from app.services.llm_enricher import enrich_opportunities
+from app.services.institution_resolver import resolve_opportunity_institutions
 
 logger = logging.getLogger("scheduler.scrapers")
 
@@ -36,6 +38,7 @@ async def run_all_scrapers() -> None:
 
     Etapa 1: Scrapers — coleta das fontes configuradas
     Etapa 2: LLM Enrichment — processa registros pendentes (enriched_at IS NULL)
+    Etapa 3: Resolução — preenche institution_id (pino do mapa) das pendentes
 
     Captura todas as exceções para que uma falha não derrube a API.
     """
@@ -50,7 +53,7 @@ async def run_all_scrapers() -> None:
 
     # Musical Chairs
     try:
-        logger.info("[Scrapers] Etapa 1/2 — Musical Chairs RSS...")
+        logger.info("[Scrapers] Etapa 1/3 — Musical Chairs RSS...")
         mc_records = await scrape_musical_chairs()
         saved = await _upsert_raw(mc_records)
         total_found += len(mc_records)
@@ -64,7 +67,7 @@ async def run_all_scrapers() -> None:
 
     # Próximos scrapers — adicionar aqui seguindo o mesmo padrão:
     # try:
-    #     logger.info("[Scrapers] Etapa 1/2 — Resartis...")
+    #     logger.info("[Scrapers] Etapa 1/3 — Resartis...")
     #     resartis_records = await scrape_resartis()
     #     saved = await _upsert_raw(resartis_records)
     #     total_found += len(resartis_records)
@@ -80,7 +83,7 @@ async def run_all_scrapers() -> None:
     # ── Etapa 2: Enrichment ───────────────────────────────────────────────────
     try:
         logger.info(
-            "[Scrapers] Etapa 2/2 — LLM Enrichment "
+            "[Scrapers] Etapa 2/3 — LLM Enrichment "
             "(processa registros com enriched_at IS NULL)..."
         )
         stats = await enrich_opportunities()
@@ -90,6 +93,18 @@ async def run_all_scrapers() -> None:
         )
     except Exception as exc:
         logger.error(f"[Scrapers] Erro no LLM Enrichment: {exc}", exc_info=True)
+
+    # ── Etapa 3: Vínculo com o mapa ───────────────────────────────────────────
+    try:
+        logger.info("[Scrapers] Etapa 3/3 — Vinculando oportunidades às instituições do mapa...")
+        stats = await resolve_opportunity_institutions()
+        logger.info(
+            f"[Scrapers] Resolução concluída: {stats.get('linked', 0)} vinculadas a uma "
+            f"instituição, {stats.get('unresolved', 0)} sem instituição localizada, "
+            f"{stats.get('linked_to_city', 0)} vinculadas à cidade"
+        )
+    except Exception as exc:
+        logger.error(f"[Scrapers] Erro na resolução de instituições: {exc}", exc_info=True)
 
     elapsed = (datetime.now(timezone.utc) - start).seconds
     logger.info(f"[Scrapers] Pipeline finalizado em {elapsed}s.")

@@ -67,6 +67,12 @@ class OpportunityModel {
   final String? description;
   final String? rawText;
   final String? institution;
+  // Pino do mapa da organizadora (osm_id) — null quando remota, sem
+  // organizadora identificada ou ainda não localizada pelo backend.
+  final String? institutionId;
+  // Marcador "oportunidades por cidade" do mapa — usado quando não há
+  // [institutionId] (organizadora sem localização exata).
+  final int? cityLocationId;
   final List<String> instruments;
   final String? country;
   final String? state;
@@ -90,6 +96,8 @@ class OpportunityModel {
     this.description,
     this.rawText,
     this.institution,
+    this.institutionId,
+    this.cityLocationId,
     this.instruments = const [],
     this.country,
     this.state,
@@ -123,6 +131,8 @@ class OpportunityModel {
       description: json['description'] as String?,
       rawText: json['raw_text'] as String?,
       institution: json['institution'] as String?,
+      institutionId: json['institution_id'] as String?,
+      cityLocationId: json['city_location_id'] as int?,
       instruments: parseInstruments(json['instruments']),
       country: json['country'] as String?,
       state: json['state'] as String?,
@@ -143,6 +153,11 @@ class OpportunityModel {
           : null,
     );
   }
+
+  /// Se a oportunidade tem onde aparecer no mapa: no pino da instituição
+  /// ou, na falta dele, no marcador da cidade.
+  bool get isOnMap =>
+      !isRemote && (institutionId != null || cityLocationId != null);
 
   /// Label amigável para exibição do tipo da oportunidade.
   String get typeLabel {

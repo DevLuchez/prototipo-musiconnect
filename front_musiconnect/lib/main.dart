@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'data/models/opportunity_model.dart';
 import 'data/models/providers/auth_service.dart';
 import 'presentation/screens/auth/login_screen.dart';
 import 'presentation/screens/auth/reset_password_screen.dart';
@@ -160,6 +161,11 @@ class _MainNavigationState extends State<MainNavigation>
     with SingleTickerProviderStateMixin {
   int _selectedIndex = 1; // começa na aba Mapa
 
+  // Pedido para a aba Mapa focar numa oportunidade (pino da instituição ou
+  // marcador da cidade) — vindo do botão "Ver no mapa". O mapa zera depois
+  // de atender.
+  final ValueNotifier<OpportunityModel?> _mapFocusRequest = ValueNotifier(null);
+
   late final AnimationController _iconPulse;
   late final Animation<double> _iconScale;
 
@@ -178,6 +184,7 @@ class _MainNavigationState extends State<MainNavigation>
   @override
   void dispose() {
     _iconPulse.dispose();
+    _mapFocusRequest.dispose();
     super.dispose();
   }
 
@@ -209,10 +216,13 @@ class _MainNavigationState extends State<MainNavigation>
   Widget build(BuildContext context) {
     final screens = <Widget>[
       _buildPlaceholder('Dashboard'),
-      const MapExplorerScreen(),
+      MapExplorerScreen(user: widget.user, focusRequest: _mapFocusRequest),
       MatcherScreen(
         user: widget.user,
-        onSwitchToMap: () => setState(() => _selectedIndex = 1),
+        onSwitchToMap: (opportunity) {
+          setState(() => _selectedIndex = 1);
+          _mapFocusRequest.value = opportunity;
+        },
       ),
       ProfileScreen(user: widget.user),
     ];

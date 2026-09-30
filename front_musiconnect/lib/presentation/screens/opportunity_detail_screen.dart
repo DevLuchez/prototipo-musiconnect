@@ -1,13 +1,9 @@
-import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
-import '../../core/config/api_config.dart';
 import '../../data/models/opportunity_model.dart';
 import '../../data/models/providers/auth_service.dart';
-import '../widgets/app_loading_indicator.dart';
 
 const _pink = Color(0xFFEC4899);
 const _purple = Color(0xFFDF2881);
@@ -27,6 +23,10 @@ Color _scoreColor(int earned, int max) {
   return const Color.fromARGB(255, 236, 72, 72);
 }
 
+/// Abre a aba Mapa focada na oportunidade: no pino da instituição, ou no
+/// marcador da cidade quando a instituição não tem localização exata.
+typedef OpenOpportunityOnMap = void Function(OpportunityModel opportunity);
+
 /// Tela de detalhes de uma oportunidade musical — duas abas arrastáveis
 /// (igual ao gesto da tela Matcher): "Informações do Edital" (conteúdo do
 /// edital) e "MusiMatch" (comparação do [MatchBreakdown] com o perfil do
@@ -35,8 +35,8 @@ class OpportunityDetailScreen extends StatefulWidget {
   final OpportunityModel opportunity;
   final AuthUser user;
 
-  /// Callback para navegar para a aba Mapa (recebido do MainNavigation).
-  final VoidCallback? onOpenMap;
+  /// Abre a aba Mapa focada na oportunidade (recebido do MainNavigation).
+  final OpenOpportunityOnMap? onOpenMap;
 
   const OpportunityDetailScreen({
     super.key,
@@ -52,7 +52,6 @@ class OpportunityDetailScreen extends StatefulWidget {
 
 class _OpportunityDetailScreenState extends State<OpportunityDetailScreen>
     with SingleTickerProviderStateMixin {
-  bool _mapSearchLoading = false;
   late final TabController _tabController;
 
   OpportunityModel get opp => widget.opportunity;
@@ -121,75 +120,15 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen>
     return parts.isEmpty ? 'Não informado' : parts.join(', ');
   }
 
-  // ── Fluxo de buscar/adicionar instituição no mapa ─────────────────────────
+  // ── Ver a instituição no mapa ─────────────────────────────────────────────
 
-  Future<void> _onMapButtonTapped() async {
-    final institution = opp.institution;
-    if (institution == null || institution.isEmpty) {
-      // Sem instituição identificada → apenas vai para o mapa
-      _navigateToMap();
-      return;
-    }
-
-    setState(() => _mapSearchLoading = true);
-
-    try {
-      final uri = Uri.parse(ApiConfig.institutionSearch)
-          .replace(queryParameters: {'name': institution});
-      final response = await http.get(uri).timeout(const Duration(seconds: 8));
-
-      if (!mounted) return;
-
-      final found = response.statusCode == 200 &&
-          (jsonDecode(response.body) as List).isNotEmpty;
-
-      if (found) {
-        // Instituição encontrada no mapa → navega
-        _navigateToMap(message: '📍 ${institution} encontrada no mapa!');
-      } else {
-        // Não encontrada → exibe BottomSheet para adicionar
-        await _showAddToMapSheet(institution);
-      }
-    } catch (_) {
-      // Falha de rede → vai para o mapa mesmo assim
-      if (mounted) _navigateToMap();
-    } finally {
-      if (mounted) setState(() => _mapSearchLoading = false);
-    }
-  }
-
-  void _navigateToMap({String? message}) {
+  /// Fecha esta tela e abre a aba Mapa já focada no pino da instituição
+  /// (ou no marcador da cidade) — o vínculo é resolvido pelo backend, então
+  /// nunca há nada para o usuário "adicionar".
+  void _openOnMap() {
+    if (!opp.isOnMap) return;
     Navigator.of(context).pop();
-    widget.onOpenMap?.call();
-    if (message != null) {
-      // Exibe snackbar após a transição
-      Future.delayed(const Duration(milliseconds: 400), () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(message),
-            duration: const Duration(seconds: 3),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: const Color(0xFF059669),
-          ),
-        );
-      });
-    }
-  }
-
-  Future<void> _showAddToMapSheet(String institutionName) async {
-    final result = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _AddToMapSheet(
-        institutionName: institutionName,
-        city: opp.city,
-        country: opp.country,
-      ),
-    );
-    if (result == true && mounted) {
-      _navigateToMap(message: '✅ ${institutionName} adicionada ao mapa!');
-    }
+    widget.onOpenMap?.call(opp);
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────
@@ -625,30 +564,30 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen>
   }
 
   Widget _buildLocationHighlight() {
-    final showMapLink = !opp.isRemote && widget.onOpenMap != null;
+    // Sem pino de instituição nem de cidade (remota, ou cidade não
+    // localizada) → sem botão.
+    final showMapLink = opp.isOnMap && widget.onOpenMap != null;
     return _HighlightCard(
       icon: Icons.location_on_rounded,
       label: 'LOCALIZAÇÃO',
       trailing: showMapLink
           ? GestureDetector(
-              onTap: _mapSearchLoading ? null : _onMapButtonTapped,
-              child: _mapSearchLoading
-                  ? const AppLoadingIndicator(size: 12, color: _purple)
-                  : const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.location_on_rounded, size: 12, color: _purple),
-                        SizedBox(width: 3),
-                        Text(
-                          'Ver no mapa',
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w600,
-                            color: _purple,
-                          ),
-                        ),
-                      ],
+              onTap: _openOnMap,
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.location_on_rounded, size: 12, color: _purple),
+                  SizedBox(width: 3),
+                  Text(
+                    'Ver no mapa',
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w600,
+                      color: _purple,
                     ),
+                  ),
+                ],
+              ),
             )
           : null,
       child: Text(
@@ -855,183 +794,6 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen>
         const SnackBar(content: Text('Não foi possível abrir o link.')),
       );
     }
-  }
-}
-
-// ── BottomSheet: adicionar instituição ao mapa ─────────────────────────────
-
-class _AddToMapSheet extends StatefulWidget {
-  final String institutionName;
-  final String? city;
-  final String? country;
-
-  const _AddToMapSheet({
-    required this.institutionName,
-    this.city,
-    this.country,
-  });
-
-  @override
-  State<_AddToMapSheet> createState() => _AddToMapSheetState();
-}
-
-class _AddToMapSheetState extends State<_AddToMapSheet> {
-  bool _loading = false;
-  String? _error;
-
-  Future<void> _addToMap() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      final body = jsonEncode({
-        'name': widget.institutionName,
-        'city': widget.city,
-        'country': widget.country,
-        'category': 'music',
-      });
-      final response = await http
-          .post(
-            Uri.parse(ApiConfig.institutionCreate),
-            headers: {'Content-Type': 'application/json'},
-            body: body,
-          )
-          .timeout(const Duration(seconds: 15));
-
-      if (!mounted) return;
-
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        Navigator.of(context).pop(true); // sucesso
-      } else {
-        final msg = jsonDecode(response.body)['detail'] ?? 'Erro desconhecido';
-        setState(() => _error = msg.toString());
-      }
-    } catch (e) {
-      if (mounted) setState(() => _error = 'Falha de conexão. Tente novamente.');
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Handle
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          const Text(
-            'Instituição não encontrada no mapa',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF111827),
-            ),
-          ),
-          const SizedBox(height: 8),
-          RichText(
-            text: TextSpan(
-              style: const TextStyle(
-                  fontSize: 13, color: Color(0xFF6B7280), height: 1.5),
-              children: [
-                const TextSpan(text: ''),
-                TextSpan(
-                  text: widget.institutionName,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF111827),
-                  ),
-                ),
-                const TextSpan(
-                  text:
-                      ' ainda não está cadastrada no mapa do MusiConnect.\n\nDeseja adicioná-la? Vamos geocodificar o endereço automaticamente usando OpenStreetMap.',
-                ),
-              ],
-            ),
-          ),
-
-          if (_error != null) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.red[50],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                _error!,
-                style: const TextStyle(color: Colors.red, fontSize: 12),
-              ),
-            ),
-          ],
-
-          const SizedBox(height: 20),
-
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  style: OutlinedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    side: const BorderSide(color: Color(0xFFE5E7EB)),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  child: const Text(
-                    'Agora não',
-                    style: TextStyle(color: Color(0xFF6B7280)),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _loading ? null : _addToMap,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _purple,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  child: _loading
-                      ? const AppLoadingIndicator(size: 18, color: Colors.white)
-                      : const Text(
-                          'Adicionar ao mapa',
-                          style: TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
-        ],
-      ),
-    );
   }
 }
 

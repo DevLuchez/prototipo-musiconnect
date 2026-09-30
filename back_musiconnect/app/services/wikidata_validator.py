@@ -7,7 +7,7 @@ Estratégia:
 - Faz o match localmente por proximidade geográfica (<= 500m) + similaridade
   de nome (>= 65%).
 - Muito mais eficiente: apenas 5 queries SPARQL para o mundo inteiro.
-- Enriquece com: website, description (texto rico para o RAG futuro).
+- Enriquece com: website (quando a instituição ainda não tem um).
 """
 
 import asyncio
@@ -64,17 +64,13 @@ def _name_similarity(a: str, b: str) -> float:
 def _build_sparql(q_ids: list[str]) -> str:
     values = " ".join(f"wd:{q}" for q in q_ids)
     return f"""
-SELECT DISTINCT ?item ?name ?coords ?website ?description WHERE {{
+SELECT DISTINCT ?item ?name ?coords ?website WHERE {{
   VALUES ?type {{ {values} }}
   ?item wdt:P31 ?type .
   ?item wdt:P625 ?coords .
   ?item rdfs:label ?name .
   FILTER(LANG(?name) IN ("pt", "en", "es", "fr", "de"))
   OPTIONAL {{ ?item wdt:P856 ?website }}
-  OPTIONAL {{
-    ?item schema:description ?description .
-    FILTER(LANG(?description) IN ("pt", "en"))
-  }}
 }}
 LIMIT 10000
 """
@@ -104,7 +100,6 @@ async def _fetch_wikidata(client: httpx.AsyncClient, q_ids: list[str]) -> list[d
                 "lat":         coords[0],
                 "lng":         coords[1],
                 "website":     b.get("website", {}).get("value"),
-                "description": b.get("description", {}).get("value"),
             })
         return items
 
@@ -167,15 +162,13 @@ async def run_wikidata_validation() -> dict:
                                 UPDATE institutions SET
                                     verified     = TRUE,
                                     wikidata_id  = :wid,
-                                    website      = COALESCE(website, :website),
-                                    description  = COALESCE(description, :desc)
+                                    website      = COALESCE(website, :website)
                                 WHERE osm_id = :osm_id AND wikidata_id IS NULL
                             """),
                             {
                                 "osm_id":  osm_id,
                                 "wid":     best["wikidata_id"],
                                 "website": best.get("website"),
-                                "desc":    best.get("description"),
                             },
                         )
                     except Exception:
@@ -184,11 +177,10 @@ async def run_wikidata_validation() -> dict:
                             text("""
                                 UPDATE institutions SET
                                     verified    = TRUE,
-                                    website     = COALESCE(website, :website),
-                                    description = COALESCE(description, :desc)
+                                    website     = COALESCE(website, :website)
                                 WHERE osm_id = :osm_id
                             """),
-                            {"osm_id": osm_id, "website": best.get("website"), "desc": best.get("description")},
+                            {"osm_id": osm_id, "website": best.get("website")},
                         )
                     db.commit()
                     matched += 1

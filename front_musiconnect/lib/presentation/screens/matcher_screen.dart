@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../data/models/providers/auth_service.dart';
 import '../../data/models/providers/opportunities_service.dart';
 import '../widgets/opportunity_browser_view.dart';
+import 'opportunity_detail_screen.dart';
 
 const _pink = Color(0xFFEC4899);
 
@@ -17,7 +18,7 @@ class MatcherScreen extends StatefulWidget {
   final AuthUser user;
 
   /// Chamado quando o usuário quer ver uma instituição no mapa.
-  final VoidCallback? onSwitchToMap;
+  final OpenOpportunityOnMap? onSwitchToMap;
 
   const MatcherScreen({super.key, required this.user, this.onSwitchToMap});
 

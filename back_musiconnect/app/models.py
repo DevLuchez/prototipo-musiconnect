@@ -1,6 +1,6 @@
 from sqlalchemy import (
     Column, String, Float, DateTime, Boolean, Text, Index,
-    Integer, Date, func
+    Integer, Date, ForeignKey, func
 )
 from sqlalchemy.dialects.postgresql import ARRAY
 from geoalchemy2 import Geography
@@ -28,10 +28,17 @@ class Institution(Base):
     lat = Column(Float, nullable=False)
     lng = Column(Float, nullable=False)
 
-    # Categorias: music_school, concert_hall, theatre, music_venue, arts_centre
-    category = Column(String, nullable=False, default="music")
+    # Categorias: music_school, concert_hall, theatre, music_venue, arts_centre,
+    # music_org (orquestra/festival — organizadoras criadas pelo pipeline)
+    category = Column(String, nullable=False)
 
-    # Fonte de onde veio (osm, google_places, curated)
+    # Fonte de onde veio:
+    #   osm      → ETL do Overpass (overpass_etl.py)
+    #   pipeline → criada pelo resolvedor a partir da organizadora de uma
+    #              oportunidade (institution_resolver.py)
+    #   curated  → cadastro manual futuro (ex: parceiros da SCAR)
+    # Nunca gravar dados vindos do Google Places aqui — os Termos de Uso
+    # só permitem exibição ao vivo, sem persistir.
     source = Column(String, nullable=False, default="osm")
 
     # Coluna geoespacial com índice GIST para buscas por raio ultra-rápidas
@@ -47,11 +54,12 @@ class Institution(Base):
     # True se confirmada por MusicBrainz ou Wikidata
     verified = Column(Boolean, nullable=False, default=False)
 
-    # Site oficial (enriquecido via MusicBrainz ou Wikidata)
+    # Site oficial — tag website do OSM (ETL / backfill_osm_contacts) ou,
+    # na falta dela, MusicBrainz/Wikidata. O primeiro preenchido é mantido.
     website = Column(String, nullable=True)
 
-    # Descrição curta da instituição (enriquecida via Wikidata, útil para RAG)
-    description = Column(Text, nullable=True)
+    # E-mail de contato — tag email do OSM (ETL / backfill_osm_contacts)
+    email = Column(String, nullable=True)
 
     # ID único no MusicBrainz (ex: "a2d3f7e0-...")
     mb_id = Column(String, nullable=True, unique=True)
@@ -124,6 +132,54 @@ class Opportunity(Base):
 
     # Data/hora em que o LLM enriqueceu o registro (NULL = ainda não processado)
     enriched_at = Column(DateTime, nullable=True)
+
+    # Pino do mapa ao qual a oportunidade pertence — preenchido pelo
+    # resolvedor (institution_resolver.py) a partir do texto de `institution`.
+    # NULL = remota, sem organizadora identificada ou não localizada.
+    institution_id = Column(
+        String,
+        ForeignKey("institutions.osm_id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+    # Categoria da organizadora sugerida pelo LLM (mesmos valores de
+    # Institution.category) — usada só quando o resolvedor precisa CRIAR a
+    # instituição; se ela já existe no mapa, a categoria de lá prevalece.
+    institution_category = Column(String(50), nullable=True)
+
+    # Centro da cidade da oportunidade — usado pelo marcador "oportunidades
+    # por cidade" do mapa quando a organizadora não pôde ser localizada
+    # (institution_id NULL). Preenchido pelo resolvedor.
+    city_location_id = Column(
+        Integer,
+        ForeignKey("city_locations.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+
+class CityLocation(Base):
+    """
+    Centro geográfico de uma cidade (geocodificado via Nominatim/OSM, licença
+    ODbL — pode ser armazenado). Uma linha por cidade+estado+país, reutilizada
+    por todas as oportunidades daquela cidade.
+    """
+
+    __tablename__ = "city_locations"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    # "cidade|estado|país" normalizados (sem acento/maiúsculas) — chave de
+    # deduplicação, já que o LLM grava os nomes em português ("Londres").
+    key = Column(String, nullable=False, unique=True)
+
+    city = Column(String(100), nullable=False)
+    state = Column(String(100), nullable=True)
+    country = Column(String(100), nullable=True)
+
+    lat = Column(Float, nullable=False)
+    lng = Column(Float, nullable=False)
 
 
 class User(Base):

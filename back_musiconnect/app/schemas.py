@@ -17,21 +17,15 @@ class InstitutionOut(BaseModel):
     # Campos de validação cruzada
     verified: bool = False
     website: Optional[str] = None
-    description: Optional[str] = None
+    email: Optional[str] = None
     mb_id: Optional[str] = None       # MusicBrainz Place ID
     wikidata_id: Optional[str] = None  # Wikidata QID (ex: Q4944615)
 
+    # Oportunidades visíveis no app vinculadas a este pino — > 0 destaca o
+    # marcador no mapa.
+    active_opportunities_count: int = 0
+
     model_config = {"from_attributes": True}
-
-
-class InstitutionCreate(BaseModel):
-    """Schema de entrada para criação de instituição via geocodificação."""
-
-    name: str
-    city: Optional[str] = None
-    country: Optional[str] = None
-    address: Optional[str] = None
-    category: str = "music"
 
 
 class NearbySearchParams(BaseModel):
@@ -60,6 +54,19 @@ class MatchBreakdownOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class CityOpportunitiesOut(BaseModel):
+    """Marcador "oportunidades por cidade" do mapa: oportunidades visíveis
+    daquela cidade cuja organizadora não pôde ser localizada."""
+
+    id: int  # city_locations.id
+    city: str
+    state: Optional[str] = None
+    country: Optional[str] = None
+    lat: float
+    lng: float
+    opportunities_count: int
+
+
 class OpportunityOut(BaseModel):
     """Schema de saída de oportunidade — o que o Flutter recebe na aba Matcher."""
 
@@ -77,6 +84,11 @@ class OpportunityOut(BaseModel):
     is_remote: Optional[bool] = None
     description: Optional[str] = None
     institution: Optional[str] = None
+    # Pino do mapa da organizadora (osm_id) — None quando remota ou não localizada
+    institution_id: Optional[str] = None
+    # Centro da cidade no mapa (marcador "oportunidades por cidade") — só
+    # usado quando não há institution_id
+    city_location_id: Optional[int] = None
     scraped_at: Optional[datetime] = None
     enriched_at: Optional[datetime] = None
     is_active: bool = True

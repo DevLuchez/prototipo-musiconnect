@@ -1,10 +1,18 @@
 import 'dart:async';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../data/models/opportunity_model.dart';
 import '../../data/models/place_model.dart';
+import '../../data/models/providers/auth_service.dart';
 import '../../data/models/providers/musicconnect_api_service.dart';
+import '../../data/models/providers/opportunities_service.dart';
 import '../widgets/app_loading_indicator.dart';
+import '../widgets/opportunity_card.dart';
+import 'opportunity_detail_screen.dart';
 
 const String _mapStyle = '''
 [
@@ -20,6 +28,8 @@ const String _mapStyle = '''
 const _pink = Color(0xFFEC4899);
 const _pinkTint = Color(0xFFFFFFFF);
 const _pinkIcon = Color(0xFFDF2881);
+// Estrela de "tem oportunidade aberta" — pinos, bolinhas de cidade e legenda.
+const _starColor = Color.fromARGB(255, 255, 183, 0);
 const _sheetHeaderStyle = TextStyle(
   fontSize: 18,
   fontWeight: FontWeight.w800,
@@ -67,10 +77,25 @@ const List<_CategoryFilter> _categoryFilters = [
     color: Colors.orange,
     categories: {'music_venue'},
   ),
+  _CategoryFilter(
+    key: 'music_org',
+    label: 'Orquestra / Festival',
+    color: Colors.green,
+    categories: {'music_org'},
+  ),
 ];
 
 class MapExplorerScreen extends StatefulWidget {
-  const MapExplorerScreen({super.key});
+  /// Usuário logado — repassado à tela de detalhes das oportunidades
+  /// abertas a partir do detalhe de uma instituição.
+  final AuthUser user;
+
+  /// Pedido para focar numa oportunidade (pino da instituição ou marcador
+  /// da cidade), vindo do botão "Ver no mapa". O mapa zera o valor depois
+  /// de atender.
+  final ValueNotifier<OpportunityModel?>? focusRequest;
+
+  const MapExplorerScreen({super.key, required this.user, this.focusRequest});
   @override
   State<MapExplorerScreen> createState() => _MapExplorerScreenState();
 }
@@ -79,6 +104,7 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
   GoogleMapController? _mapController;
   final MusicConnectApiService _apiService = MusicConnectApiService();
   Timer? _cameraDebounce;
+  Timer? _searchDebounce;
 
   // Marcadores e lugares
   final Map<MarkerId, Marker> _markers = {};
@@ -93,8 +119,31 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
   bool _showMarkers = true; // zoom inicial (12.0) já está acima do limite
 
   bool _isLoading = true;
+  bool _initialLoadDone = false;
   bool _backendOffline = false;
   int? _dbTotalCount;
+  int? _dbWithOpportunitiesCount;
+
+  // Oportunidade aguardando foco — o pedido pode chegar antes da carga
+  // inicial terminar ou do mapa nativo estar pronto.
+  OpportunityModel? _pendingFocus;
+
+  // Marcadores "oportunidades por cidade": oportunidades cuja organizadora
+  // não tem localização exata ficam numa bolinha com estrela, no centro da
+  // cidade — separada dos pinos de instituição.
+  final OpportunitiesService _opportunitiesService = OpportunitiesService();
+  List<CityOpportunities> _cities = [];
+  Map<MarkerId, Marker> _cityMarkers = {};
+  bool _showCityMarkers = true;
+
+  // Ícones dos marcadores, desenhados uma vez na carga inicial e
+  // reaproveitados por todos os pinos (chave = hue da categoria). Todos os
+  // pinos são desenhados — não só os com estrela — para que a única
+  // diferença visual seja a estrela: o google_maps_flutter não permite
+  // sobrepor nada ao pino padrão do Google.
+  final Map<double, BitmapDescriptor> _pinIcons = {};
+  final Map<double, BitmapDescriptor> _starPinIcons = {};
+  BitmapDescriptor? _starCityIcon;
 
   // Busca
   final TextEditingController _searchController = TextEditingController();
@@ -106,6 +155,12 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
   // (nenhum filtro aplicado, todos os marcadores aparecem).
   Set<String> _activeFilterKeys =
       _categoryFilters.map((f) => f.key).toSet();
+  bool _onlyWithOpportunities = false;
+
+  int get _activeFilterCount =>
+      (_categoryFilters.length - _activeFilterKeys.length) +
+      (_onlyWithOpportunities ? 1 : 0) +
+      (_showCityMarkers ? 0 : 1);
 
   static final Map<String, double> _hues = {
     'music_school': BitmapDescriptor.hueAzure,
@@ -113,17 +168,21 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
     'arts_centre':  BitmapDescriptor.hueRose,
     'theatre':      BitmapDescriptor.hueViolet,
     'music_venue':  BitmapDescriptor.hueOrange,
+    'music_org':    BitmapDescriptor.hueGreen,
   };
 
   @override
   void initState() {
     super.initState();
+    widget.focusRequest?.addListener(_onFocusRequest);
     _initialLoad();
   }
 
   @override
   void dispose() {
+    widget.focusRequest?.removeListener(_onFocusRequest);
     _cameraDebounce?.cancel();
+    _searchDebounce?.cancel();
     _mapController?.dispose();
     _searchController.dispose();
     _searchFocus.dispose();
@@ -140,23 +199,248 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
       setState(() {
         _backendOffline = true;
         _isLoading = false;
+        _initialLoadDone = true;
       });
       return;
     }
 
     setState(() => _isLoading = true);
 
+    // Antes de criar qualquer marcador, que já usa esses ícones
+    await _prepareMarkerIcons();
     final places = await _apiService.fetchAll(limit: 5000);
-    final total = await _apiService.fetchTotalCount();
+    final stats = await _apiService.fetchStats();
     if (!mounted) return;
 
     for (final p in places) {
-      _addPlace(p, fromBackend: true);
+      _addPlace(p);
     }
-    _dbTotalCount = total;
+    _dbTotalCount = stats?.total;
+    _dbWithOpportunitiesCount = stats?.withOpportunities;
+    await _loadCities();
+    if (!mounted) return;
 
-    setState(() => _isLoading = false);
+    setState(() {
+      _isLoading = false;
+      _initialLoadDone = true;
+    });
     _nudgeMapRedraw();
+    _focusPending();
+  }
+
+  // ── Foco vindo de uma oportunidade ("Ver no mapa") ─────────────
+
+  void _onFocusRequest() {
+    final opp = widget.focusRequest?.value;
+    if (opp == null) return;
+    widget.focusRequest!.value = null;
+    _pendingFocus = opp;
+    _focusPending();
+  }
+
+  /// Leva o mapa até a oportunidade pendente: pino da instituição, ou o
+  /// marcador da cidade quando a organizadora não tem localização exata.
+  Future<void> _focusPending() async {
+    final opp = _pendingFocus;
+    if (opp == null || !_initialLoadDone || _mapController == null) return;
+    _pendingFocus = null;
+
+    final osmId = opp.institutionId;
+    final cityId = opp.cityLocationId;
+    if (osmId != null) {
+      await _focusInstitution(osmId);
+    } else if (cityId != null) {
+      await _focusCity(cityId);
+    }
+  }
+
+  void _showNotFoundOnMap() {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text('Não foi possível localizar esta oportunidade no mapa.'),
+      behavior: SnackBarBehavior.floating,
+    ));
+  }
+
+  /// Centraliza no pino da instituição e abre o detalhe dela. Se o pino
+  /// ainda não foi carregado (fora da carga inicial), busca no backend; se
+  /// algum filtro ativo o esconderia, limpa os filtros.
+  Future<void> _focusInstitution(String osmId) async {
+    final place = _places.where((p) => p.osmId == osmId).firstOrNull ??
+        await _apiService.fetchById(osmId);
+    if (!mounted) return;
+    if (place == null) {
+      _showNotFoundOnMap();
+      return;
+    }
+    await _focusPlace(place);
+  }
+
+  /// Adiciona o pino (se ainda não estava carregado), garante que nenhum
+  /// filtro o esconda, centraliza e abre o detalhe da instituição — usado
+  /// pelo "Ver no mapa" das oportunidades e pela barra de busca.
+  Future<void> _focusPlace(PlaceModel place) async {
+    // Se já estava carregado, usa a instância do mapa (mesmo marcador)
+    final target =
+        _places.where((p) => p.id == place.id).firstOrNull ?? place;
+    setState(() {
+      _addPlace(target);
+      if (!_isVisible(target)) {
+        _activeFilterKeys = _categoryFilters.map((f) => f.key).toSet();
+        _onlyWithOpportunities = false;
+      }
+    });
+    await _mapController?.animateCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(target: LatLng(target.lat, target.lng), zoom: 16),
+      ),
+    );
+    if (mounted) _showDetail(target);
+  }
+
+  /// Centraliza no marcador da cidade e abre a lista das oportunidades dela.
+  Future<void> _focusCity(int cityId) async {
+    var city = _cities.where((c) => c.id == cityId).firstOrNull;
+    if (city == null) {
+      // Vínculo criado depois da carga inicial — recarrega os marcadores.
+      await _loadCities();
+      city = _cities.where((c) => c.id == cityId).firstOrNull;
+    }
+    if (!mounted) return;
+    if (city == null) {
+      _showNotFoundOnMap();
+      return;
+    }
+
+    final target = city;
+    if (!_showCityMarkers) setState(() => _showCityMarkers = true);
+    await _mapController?.animateCamera(
+      CameraUpdate.newLatLngZoom(LatLng(target.lat, target.lng), 11),
+    );
+    if (mounted) _showCityDetail(target);
+  }
+
+  // ── Oportunidades por cidade ──────────────────────────────────
+
+  Future<void> _loadCities() async {
+    final cities = await _opportunitiesService.fetchCities();
+    final markers = <MarkerId, Marker>{};
+    for (final c in cities) {
+      final id = MarkerId('city_${c.id}');
+      markers[id] = Marker(
+        markerId: id,
+        position: LatLng(c.lat, c.lng),
+        icon: _starCityIcon ??
+            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRose),
+        anchor: const Offset(0.5, 0.5),
+        zIndex: 3.0,
+        onTap: () => _showCityDetail(c),
+      );
+    }
+    if (!mounted) return;
+    setState(() {
+      _cities = cities;
+      _cityMarkers = markers;
+    });
+  }
+
+  // ── Ícones dos marcadores ─────────────────────────────────────
+
+  Future<void> _prepareMarkerIcons() async {
+    final dpr = ui.PlatformDispatcher.instance.views.first.devicePixelRatio;
+    for (final hue in {..._hues.values, BitmapDescriptor.hueViolet}) {
+      _pinIcons[hue] = await _drawPin(hue, dpr, withStar: false);
+      _starPinIcons[hue] = await _drawPin(hue, dpr, withStar: true);
+    }
+    _starCityIcon = await _drawStarCity(dpr);
+  }
+
+  /// Estrela de 5 pontas centrada em [center].
+  static Path _starPath(Offset center, double outerRadius) {
+    final innerRadius = outerRadius * 0.45;
+    final path = Path();
+    for (var i = 0; i < 10; i++) {
+      final r = i.isEven ? outerRadius : innerRadius;
+      final angle = -math.pi / 2 + i * math.pi / 5;
+      final point = center + Offset(r * math.cos(angle), r * math.sin(angle));
+      if (i == 0) {
+        path.moveTo(point.dx, point.dy);
+      } else {
+        path.lineTo(point.dx, point.dy);
+      }
+    }
+    return path..close();
+  }
+
+  static Future<BitmapDescriptor> _toBitmap(
+      ui.PictureRecorder recorder, double width, double height, double dpr) async {
+    final image = await recorder
+        .endRecording()
+        .toImage(width.round(), height.round());
+    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+    return BytesMapBitmap(bytes!.buffer.asUint8List(), imagePixelRatio: dpr);
+  }
+
+  /// Pino em gota na cor da categoria — com estrela amarela na cabeça quando
+  /// a instituição tem oportunidade aberta, ou com o miolo escuro do pino
+  /// padrão do Google quando não tem.
+  static Future<BitmapDescriptor> _drawPin(double hue, double dpr,
+      {required bool withStar}) async {
+    final width = 28 * dpr;
+    final height = 42 * dpr;
+    final r = width / 2;
+    final head = Offset(width / 2, r);
+    final fill = HSVColor.fromAHSV(1, hue, 0.8, 0.95).toColor();
+    final dark = HSVColor.fromAHSV(1, hue, 0.8, 0.6).toColor();
+
+    // Cabeça redonda + ponta triangular (os cantos do triângulo ficam sobre
+    // a circunferência, então a união não tem "degrau").
+    final body = Path.combine(
+      PathOperation.union,
+      Path()..addOval(Rect.fromCircle(center: head, radius: r - dpr)),
+      Path()
+        ..moveTo(width / 2 - r * 0.78, r + r * 0.62)
+        ..lineTo(width / 2, height - dpr)
+        ..lineTo(width / 2 + r * 0.78, r + r * 0.62)
+        ..close(),
+    );
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    canvas.drawPath(body, Paint()..color = fill);
+    canvas.drawPath(
+      body,
+      Paint()
+        ..color = dark
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = dpr,
+    );
+    if (withStar) {
+      canvas.drawPath(_starPath(head, r * 0.62), Paint()..color = _starColor);
+    } else {
+      canvas.drawCircle(head, r * 0.3, Paint()..color = dark);
+    }
+    return _toBitmap(recorder, width, height, dpr);
+  }
+
+  /// Bolinha rosa com estrela amarela — marcador de cidade.
+  static Future<BitmapDescriptor> _drawStarCity(double dpr) async {
+    final size = 30 * dpr;
+    final center = Offset(size / 2, size / 2);
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    canvas.drawCircle(center, size / 2, Paint()..color = Colors.white);
+    canvas.drawCircle(center, size / 2 - 3 * dpr, Paint()..color = _pink);
+    canvas.drawPath(_starPath(center, size * 0.28), Paint()..color = _starColor);
+    return _toBitmap(recorder, size, size, dpr);
+  }
+
+  void _showCityDetail(CityOpportunities city) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _CitySheet(city: city, user: widget.user),
+    );
   }
 
   // ── Busca no backend (ao mover câmera) ────────────────────────
@@ -177,7 +461,7 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
     if (!mounted) return;
 
     for (final p in places) {
-      _addPlace(p, fromBackend: true);
+      _addPlace(p);
     }
 
     setState(() => _isLoading = false);
@@ -199,59 +483,64 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
 
   /// Adiciona uma instituição à lista e mapa de marcadores.
   /// Retorna true se era nova (não duplicada).
-  bool _addPlace(PlaceModel p, {required bool fromBackend}) {
+  bool _addPlace(PlaceModel p) {
     if (_loadedIds.contains(p.id)) return false;
     _loadedIds.add(p.id);
     _places.add(p);
     final mid = MarkerId(p.id);
-    _markers[mid] = _buildMarker(p, fromBackend: fromBackend);
+    _markers[mid] = _buildMarker(p);
     return true;
   }
 
   // ── Busca por texto ───────────────────────────────────────────
 
+  /// Busca no backend, em todas as instituições — o mapa só tem parte delas
+  /// em memória. Espera uma pausa na digitação antes de consultar; se o
+  /// backend falhar, cai na busca local (só no que já está carregado).
   void _onSearchChanged(String query) {
-    if (query.trim().isEmpty) {
+    _searchDebounce?.cancel();
+    final term = query.trim();
+    if (term.length < 2) {
       setState(() {
         _searchResults = [];
         _showSearchResults = false;
       });
       return;
     }
-    final lower = query.toLowerCase();
-    setState(() {
-      _searchResults = _places
-          .where((p) =>
-              p.name.toLowerCase().contains(lower) ||
-              (p.address?.toLowerCase().contains(lower) ?? false) ||
-              p.categoryLabel.toLowerCase().contains(lower))
-          .take(8)
-          .toList();
-      _showSearchResults = true;
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () async {
+      final results = await _apiService.search(term) ?? _searchLocal(term);
+      // Descarta respostas atrasadas de um termo que já foi alterado
+      if (!mounted || _searchController.text.trim() != term) return;
+      setState(() {
+        _searchResults = results;
+        _showSearchResults = true;
+      });
     });
   }
 
+  List<PlaceModel> _searchLocal(String term) {
+    final lower = term.toLowerCase();
+    return _places
+        .where((p) =>
+            p.name.toLowerCase().contains(lower) ||
+            (p.address?.toLowerCase().contains(lower) ?? false))
+        .take(8)
+        .toList();
+  }
+
   void _navigateToPlace(PlaceModel p) {
-    _mapController?.animateCamera(
-      CameraUpdate.newCameraPosition(
-        CameraPosition(target: LatLng(p.lat, p.lng), zoom: 16),
-      ),
-    );
+    _searchDebounce?.cancel();
     _searchController.clear();
     _searchFocus.unfocus();
     setState(() {
       _searchResults = [];
       _showSearchResults = false;
     });
-    // Abre o infoWindow após a animação
-    Future.delayed(const Duration(milliseconds: 600), () {
-      if (mounted) {
-        _mapController?.showMarkerInfoWindow(MarkerId(p.id));
-      }
-    });
+    _focusPlace(p);
   }
 
   void _clearSearch() {
+    _searchDebounce?.cancel();
     _searchController.clear();
     _searchFocus.unfocus();
     setState(() {
@@ -264,6 +553,7 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
 
   void _onMapCreated(GoogleMapController c) {
     _mapController = c;
+    _focusPending();
     // Confirma o zoom real assim que o mapa nativo está pronto: o primeiro
     // onCameraMove pode reportar um zoom incorreto (view ainda sem
     // dimensões finais), o que deixaria _showMarkers travado em false até
@@ -296,19 +586,22 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
 
   // ── Filtro por tipo ──────────────────────────────────────────────
 
-  /// Marcadores exibidos no mapa, considerando o filtro de tipo ativo.
-  /// Com todos os tipos selecionados (padrão), mostra tudo — inclusive
-  /// categorias fora dos grupos conhecidos (ex.: ruído de tags do OSM).
+  /// Se a instituição passa pelos filtros ativos (tipo + "só com
+  /// oportunidades abertas"). Com todos os tipos selecionados (padrão),
+  /// qualquer categoria passa — inclusive as fora dos grupos conhecidos
+  /// (ex.: ruído de tags do OSM).
+  bool _isVisible(PlaceModel p) {
+    if (_onlyWithOpportunities && !p.hasActiveOpportunities) return false;
+    if (_activeFilterKeys.length == _categoryFilters.length) return true;
+    return _categoryFilters.any((f) =>
+        _activeFilterKeys.contains(f.key) && f.categories.contains(p.category));
+  }
+
+  /// Marcadores exibidos no mapa, considerando os filtros ativos.
   Set<Marker> get _visibleMarkers {
-    if (_activeFilterKeys.length == _categoryFilters.length) {
-      return Set.of(_markers.values);
-    }
-    final allowedCategories = <String>{
-      for (final f in _categoryFilters)
-        if (_activeFilterKeys.contains(f.key)) ...f.categories,
-    };
+    if (_activeFilterCount == 0) return Set.of(_markers.values);
     return _places
-        .where((p) => allowedCategories.contains(p.category))
+        .where(_isVisible)
         .map((p) => _markers[MarkerId(p.id)])
         .whereType<Marker>()
         .toSet();
@@ -318,9 +611,14 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
     // Seleção provisória — só é aplicada de fato (setState no estado da
     // tela, que filtra os marcadores) quando o usuário toca em "Aplicar".
     final draftKeys = Set<String>.of(_activeFilterKeys);
+    var draftOnlyWithOpportunities = _onlyWithOpportunities;
+    var draftShowCityMarkers = _showCityMarkers;
 
     showModalBottomSheet(
       context: context,
+      // Sem isso o sheet fica limitado a ~56% da tela e o conteúdo estoura
+      // em telas menores — a parte do meio rola, cabeçalho e rodapé ficam.
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => StatefulBuilder(
         builder: (context, setModalState) {
@@ -335,6 +633,9 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
           }
 
           return Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.85,
+            ),
             decoration: const BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -361,32 +662,68 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
                 ),
                 const Divider(height: 1),
 
-                // ── Lista de tipos ───────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Column(
-                    children: [
-                      for (final f in _categoryFilters)
-                        CheckboxListTile(
-                          value: draftKeys.contains(f.key),
-                          onChanged: (v) => toggle(f.key, v ?? false),
-                          controlAffinity: ListTileControlAffinity.leading,
-                          contentPadding: EdgeInsets.zero,
-                          activeColor: _pink,
-                          title: Row(children: [
-                            Container(
-                              width: 14,
-                              height: 14,
-                              decoration: BoxDecoration(
-                                  color: f.color, shape: BoxShape.circle),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                                child: Text(f.label,
-                                    style: const TextStyle(fontSize: 14))),
-                          ]),
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // ── Só com oportunidades abertas ─────────────────
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: SwitchListTile(
+                            value: draftOnlyWithOpportunities,
+                            onChanged: (v) =>
+                                setModalState(() => draftOnlyWithOpportunities = v),
+                            contentPadding: EdgeInsets.zero,
+                            activeColor: _pink,
+                            title: const Text('Só com oportunidades abertas',
+                                style: TextStyle(fontSize: 14)),
+                          ),
                         ),
-                    ],
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: SwitchListTile(
+                            value: draftShowCityMarkers,
+                            onChanged: (v) =>
+                                setModalState(() => draftShowCityMarkers = v),
+                            contentPadding: EdgeInsets.zero,
+                            activeColor: _pink,
+                            title: const Text('Oportunidades por cidade',
+                                style: TextStyle(fontSize: 14)),
+                          ),
+                        ),
+                        const Divider(height: 1),
+
+                        // ── Lista de tipos ───────────────────────────────
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Column(
+                            children: [
+                              for (final f in _categoryFilters)
+                                CheckboxListTile(
+                                  value: draftKeys.contains(f.key),
+                                  onChanged: (v) => toggle(f.key, v ?? false),
+                                  controlAffinity: ListTileControlAffinity.leading,
+                                  contentPadding: EdgeInsets.zero,
+                                  activeColor: _pink,
+                                  title: Row(children: [
+                                    Container(
+                                      width: 14,
+                                      height: 14,
+                                      decoration: BoxDecoration(
+                                          color: f.color, shape: BoxShape.circle),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                        child: Text(f.label,
+                                            style: const TextStyle(fontSize: 14))),
+                                  ]),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
 
@@ -408,6 +745,8 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
                               draftKeys
                                 ..clear()
                                 ..addAll(_categoryFilters.map((f) => f.key));
+                              draftOnlyWithOpportunities = false;
+                              draftShowCityMarkers = true;
                             });
                           },
                           style: OutlinedButton.styleFrom(
@@ -426,7 +765,12 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
                         flex: 2,
                         child: ElevatedButton(
                           onPressed: () {
-                            setState(() => _activeFilterKeys = draftKeys);
+                            setState(() {
+                              _activeFilterKeys = draftKeys;
+                              _onlyWithOpportunities =
+                                  draftOnlyWithOpportunities;
+                              _showCityMarkers = draftShowCityMarkers;
+                            });
                             Navigator.of(context).pop();
                           },
                           style: ElevatedButton.styleFrom(
@@ -457,25 +801,32 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
 
   // ── Marcadores ────────────────────────────────────────────────
 
-  Marker _buildMarker(PlaceModel p, {required bool fromBackend}) => Marker(
-        markerId: MarkerId(p.id),
-        position: LatLng(p.lat, p.lng),
-        icon: BitmapDescriptor.defaultMarkerWithHue(
-          _hues[p.category] ?? BitmapDescriptor.hueViolet,
-        ),
-        infoWindow: InfoWindow(
-          title: p.name,
-          snippet: '${p.categoryLabel}${p.address != null ? ' · ${p.address}' : ''}',
-        ),
-        onTap: () => _showDetail(p),
-        zIndex: fromBackend ? 2.0 : 1.0,
-      );
+  Marker _buildMarker(PlaceModel p) {
+    final highlighted = p.hasActiveOpportunities;
+    final snippet = [
+      p.categoryLabel,
+      if (highlighted) _openOpportunitiesLabel(p.activeOpportunitiesCount),
+      if (p.address != null) p.address!,
+    ].join(' · ');
+    final hue = _hues[p.category] ?? BitmapDescriptor.hueViolet;
+    return Marker(
+      markerId: MarkerId(p.id),
+      position: LatLng(p.lat, p.lng),
+      // Com oportunidade aberta → mesmo pino, com estrela
+      icon: (highlighted ? _starPinIcons[hue] : _pinIcons[hue]) ??
+          BitmapDescriptor.defaultMarkerWithHue(hue),
+      infoWindow: InfoWindow(title: p.name, snippet: snippet),
+      onTap: () => _showDetail(p),
+      zIndex: highlighted ? 2.0 : 1.0,
+    );
+  }
 
   void _showDetail(PlaceModel p) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _DetailSheet(place: p),
+      builder: (_) => _DetailSheet(place: p, user: widget.user),
     );
   }
 
@@ -495,7 +846,13 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
             onMapCreated: _onMapCreated,
             initialCameraPosition:
                 CameraPosition(target: _mapCenter, zoom: 12.0),
-            markers: _showMarkers ? _visibleMarkers : const {},
+            // Instituições e cidades somem juntas abaixo de _markersMinZoom.
+            markers: _showMarkers
+                ? {
+                    ..._visibleMarkers,
+                    if (_showCityMarkers) ..._cityMarkers.values,
+                  }
+                : const {},
             style: _mapStyle,
             myLocationEnabled: false,
             myLocationButtonEnabled: false,
@@ -611,8 +968,7 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
                           children: [
                             const Icon(Icons.tune_rounded,
                                 size: 20, color: _pinkIcon),
-                            if (_activeFilterKeys.length <
-                                _categoryFilters.length)
+                            if (_activeFilterCount > 0)
                               Positioned(
                                 top: 6,
                                 right: 6,
@@ -625,7 +981,7 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
                                   ),
                                   child: Center(
                                     child: Text(
-                                      '${_categoryFilters.length - _activeFilterKeys.length}',
+                                      '$_activeFilterCount',
                                       style: const TextStyle(
                                         fontSize: 8,
                                         fontWeight: FontWeight.w700,
@@ -832,8 +1188,12 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
   void _showLegend() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
         decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -861,28 +1221,80 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
             const Divider(height: 1),
 
             // ── Itens ────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  for (final f in _categoryFilters)
-                    _legendItem(f.color, f.label),
-                  const Divider(height: 24),
-                  Row(children: [
-                    const Icon(Icons.storage, size: 14, color: Colors.grey),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        _dbTotalCount != null
-                            ? '$_dbTotalCount instituições catalogadas na base de dados.'
-                            : 'Carregando total de instituições catalogadas...',
-                        style:
-                            const TextStyle(color: Colors.grey, fontSize: 11),
-                      ),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (final f in _categoryFilters)
+                      _legendItem(f.color, f.label),
+                    const Divider(height: 24),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(children: [
+                        SizedBox(
+                          width: 18,
+                          height: 22,
+                          child: Stack(
+                            alignment: Alignment.topCenter,
+                            children: [
+                              Icon(Icons.location_on,
+                                  size: 22, color: Colors.grey[600]),
+                              const Padding(
+                                padding: EdgeInsets.only(top: 3.5),
+                                child: Icon(Icons.star_rounded,
+                                    size: 10, color: _starColor),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'Pino com estrela: instituição com oportunidades abertas',
+                            style: TextStyle(fontSize: 13),
+                          ),
+                        ),
+                      ]),
                     ),
-                  ]),
-                ],
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(children: [
+                        Container(
+                          width: 18,
+                          height: 18,
+                          decoration: const BoxDecoration(
+                              color: _pink, shape: BoxShape.circle),
+                          child: const Icon(Icons.star_rounded,
+                              size: 12, color: _starColor),
+                        ),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'Bolinha com estrela: oportunidades na cidade, de instituições sem endereço exato',
+                            style: TextStyle(fontSize: 13),
+                          ),
+                        ),
+                      ]),
+                    ),
+                    const Divider(height: 24),
+                    Row(children: [
+                      const Icon(Icons.storage, size: 14, color: Colors.grey),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          _dbTotalCount != null
+                              ? '$_dbTotalCount instituições catalogadas na base de dados'
+                                  '${_dbWithOpportunitiesCount != null ? ', $_dbWithOpportunitiesCount com oportunidades abertas' : ''}.'
+                              : 'Carregando total de instituições catalogadas...',
+                          style:
+                              const TextStyle(color: Colors.grey, fontSize: 11),
+                        ),
+                      ),
+                    ]),
+                  ],
+                ),
               ),
             ),
           ],
@@ -890,6 +1302,9 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
       ),
     );
   }
+
+  static String _openOpportunitiesLabel(int n) =>
+      n == 1 ? '1 oportunidade aberta' : '$n oportunidades abertas';
 
   Widget _legendItem(Color color, String label) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
@@ -899,16 +1314,209 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
               height: 14,
               decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
           const SizedBox(width: 10),
-          Text(label, style: const TextStyle(fontSize: 13)),
+          Expanded(child: Text(label, style: const TextStyle(fontSize: 13))),
         ]),
       );
 }
 
+// ── Widget: sheet de oportunidades de uma cidade ──────────────────
+
+class _CitySheet extends StatefulWidget {
+  final CityOpportunities city;
+  final AuthUser user;
+  const _CitySheet({required this.city, required this.user});
+
+  @override
+  State<_CitySheet> createState() => _CitySheetState();
+}
+
+class _CitySheetState extends State<_CitySheet> {
+  // null = carregando
+  List<OpportunityModel>? _opportunities;
+
+  @override
+  void initState() {
+    super.initState();
+    OpportunitiesService()
+        .fetchOpportunities(cityLocationId: widget.city.id)
+        .then((result) {
+      if (mounted) setState(() => _opportunities = result.items);
+    });
+  }
+
+  void _openOpportunity(OpportunityModel opp) {
+    // Sem onOpenMap: quem chegou aqui já está no mapa, com esta cidade aberta.
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => OpportunityDetailScreen(opportunity: opp, user: widget.user),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final items = _opportunities;
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.85,
+      ),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Cabeçalho ──────────────────────────────────────────
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 10, bottom: 8),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Row(children: [
+              const Icon(Icons.location_city_rounded, color: _pinkIcon),
+              const SizedBox(width: 8),
+              Expanded(
+                  child: Text(widget.city.label, style: _sheetHeaderStyle)),
+            ]),
+          ),
+          const Divider(height: 1),
+
+          // ── Oportunidades ──────────────────────────────────────
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'As instituições destas oportunidades não têm endereço '
+                    'exato cadastrado, por isso elas aparecem no centro da cidade.',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                  ),
+                  const SizedBox(height: 8),
+                  if (items == null)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: Center(child: AppLoadingIndicator(size: 24)),
+                    )
+                  else if (items.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
+                        'Não foi possível carregar as oportunidades.',
+                        style: TextStyle(color: Colors.grey[500], fontSize: 13),
+                      ),
+                    )
+                  else
+                    for (final opp in items)
+                      OpportunityCard(
+                        opportunity: opp,
+                        matchPercentage: opp.matchPercentage,
+                        margin: const EdgeInsets.symmetric(vertical: 6),
+                        onTap: () => _openOpportunity(opp),
+                      ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ── Widget: sheet de detalhes ─────────────────────────────────────
 
-class _DetailSheet extends StatelessWidget {
+class _DetailSheet extends StatefulWidget {
   final PlaceModel place;
-  const _DetailSheet({required this.place});
+  final AuthUser user;
+  const _DetailSheet({required this.place, required this.user});
+
+  @override
+  State<_DetailSheet> createState() => _DetailSheetState();
+}
+
+class _DetailSheetState extends State<_DetailSheet> {
+  // null = carregando; só é buscado quando o pino tem oportunidades abertas.
+  List<OpportunityModel>? _opportunities;
+
+  PlaceModel get place => widget.place;
+
+  @override
+  void initState() {
+    super.initState();
+    final osmId = place.osmId;
+    if (place.hasActiveOpportunities && osmId != null) {
+      OpportunitiesService().fetchByInstitution(osmId).then((items) {
+        if (mounted) setState(() => _opportunities = items);
+      });
+    }
+  }
+
+  void _openOpportunity(OpportunityModel opp) {
+    // Sem onOpenMap: quem chegou aqui já está no mapa, com este pino aberto.
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => OpportunityDetailScreen(opportunity: opp, user: widget.user),
+    ));
+  }
+
+  Widget _buildOpportunities() {
+    final items = _opportunities;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 14),
+        const Divider(height: 1),
+        const SizedBox(height: 12),
+        Text(
+          'Oportunidades abertas (${place.activeOpportunitiesCount})',
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF111827),
+          ),
+        ),
+        const SizedBox(height: 4),
+        if (items == null)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(child: AppLoadingIndicator(size: 24)),
+          )
+        else if (items.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              'Não foi possível carregar as oportunidades.',
+              style: TextStyle(color: Colors.grey[500], fontSize: 13),
+            ),
+          )
+        else
+          for (final opp in items)
+            OpportunityCard(
+              opportunity: opp,
+              matchPercentage: opp.matchPercentage,
+              margin: const EdgeInsets.symmetric(vertical: 6),
+              onTap: () => _openOpportunity(opp),
+            ),
+      ],
+    );
+  }
+
+  static final ButtonStyle _linkButtonStyle = OutlinedButton.styleFrom(
+    foregroundColor: const Color(0xFFDF2881),
+    side: const BorderSide(color: Color(0xFFDF2881)),
+    textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+  );
 
   Future<void> _openUrl(String url) async {
     final uri = Uri.parse(url);
@@ -917,11 +1525,48 @@ class _DetailSheet extends StatelessWidget {
     }
   }
 
-  void _openInGoogleMaps() => _openUrl(
-      'https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lng}');
+  /// Abre a instituição no app de mapas sem nunca mostrar coordenadas cruas:
+  ///  - com endereço → busca "nome, endereço" no Google Maps (abre a página
+  ///    do lugar, com endereço/fotos/horário);
+  ///  - sem endereço → pino no ponto exato, rotulado com o nome: `geo:` no
+  ///    Android (Google Maps) e Apple Maps no iOS (o link do Google Maps
+  ///    não aceita "ponto + rótulo", só busca por texto, que poderia cair
+  ///    num lugar homônimo de outra cidade).
+  void _openInMaps() {
+    final address = place.address;
+    if (address != null && address.isNotEmpty) {
+      _openUrl(Uri.https('www.google.com', '/maps/search/', {
+        'api': '1',
+        'query': '${place.name}, $address',
+      }).toString());
+      return;
+    }
+
+    final coords = '${place.lat},${place.lng}';
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        // Parênteses delimitam o rótulo — remove os do próprio nome.
+        final label = Uri.encodeComponent(
+            place.name.replaceAll(RegExp(r'[()]'), ''));
+        _openUrl('geo:0,0?q=$coords($label)');
+      case TargetPlatform.iOS:
+        _openUrl(Uri.https('maps.apple.com', '/', {
+          'll': coords,
+          'q': place.name,
+        }).toString());
+      default:
+        _openUrl(Uri.https('www.google.com', '/maps/search/', {
+          'api': '1',
+          'query': coords,
+        }).toString());
+    }
+  }
 
   @override
   Widget build(BuildContext context) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
         decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -945,21 +1590,46 @@ class _DetailSheet extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               child: Row(children: [
-                const Icon(Icons.business_rounded, color: Color(0xFFDF2881)),
-                const SizedBox(width: 8),
+                // Instituição confirmada no Wikidata/MusicBrainz → só um
+                // check discreto no ícone (um selo "Verificado" dava má
+                // impressão às que não têm).
+                SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      const Icon(Icons.business_rounded, color: Color(0xFFDF2881)),
+                      if (place.verified)
+                        Positioned(
+                          right: 0,
+                          bottom: 0,
+                          child: Container(
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.verified,
+                                size: 14, color: Colors.green[600]),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 4),
                 Expanded(child: Text(place.name, style: _sheetHeaderStyle)),
               ]),
             ),
             const Divider(height: 1),
 
             // ── Detalhes ─────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Categoria + badge verificado
-                  Wrap(spacing: 8, children: [
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Categoria
                     Chip(
                       label: Text(place.categoryLabel,
                           style: const TextStyle(fontSize: 13)),
@@ -968,82 +1638,70 @@ class _DetailSheet extends StatelessWidget {
                       labelStyle: const TextStyle(color: Color(0xFFDF2881)),
                       side: BorderSide.none,
                     ),
-                    if (place.verified)
-                      Chip(
-                        avatar: const Icon(Icons.verified,
-                            size: 16, color: Colors.white),
-                        label: const Text('Verificado',
-                            style:
-                                TextStyle(color: Colors.white, fontSize: 12)),
-                        backgroundColor: Colors.green[600],
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        side: BorderSide.none,
-                      ),
-                  ]),
 
-                  // Endereço + botão "Ver no Google Maps"
-                  const SizedBox(height: 12),
-                  Row(children: [
-                    const Icon(Icons.location_on, size: 16, color: Colors.grey),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        place.address ?? 'Endereço não disponível',
-                        style: const TextStyle(
-                            color: Colors.grey, fontSize: 13),
-                      ),
-                    ),
-                  ]),
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    onPressed: _openInGoogleMaps,
-                    icon: const Icon(Icons.map_rounded, size: 16),
-                    label: const Text('Ver no Google Maps'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFFDF2881),
-                      side: const BorderSide(color: Color(0xFFDF2881)),
-                      textStyle: const TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w600),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 8),
-                    ),
-                  ),
-
-                  // Descrição
-                  if (place.description != null) ...[
-                    const SizedBox(height: 14),
-                    Text(place.description!,
-                        style:
-                            TextStyle(color: Colors.grey[700], fontSize: 13)),
-                  ],
-
-                  // Links externos
-                  if (place.website != null || place.wikidataId != null) ...[
-                    const SizedBox(height: 14),
-                    const Divider(height: 1),
+                    // E-mail de contato (OSM) — link que abre o app de e-mail
                     const SizedBox(height: 12),
-                    Wrap(spacing: 8, runSpacing: 8, children: [
-                      if (place.website != null)
-                        ActionChip(
-                          avatar: const Icon(Icons.open_in_new, size: 16),
-                          label: const Text('Saiba mais',
-                              style: TextStyle(fontSize: 13)),
-                          onPressed: () => _openUrl(place.website!),
+                    if (place.email != null) ...[
+                      Row(children: [
+                        const Icon(Icons.email_outlined,
+                            size: 16, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: GestureDetector(
+                            onTap: () => _openUrl(Uri(
+                              scheme: 'mailto',
+                              path: place.email,
+                            ).toString()),
+                            child: Text(
+                              place.email!,
+                              style: const TextStyle(
+                                color: Color(0xFFDF2881),
+                                fontSize: 13,
+                                decoration: TextDecoration.underline,
+                                decorationColor: Color(0xFFDF2881),
+                              ),
+                            ),
+                          ),
                         ),
-                      if (place.wikidataId != null)
-                        ActionChip(
-                          avatar: const Icon(Icons.open_in_new, size: 16),
-                          label: const Text('Wikidata',
-                              style: TextStyle(fontSize: 13)),
-                          onPressed: () => _openUrl(
-                              'https://www.wikidata.org/wiki/${place.wikidataId}'),
+                      ]),
+                    ],
+                    // Endereço (abaixo do e-mail) + botões "Abrir com Maps" / "Saiba mais"
+                    Padding(
+                      padding: EdgeInsets.only(top: place.email != null ? 6 : 0),
+                      child: Row(children: [
+                        const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            place.address ?? 'Endereço não informado',
+                            style: const TextStyle(
+                                color: Colors.grey, fontSize: 13),
+                          ),
+                        ),
+                      ]),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(spacing: 8, runSpacing: 8, children: [
+                      OutlinedButton.icon(
+                        onPressed: _openInMaps,
+                        icon: const Icon(Icons.map_rounded, size: 16),
+                        label: const Text('Abrir com Maps'),
+                        style: _linkButtonStyle,
+                      ),
+                      // Site oficial (OSM, Wikidata ou MusicBrainz), quando houver
+                      if (place.website != null)
+                        OutlinedButton.icon(
+                          onPressed: () => _openUrl(place.website!),
+                          icon: const Icon(Icons.open_in_new, size: 16),
+                          label: const Text('Saiba mais'),
+                          style: _linkButtonStyle,
                         ),
                     ]),
+
+                    // Oportunidades abertas vinculadas a este pino
+                    if (place.hasActiveOpportunities) _buildOpportunities(),
                   ],
-                ],
+                ),
               ),
             ),
           ],

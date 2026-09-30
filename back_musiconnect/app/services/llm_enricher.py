@@ -26,6 +26,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import SessionLocal
 from app.models import Opportunity
+from app.services.institution_factory import VALID_CATEGORIES
 
 logger = logging.getLogger("services.llm_enricher")
 
@@ -58,6 +59,7 @@ A data de hoje é {today}.
   "state": "sigla do estado (SP, RJ, MG...) ou null se fora do Brasil",
   "city": "cidade onde ocorre ou null",
   "institution": "nome da ORQUESTRA, CONSERVATÓRIO, FESTIVAL ou ORGANIZAÇÃO responsável (NÃO a plataforma Musical Chairs/Funarte/DOU, e NÃO o nome de uma sala de concerto/teatro/endereço do evento). Se o texto só mencionar um local/venue e não a organização responsável, retorne null.",
+  "institution_category": "tipo da organização de \"institution\", um de: music_school (conservatório, escola ou faculdade de música) | music_org (orquestra, banda, coro, companhia de ópera/balé, festival, concurso, fundação ou associação) | concert_hall (sala de concerto) | theatre (teatro ou casa de ópera) | music_venue (casa de shows) | null se institution for null ou não der para saber",
   "is_remote": true se online/remoto, false se presencial ou não especificado,
   "is_active": true se prazo ainda não venceu ou não especificado, false se claramente vencido,
   "is_music_related": true ou false,
@@ -143,6 +145,8 @@ def _apply_enrichment(opp: Opportunity, data: dict) -> None:
     # que só tem o texto solto do resumo RSS para tentar adivinhar.
     opp.deadline     = opp.deadline or _parse_deadline(data.get("deadline"))
     opp.institution  = opp.institution or data.get("institution")
+    category = data.get("institution_category")
+    opp.institution_category = category if category in VALID_CATEGORIES else None
     opp.country      = data.get("country") or opp.country
     opp.state        = data.get("state") or opp.state
     opp.city         = data.get("city") or opp.city

@@ -35,7 +35,7 @@ class OpportunityBrowserView extends StatefulWidget {
   final OpportunitiesService service;
 
   /// Chamado quando o usuário quer ver uma instituição no mapa.
-  final VoidCallback? onOpenMap;
+  final OpenOpportunityOnMap? onOpenMap;
 
   // Limites do slider "Escala de Match" no FilterModal — "Todas as
   // oportunidades" usa 0-100 (livre, sem filtrar por padrão); "Minhas
