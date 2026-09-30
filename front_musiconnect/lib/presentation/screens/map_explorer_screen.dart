@@ -1155,28 +1155,6 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
             ),
           ),
 
-          // ── Indicador de loading (direita, pós-carga inicial) ───
-          if (_isLoading && _markers.isNotEmpty)
-            Positioned(
-              bottom: 16,
-              right: 16,
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                        color: Colors.black.withOpacity(0.12), blurRadius: 8)
-                  ],
-                ),
-                child: const Padding(
-                  padding: EdgeInsets.all(9),
-                  child: AppLoadingIndicator(size: 20),
-                ),
-              ),
-            ),
 
         ],
       ),
