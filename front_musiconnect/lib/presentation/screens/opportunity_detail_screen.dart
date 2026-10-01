@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../data/models/opportunity_model.dart';
 import '../../data/models/providers/auth_service.dart';
+import '../widgets/favorite_button.dart';
 
 const _pink = Color(0xFFEC4899);
 const _purple = Color(0xFFDF2881);
@@ -348,8 +349,7 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen>
     );
   }
 
-  /// Rodapé fixo (fora do scroll): coração (só visual — sem interação,
-  /// favoritos fica pra depois) + botão "Saiba mais". Rótulo
+  /// Rodapé fixo (fora do scroll): coração de salvar + botão "Saiba mais". Rótulo
   /// deliberadamente não diz "Inscreva-se": o destino às vezes é a página
   /// geral de vagas da instituição (não uma inscrição específica pra este
   /// instrumento/posição), e prometer "inscrição" no botão criaria uma
@@ -369,19 +369,7 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen>
       ),
       child: Row(
         children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFFE5E7EB)),
-            ),
-            child: const Icon(
-              Icons.favorite_border_rounded,
-              color: _pink,
-              size: 22,
-            ),
-          ),
+          FavoriteButton.opportunity(opp.id, circle: true),
           const SizedBox(width: 12),
           Expanded(
             child: Container(

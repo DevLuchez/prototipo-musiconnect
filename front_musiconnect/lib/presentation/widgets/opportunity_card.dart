@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../data/models/opportunity_model.dart';
+import 'favorite_button.dart';
 
 /// Cores e utilitários de estilo da aba Matcher.
 class _MatcherTheme {
@@ -45,6 +46,8 @@ class OpportunityCard extends StatelessWidget {
   // Percentual de compatibilidade com o usuário logado (0-100) — null
   // esconde a tag (ex: sem sessão, backend não calculou).
   final int? matchPercentage;
+  // Coração de salvar no canto inferior direito.
+  final bool showFavorite;
 
   const OpportunityCard({
     super.key,
@@ -53,6 +56,7 @@ class OpportunityCard extends StatelessWidget {
     this.margin = const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
     this.expandToFill = false,
     this.matchPercentage,
+    this.showFavorite = true,
   });
 
   @override
@@ -124,80 +128,115 @@ class OpportunityCard extends StatelessWidget {
 
               // ── Instrumentos (chips) + separador + tipo ─────────
               const SizedBox(height: 8),
-              Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  // Badge de tipo (Edital, Curso, etc.)
-                  _TypeBadge(
-                    type: opportunity.typeLabel,
-                    color: _MatcherTheme.typeColor(opportunity.type),
-                  ),
-                  // Separador (mesmo "•" usado no resumo de filtros)
-                  Text('•', style: TextStyle(fontSize: 12, color: Colors.grey[400])),
-                  if (opportunity.instruments.isNotEmpty) ...[
-                    ...opportunity.instruments.take(2).map(
-                      (inst) => Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 7, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF3F4F6),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          inst,
-                          style: const TextStyle(
-                            fontSize: 10.5,
-                            color: Color(0xFF4B5563),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (opportunity.instruments.length > 2)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 7, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF3F4F6),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          '+${opportunity.instruments.length - 2}',
-                          style: const TextStyle(
-                            fontSize: 10.5,
-                            color: Color(0xFF9CA3AF),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                  ] else
-                    Text(
-                      'Instrumentos não informados',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey[400],
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                ],
-              ),
-
-              const SizedBox(height: 10),
-
-              // ── Rodapé: endereço ────────────────────────────
+              // Coração à direita, centralizado na altura das duas últimas
+              // linhas (tipo/instrumentos + endereço) — não aumenta o card.
               Row(
                 children: [
-                  Icon(Icons.location_on_outlined, size: 13, color: Colors.grey[400]),
-                  const SizedBox(width: 4),
                   Expanded(
-                    child: Text(
-                      opportunity.locationLabel,
-                      style: TextStyle(fontSize: 11.5, color: Colors.grey[500]),
-                      overflow: TextOverflow.ellipsis,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Uma linha só (nunca quebra): no carrossel o card
+                        // tem altura fixa e uma segunda linha de chips o
+                        // estourava. Nome de instrumento longo é abreviado
+                        // com "…" só quando não cabe.
+                        Row(
+                          children: [
+                            // Badge de tipo (Edital, Curso, etc.)
+                            _TypeBadge(
+                              type: opportunity.typeLabel,
+                              color: _MatcherTheme.typeColor(opportunity.type),
+                            ),
+                            const SizedBox(width: 6),
+                            // Separador (mesmo "•" usado no resumo de filtros)
+                            Text('•',
+                                style: TextStyle(
+                                    fontSize: 12, color: Colors.grey[400])),
+                            const SizedBox(width: 6),
+                            if (opportunity.instruments.isNotEmpty) ...[
+                              ...opportunity.instruments.take(2).map(
+                                    (inst) => Flexible(
+                                      child: Container(
+                                        margin: const EdgeInsets.only(right: 6),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 7, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFF3F4F6),
+                                          borderRadius:
+                                              BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          inst,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 10.5,
+                                            color: Color(0xFF4B5563),
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              if (opportunity.instruments.length > 2)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 7, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF3F4F6),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    '+${opportunity.instruments.length - 2}',
+                                    style: const TextStyle(
+                                      fontSize: 10.5,
+                                      color: Color(0xFF9CA3AF),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                            ] else
+                              Flexible(
+                                child: Text(
+                                  'Instrumentos não informados',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey[400],
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 10),
+
+                        // ── Rodapé: endereço ────────────────────────────
+                        Row(
+                          children: [
+                            Icon(Icons.location_on_outlined,
+                                size: 13, color: Colors.grey[400]),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                opportunity.locationLabel,
+                                style: TextStyle(
+                                    fontSize: 11.5, color: Colors.grey[500]),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
+                  if (showFavorite) ...[
+                    const SizedBox(width: 4),
+                    FavoriteButton.opportunity(opportunity.id),
+                  ],
                 ],
               ),
             ],

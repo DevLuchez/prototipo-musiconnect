@@ -3,11 +3,12 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'data/models/opportunity_model.dart';
 import 'data/models/providers/auth_service.dart';
+import 'data/models/providers/favorites_service.dart';
 import 'presentation/screens/auth/login_screen.dart';
 import 'presentation/screens/auth/reset_password_screen.dart';
 import 'presentation/screens/auth/welcome_screen.dart';
+import 'presentation/screens/favorites_screens.dart';
 import 'presentation/screens/map_explorer_screen.dart';
 import 'presentation/screens/matcher_screen.dart';
 import 'presentation/screens/profile/profile_screen.dart';
@@ -161,10 +162,10 @@ class _MainNavigationState extends State<MainNavigation>
     with SingleTickerProviderStateMixin {
   int _selectedIndex = 1; // começa na aba Mapa
 
-  // Pedido para a aba Mapa focar numa oportunidade (pino da instituição ou
-  // marcador da cidade) — vindo do botão "Ver no mapa". O mapa zera depois
-  // de atender.
-  final ValueNotifier<OpportunityModel?> _mapFocusRequest = ValueNotifier(null);
+  // Pedido para a aba Mapa focar num pino de instituição ou marcador de
+  // cidade — vindo do "Ver no mapa" ou de uma instituição favorita. O mapa
+  // zera depois de atender.
+  final ValueNotifier<MapFocusTarget?> _mapFocusRequest = ValueNotifier(null);
 
   late final AnimationController _iconPulse;
   late final Animation<double> _iconScale;
@@ -172,6 +173,8 @@ class _MainNavigationState extends State<MainNavigation>
   @override
   void initState() {
     super.initState();
+    // Estado dos corações (salvos/favoritos) de todas as telas.
+    FavoritesService.instance.load();
     _iconPulse = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1800),
@@ -190,6 +193,80 @@ class _MainNavigationState extends State<MainNavigation>
 
   void _onItemTapped(int index) {
     setState(() => _selectedIndex = index);
+  }
+
+  /// Vai para a aba Mapa focada no alvo. Fecha antes as telas empilhadas
+  /// por cima (ex: lista de favoritos aberta pelo menu lateral).
+  void _focusOnMap(MapFocusTarget target) {
+    final route = ModalRoute.of(context);
+    if (route != null) Navigator.of(context).popUntil((r) => r == route);
+    setState(() => _selectedIndex = 1);
+    _mapFocusRequest.value = target;
+  }
+
+  void _openSavedOpportunities() {
+    Navigator.of(context)
+      ..pop() // fecha o menu lateral
+      ..push(MaterialPageRoute(
+        builder: (_) => SavedOpportunitiesScreen(
+          user: widget.user,
+          onOpenMap: (opp) => _focusOnMap(MapFocusTarget.opportunity(opp)),
+        ),
+      ));
+  }
+
+  void _openFavoriteInstitutions() {
+    Navigator.of(context)
+      ..pop() // fecha o menu lateral
+      ..push(MaterialPageRoute(
+        builder: (_) => FavoriteInstitutionsScreen(
+          onOpenMap: (place) =>
+              _focusOnMap(MapFocusTarget.institution(place.osmId!)),
+        ),
+      ));
+  }
+
+  /// Menu lateral (ícone hambúrguer do header) — por enquanto só os
+  /// favoritos. Sem contadores aqui: as quantidades aparecem nas próprias
+  /// telas e no Perfil.
+  Widget _buildDrawer() {
+    return Drawer(
+      backgroundColor: Colors.white,
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(24, 20, 24, 20),
+              child: AuthLogo(fontSize: 22),
+            ),
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+              child: Text(
+                'FAVORITOS',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.grey[500],
+                  letterSpacing: 0.4,
+                ),
+              ),
+            ),
+            _DrawerItem(
+              icon: Icons.favorite_rounded,
+              label: 'Oportunidades salvas',
+              onTap: _openSavedOpportunities,
+            ),
+            _DrawerItem(
+              icon: Icons.business_rounded,
+              label: 'Instituições favoritas',
+              onTap: _openFavoriteInstitutions,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildPlaceholder(String tabName) {
@@ -219,16 +296,15 @@ class _MainNavigationState extends State<MainNavigation>
       MapExplorerScreen(user: widget.user, focusRequest: _mapFocusRequest),
       MatcherScreen(
         user: widget.user,
-        onSwitchToMap: (opportunity) {
-          setState(() => _selectedIndex = 1);
-          _mapFocusRequest.value = opportunity;
-        },
+        onSwitchToMap: (opportunity) =>
+            _focusOnMap(MapFocusTarget.opportunity(opportunity)),
       ),
       ProfileScreen(user: widget.user),
     ];
 
     return Scaffold(
       backgroundColor: Colors.white,
+      drawer: _buildDrawer(),
       // ── Header global ──────────────────────────────────────────
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(kToolbarHeight),
@@ -249,17 +325,14 @@ class _MainNavigationState extends State<MainNavigation>
             scrolledUnderElevation: 0,
             surfaceTintColor: Colors.transparent,
             // Ícone hambúrguer
-            leading: IconButton(
-              icon: const Icon(Icons.menu_rounded, color: Colors.black87),
-              tooltip: 'Menu',
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Menu lateral em breve!'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-              },
+            // Builder: o context precisa estar abaixo do Scaffold pra
+            // achar o drawer.
+            leading: Builder(
+              builder: (context) => IconButton(
+                icon: const Icon(Icons.menu_rounded, color: Colors.black87),
+                tooltip: 'Menu',
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              ),
             ),
             // Logo centralizada — mesmo estilo (preto + rosa) das telas
             // iniciais, em vez do texto em gradiente que só era usado aqui.
@@ -341,6 +414,32 @@ class _MainNavigationState extends State<MainNavigation>
           ],
         ),
       ),
+    );
+  }
+}
+
+class _DrawerItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _DrawerItem({required this.icon, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24),
+      leading: Icon(icon, color: kAuthPink, size: 22),
+      title: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          color: kAuthTextDark,
+        ),
+      ),
+      trailing: Icon(Icons.chevron_right_rounded, color: Colors.grey[400]),
+      onTap: onTap,
     );
   }
 }

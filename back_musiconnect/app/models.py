@@ -229,3 +229,46 @@ class User(Base):
     password_reset_sent_at = Column(DateTime, nullable=True)
 
     created_at = Column(DateTime, server_default=func.now())
+
+
+class FavoriteOpportunity(Base):
+    """
+    Oportunidade salva por um usuário (coração da aba Matcher).
+
+    Chave primária composta — salvar duas vezes não duplica. Some junto
+    com o usuário ou a oportunidade (ON DELETE CASCADE); as que vencem o
+    prazo são apagadas pela limpeza diária (ver favorites_cleanup.py).
+    """
+
+    __tablename__ = "user_favorite_opportunities"
+
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    opportunity_id = Column(
+        Integer,
+        ForeignKey("opportunities.id", ondelete="CASCADE"),
+        primary_key=True,
+        index=True,
+    )
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class FavoriteInstitution(Base):
+    """
+    Instituição favoritada por um usuário (coração do detalhe do pino no
+    mapa). Some junto com o usuário ou a instituição (ON DELETE CASCADE).
+    """
+
+    __tablename__ = "user_favorite_institutions"
+
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    institution_id = Column(
+        String,
+        ForeignKey("institutions.osm_id", ondelete="CASCADE"),
+        primary_key=True,
+        index=True,
+    )
+    created_at = Column(DateTime, server_default=func.now())

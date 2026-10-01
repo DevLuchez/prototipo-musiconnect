@@ -11,6 +11,7 @@ import '../../data/models/providers/auth_service.dart';
 import '../../data/models/providers/musicconnect_api_service.dart';
 import '../../data/models/providers/opportunities_service.dart';
 import '../widgets/app_loading_indicator.dart';
+import '../widgets/favorite_button.dart';
 import '../widgets/opportunity_card.dart';
 import 'opportunity_detail_screen.dart';
 
@@ -85,15 +86,33 @@ const List<_CategoryFilter> _categoryFilters = [
   ),
 ];
 
+/// Onde o mapa deve focar: no pino de uma instituição ou, quando a
+/// oportunidade não tem instituição localizada, no marcador da cidade.
+class MapFocusTarget {
+  final String? institutionId;
+  final int? cityLocationId;
+
+  const MapFocusTarget({this.institutionId, this.cityLocationId});
+
+  /// "Ver no mapa" de uma oportunidade.
+  factory MapFocusTarget.opportunity(OpportunityModel opp) => MapFocusTarget(
+        institutionId: opp.institutionId,
+        cityLocationId: opp.cityLocationId,
+      );
+
+  /// Instituição favorita (menu lateral).
+  const MapFocusTarget.institution(String osmId) : this(institutionId: osmId);
+}
+
 class MapExplorerScreen extends StatefulWidget {
   /// Usuário logado — repassado à tela de detalhes das oportunidades
   /// abertas a partir do detalhe de uma instituição.
   final AuthUser user;
 
-  /// Pedido para focar numa oportunidade (pino da instituição ou marcador
-  /// da cidade), vindo do botão "Ver no mapa". O mapa zera o valor depois
-  /// de atender.
-  final ValueNotifier<OpportunityModel?>? focusRequest;
+  /// Pedido para focar num pino de instituição ou marcador de cidade —
+  /// vindo do "Ver no mapa" de uma oportunidade ou de uma instituição
+  /// favorita. O mapa zera o valor depois de atender.
+  final ValueNotifier<MapFocusTarget?>? focusRequest;
 
   const MapExplorerScreen({super.key, required this.user, this.focusRequest});
   @override
@@ -124,9 +143,9 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
   int? _dbTotalCount;
   int? _dbWithOpportunitiesCount;
 
-  // Oportunidade aguardando foco — o pedido pode chegar antes da carga
-  // inicial terminar ou do mapa nativo estar pronto.
-  OpportunityModel? _pendingFocus;
+  // Foco pendente — o pedido pode chegar antes da carga inicial terminar
+  // ou do mapa nativo estar pronto.
+  MapFocusTarget? _pendingFocus;
 
   // Marcadores "oportunidades por cidade": oportunidades cuja organizadora
   // não tem localização exata ficam numa bolinha com estrela, no centro da
@@ -228,25 +247,25 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
     _focusPending();
   }
 
-  // ── Foco vindo de uma oportunidade ("Ver no mapa") ─────────────
+  // ── Foco vindo de fora ("Ver no mapa" / instituição favorita) ──
 
   void _onFocusRequest() {
-    final opp = widget.focusRequest?.value;
-    if (opp == null) return;
+    final target = widget.focusRequest?.value;
+    if (target == null) return;
     widget.focusRequest!.value = null;
-    _pendingFocus = opp;
+    _pendingFocus = target;
     _focusPending();
   }
 
-  /// Leva o mapa até a oportunidade pendente: pino da instituição, ou o
-  /// marcador da cidade quando a organizadora não tem localização exata.
+  /// Leva o mapa até o foco pendente: pino da instituição, ou o marcador
+  /// da cidade quando a organizadora não tem localização exata.
   Future<void> _focusPending() async {
-    final opp = _pendingFocus;
-    if (opp == null || !_initialLoadDone || _mapController == null) return;
+    final target = _pendingFocus;
+    if (target == null || !_initialLoadDone || _mapController == null) return;
     _pendingFocus = null;
 
-    final osmId = opp.institutionId;
-    final cityId = opp.cityLocationId;
+    final osmId = target.institutionId;
+    final cityId = target.cityLocationId;
     if (osmId != null) {
       await _focusInstitution(osmId);
     } else if (cityId != null) {
@@ -256,7 +275,7 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
 
   void _showNotFoundOnMap() {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Text('Não foi possível localizar esta oportunidade no mapa.'),
+      content: Text('Não foi possível localizar no mapa.'),
       behavior: SnackBarBehavior.floating,
     ));
   }
@@ -1596,6 +1615,11 @@ class _DetailSheetState extends State<_DetailSheet> {
                 ),
                 const SizedBox(width: 4),
                 Expanded(child: Text(place.name, style: _sheetHeaderStyle)),
+                // Favoritar — só aqui no detalhe; os pinos não mudam.
+                if (place.osmId != null) ...[
+                  const SizedBox(width: 8),
+                  FavoriteButton.institution(place.osmId!, circle: true),
+                ],
               ]),
             ),
             const Divider(height: 1),

@@ -25,6 +25,9 @@ class InstitutionOut(BaseModel):
     # marcador no mapa.
     active_opportunities_count: int = 0
 
+    # Quando o usuário favoritou — só vem na lista de favoritos.
+    saved_at: Optional[datetime] = None
+
     model_config = {"from_attributes": True}
 
 
@@ -99,7 +102,17 @@ class OpportunityOut(BaseModel):
     match_percentage: Optional[int] = None
     match_breakdown: Optional[MatchBreakdownOut] = None
 
+    # Quando o usuário salvou — só vem na lista de oportunidades salvas.
+    saved_at: Optional[datetime] = None
+
     model_config = {"from_attributes": True}
+
+
+class FavoriteIdsOut(BaseModel):
+    """IDs salvos pelo usuário logado — o app usa pra desenhar os corações."""
+
+    opportunities: List[int] = []
+    institutions: List[str] = []
 
 
 class SignupIn(BaseModel):

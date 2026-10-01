@@ -19,6 +19,9 @@ class PlaceModel {
   final String? osmId;
   final int activeOpportunitiesCount;
 
+  // Quando o usuário favoritou — só vem na lista de instituições favoritas.
+  final DateTime? savedAt;
+
   PlaceModel({
     required this.id,
     required this.name,
@@ -33,6 +36,7 @@ class PlaceModel {
     this.mbId,
     this.osmId,
     this.activeOpportunitiesCount = 0,
+    this.savedAt,
   });
 
   bool get hasActiveOpportunities => activeOpportunitiesCount > 0;
@@ -67,6 +71,9 @@ class PlaceModel {
       mbId: json['mb_id'] as String?,
       osmId: json['osm_id'] as String?,
       activeOpportunitiesCount: json['active_opportunities_count'] as int? ?? 0,
+      savedAt: json['saved_at'] != null
+          ? DateTime.tryParse(json['saved_at'] as String)
+          : null,
     );
   }
 

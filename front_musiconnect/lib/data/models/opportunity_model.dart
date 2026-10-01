@@ -86,6 +86,8 @@ class OpportunityModel {
   // pelo backend — null se a requisição não foi autenticada.
   final int? matchPercentage;
   final MatchBreakdown? matchBreakdown;
+  // Quando o usuário salvou — só vem na lista de oportunidades salvas.
+  final DateTime? savedAt;
 
   const OpportunityModel({
     required this.id,
@@ -109,6 +111,7 @@ class OpportunityModel {
     this.scrapedAt,
     this.matchPercentage,
     this.matchBreakdown,
+    this.savedAt,
   });
 
   factory OpportunityModel.fromJson(Map<String, dynamic> json) {
@@ -150,6 +153,9 @@ class OpportunityModel {
       matchBreakdown: json['match_breakdown'] != null
           ? MatchBreakdown.fromJson(
               json['match_breakdown'] as Map<String, dynamic>)
+          : null,
+      savedAt: json['saved_at'] != null
+          ? DateTime.tryParse(json['saved_at'] as String)
           : null,
     );
   }

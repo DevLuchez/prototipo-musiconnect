@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../data/models/providers/auth_service.dart';
+import '../../../data/models/providers/favorites_service.dart';
 import '../../widgets/auth/auth_common.dart';
 import '../auth/welcome_screen.dart';
 import 'change_password_screen.dart';
@@ -171,10 +172,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           style: TextStyle(fontSize: 13, color: Colors.grey[600]),
         ),
         const SizedBox(height: 22),
-        // Matches/estatísticas de compatibilidade ainda não existem no
-        // backend (dependem do futuro algoritmo de match oportunidade ↔
-        // perfil) — números fixos por enquanto, a pedido, até essa
-        // funcionalidade ser implementada.
+        // "Matches" ainda é um número fixo (estatística de compatibilidade
+        // não existe no backend); salvas/favoritas são reais.
         const _StatsCard(),
         const SizedBox(height: 16),
         _InfoCard(
@@ -235,9 +234,27 @@ class _StatsCard extends StatelessWidget {
         children: [
           const Expanded(child: _StatItem(value: '142', label: 'Matches')),
           Container(width: 1, height: 30, color: Colors.grey[200]),
-          const Expanded(child: _StatItem(value: '8', label: 'Em breve')),
+          // Oportunidades salvas / instituições favoritas — atualizam na
+          // hora quando um coração é marcado em qualquer tela.
+          Expanded(
+            child: ListenableBuilder(
+              listenable: FavoritesService.instance,
+              builder: (context, _) => _StatItem(
+                value: '${FavoritesService.instance.opportunityCount}',
+                label: 'Salvas',
+              ),
+            ),
+          ),
           Container(width: 1, height: 30, color: Colors.grey[200]),
-          const Expanded(child: _StatItem(value: '4', label: 'Em breve')),
+          Expanded(
+            child: ListenableBuilder(
+              listenable: FavoritesService.instance,
+              builder: (context, _) => _StatItem(
+                value: '${FavoritesService.instance.institutionCount}',
+                label: 'Favoritas',
+              ),
+            ),
+          ),
         ],
       ),
     );

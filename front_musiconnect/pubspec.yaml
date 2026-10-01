@@ -46,6 +46,7 @@ dependencies:
   # pinned — 5.2.2 usa Color.withValues(), API mais nova que o SDK Flutter
   # instalado (3.24.4) não tem, quebrando a compilação.
   flutter_spinkit: 5.2.1
+  shared_preferences: ^2.5.3
 
 dev_dependencies:
   flutter_test:
