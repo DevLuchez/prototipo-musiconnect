@@ -9,6 +9,7 @@ import 'data/models/providers/match_count_service.dart';
 import 'presentation/screens/auth/login_screen.dart';
 import 'presentation/screens/auth/reset_password_screen.dart';
 import 'presentation/screens/auth/welcome_screen.dart';
+import 'presentation/screens/dashboard_screen.dart';
 import 'presentation/screens/favorites_screens.dart';
 import 'presentation/screens/help_screen.dart';
 import 'presentation/screens/map_explorer_screen.dart';
@@ -163,7 +164,7 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation>
     with SingleTickerProviderStateMixin {
-  int _selectedIndex = 1; // começa na aba Mapa
+  int _selectedIndex = _homeTab; // começa na aba Início
 
   // Usuário logado, atualizado quando o perfil é editado — repassado às
   // abas e ao cabeçalho do menu lateral.
@@ -178,8 +179,13 @@ class _MainNavigationState extends State<MainNavigation>
   // vindo do número de Matches do Perfil.
   final ValueNotifier<int?> _matcherTabRequest = ValueNotifier(null);
 
+  static const int _homeTab = 0;
+  static const int _mapTab = 1;
   static const int _matcherTab = 2;
   static const int _profileTab = 3;
+
+  // Incrementado ao tocar na aba Início — a tela recarrega o resumo.
+  final ValueNotifier<int> _homeRefresh = ValueNotifier(0);
 
   late final AnimationController _iconPulse;
   late final Animation<double> _iconScale;
@@ -205,6 +211,7 @@ class _MainNavigationState extends State<MainNavigation>
     _iconPulse.dispose();
     _mapFocusRequest.dispose();
     _matcherTabRequest.dispose();
+    _homeRefresh.dispose();
     super.dispose();
   }
 
@@ -212,12 +219,18 @@ class _MainNavigationState extends State<MainNavigation>
     setState(() => _selectedIndex = index);
     // Pega oportunidades novas (scraper) desde a última consulta.
     if (index == _profileTab) MatchCountService.instance.refresh();
+    if (index == _homeTab) _homeRefresh.value++;
   }
 
-  /// Matches do Perfil → aba Matcher em "Minhas oportunidades".
-  void _openMatches() {
+  /// Vai para o Matcher numa aba (0 = Minhas oportunidades, 1 = Todas).
+  void _openMatcher(int tab) {
     setState(() => _selectedIndex = _matcherTab);
-    _matcherTabRequest.value = 0;
+    _matcherTabRequest.value = tab;
+  }
+
+  void _onUserChanged(AuthUser user) {
+    setState(() => _user = user);
+    MatchCountService.instance.refresh();
   }
 
   /// Vai para a aba Mapa focada no alvo. Fecha antes as telas empilhadas
@@ -225,7 +238,7 @@ class _MainNavigationState extends State<MainNavigation>
   void _focusOnMap(MapFocusTarget target) {
     final route = ModalRoute.of(context);
     if (route != null) Navigator.of(context).popUntil((r) => r == route);
-    setState(() => _selectedIndex = 1);
+    setState(() => _selectedIndex = _mapTab);
     _mapFocusRequest.value = target;
   }
 
@@ -330,30 +343,16 @@ class _MainNavigationState extends State<MainNavigation>
     );
   }
 
-  Widget _buildPlaceholder(String tabName) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.construction_rounded, size: 48, color: Colors.grey[400]),
-          const SizedBox(height: 12),
-          Text(
-            'Aba $tabName ainda não desenvolvida.',
-            style: TextStyle(
-              fontSize: 15,
-              color: Colors.grey[500],
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final screens = <Widget>[
-      _buildPlaceholder('Dashboard'),
+      DashboardScreen(
+        user: _user,
+        refreshRequest: _homeRefresh,
+        onOpenMatcher: _openMatcher,
+        onOpenMap: (opportunity) =>
+            _focusOnMap(MapFocusTarget.opportunity(opportunity)),
+      ),
       MapExplorerScreen(user: _user, focusRequest: _mapFocusRequest),
       MatcherScreen(
         user: _user,
@@ -363,10 +362,10 @@ class _MainNavigationState extends State<MainNavigation>
       ),
       ProfileScreen(
         user: _user,
-        onOpenMatches: _openMatches,
+        onOpenMatches: () => _openMatcher(0),
         onOpenSavedOpportunities: _openSavedOpportunities,
         onOpenFavoriteInstitutions: _openFavoriteInstitutions,
-        onUserChanged: (user) => setState(() => _user = user),
+        onUserChanged: _onUserChanged,
       ),
     ];
 
@@ -464,8 +463,8 @@ class _MainNavigationState extends State<MainNavigation>
           onTap: _onItemTapped,
           items: const [
             BottomNavigationBarItem(
-              icon: Icon(Icons.grid_view_rounded),
-              label: 'Dashboard',
+              icon: Icon(Icons.home_rounded),
+              label: 'Início',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.location_on_rounded),

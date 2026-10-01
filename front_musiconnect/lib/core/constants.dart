@@ -5,6 +5,11 @@
 /// HIGH_MATCH_THRESHOLD do backend (app/services/matching.py).
 const int kHighMatchThreshold = 85;
 
+/// Prazo "urgente": vence em menos de N dias (hoje incluso) — a data fica
+/// vermelha no card e entra em "Prazos se aproximando" no Início. Igual a
+/// URGENT_DEADLINE_DAYS do backend (app/services/matching.py).
+const int kUrgentDeadlineDays = 7;
+
 /// E-mail do "Fale conosco" (menu lateral → Ajuda e suporte).
 const String kSupportEmail = 'laura.luchez@gmail.com';
 

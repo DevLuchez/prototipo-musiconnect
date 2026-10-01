@@ -5,21 +5,25 @@ import 'opportunity_card.dart';
 const _pink = Color(0xFFEC4899);
 
 /// Seção de carrossel horizontal com uma prévia das oportunidades de uma
-/// categoria (tipo), usada dentro da aba "Todas as oportunidades". Tocar
-/// no cabeçalho leva pra subpágina com a lista completa da categoria.
+/// categoria (tipo), usada dentro da aba "Todas as oportunidades" e no
+/// Início. Tocar no cabeçalho leva pra lista completa — sem [onSeeAll], o
+/// "Ver todas" não aparece.
 class OpportunityCarouselSection extends StatelessWidget {
   final String title;
+  // Linha menor abaixo do título (ex: "Prazos se aproximando" no Início).
+  final String? subtitle;
   final int total;
   final List<OpportunityModel> items;
-  final VoidCallback onSeeAll;
+  final VoidCallback? onSeeAll;
   final ValueChanged<OpportunityModel> onCardTap;
 
   const OpportunityCarouselSection({
     super.key,
     required this.title,
+    this.subtitle,
     required this.total,
     required this.items,
-    required this.onSeeAll,
+    this.onSeeAll,
     required this.onCardTap,
   });
 
@@ -36,25 +40,39 @@ class OpportunityCarouselSection extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(
-                  child: Text(
-                    title,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF111827),
+                        ),
+                      ),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle!,
+                          style: TextStyle(fontSize: 12.5, color: Colors.grey[500]),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                if (onSeeAll != null) ...[
+                  Text(
+                    'Ver todas ($total)',
                     style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF111827),
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: _pink,
                     ),
                   ),
-                ),
-                Text(
-                  'Ver todas ($total)',
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                    color: _pink,
-                  ),
-                ),
-                const Icon(Icons.chevron_right_rounded,
-                    size: 16, color: _pink),
+                  const Icon(Icons.chevron_right_rounded,
+                      size: 16, color: _pink),
+                ],
               ],
             ),
           ),

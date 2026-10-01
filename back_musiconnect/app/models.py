@@ -119,6 +119,11 @@ class Opportunity(Base):
 
     scraped_at = Column(DateTime, server_default=func.now())
 
+    # Quando a oportunidade entrou no banco — gravado uma vez, nunca muda
+    # (diferente de scraped_at, que o upsert atualiza a cada relistagem do
+    # RSS). Usado em "Novas para você" do Início.
+    created_at = Column(DateTime, server_default=func.now())
+
     # False quando prazo expirou, fonte removeu, ou usuário reportou
     is_active = Column(Boolean, nullable=False, default=True)
 

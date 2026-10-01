@@ -39,6 +39,11 @@ _CONFIDENCE_WEIGHT = 15
 # O app tem o mesmo valor em kHighMatchThreshold (core/constants.dart).
 HIGH_MATCH_THRESHOLD = 85
 
+# Prazo "urgente": vence em menos de N dias (hoje incluso). É quando a data
+# fica vermelha no card e entra em "Prazos se aproximando" no Início.
+# O app tem o mesmo valor em kUrgentDeadlineDays (core/constants.dart).
+URGENT_DEADLINE_DAYS = 7
+
 
 @dataclass
 class MatchBreakdown:

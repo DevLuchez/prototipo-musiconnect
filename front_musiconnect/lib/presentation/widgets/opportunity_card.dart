@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/constants.dart';
 import '../../data/models/opportunity_model.dart';
 import 'favorite_button.dart';
 
@@ -249,13 +250,14 @@ class OpportunityCard extends StatelessWidget {
   String _formatDate(DateTime d) =>
       '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 
-  /// Prazo com menos de 7 dias até hoje (e ainda não vencido) → destaque.
+  /// Prazo com menos de [kUrgentDeadlineDays] dias até hoje (e ainda não
+  /// vencido) → destaque.
   bool _isDeadlineUrgent(DateTime deadline) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final day = DateTime(deadline.year, deadline.month, deadline.day);
     final diff = day.difference(today).inDays;
-    return diff >= 0 && diff < 7;
+    return diff >= 0 && diff < kUrgentDeadlineDays;
   }
 
   Widget _buildMatchTag() {

@@ -52,6 +52,17 @@ _STATEMENTS = [
     "UPDATE institutions SET source = 'pipeline' WHERE source = 'musiconnect'",
     "UPDATE institutions SET category = 'music_org' WHERE source = 'pipeline' AND category = 'music'",
     "ALTER TABLE institutions ALTER COLUMN category DROP DEFAULT",
+    # ── Data de entrada da oportunidade ("Novas para você" do Início) ─────
+    # Coluna criada SEM default pra não marcar as antigas como "agora";
+    # as existentes recebem a melhor estimativa disponível (enriched_at,
+    # senão scraped_at) e só então o default vale para as novas.
+    "ALTER TABLE opportunities ADD COLUMN IF NOT EXISTS created_at TIMESTAMP",
+    """
+    UPDATE opportunities
+       SET created_at = COALESCE(enriched_at, scraped_at)
+     WHERE created_at IS NULL
+    """,
+    "ALTER TABLE opportunities ALTER COLUMN created_at SET DEFAULT now()",
 ]
 
 

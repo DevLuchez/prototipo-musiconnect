@@ -51,6 +51,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _authService = AuthService();
   late AuthUser _user = widget.user;
 
+  @override
+  void didUpdateWidget(ProfileScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Perfil editado fora daqui (ex: "Complete seu perfil" do Início).
+    if (oldWidget.user != widget.user) _user = widget.user;
+  }
+
   String get _initial => _user.name.isNotEmpty ? _user.name[0].toUpperCase() : '?';
 
   List<String> get _ramoLabels => [
