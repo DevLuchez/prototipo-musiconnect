@@ -5,6 +5,9 @@
 /// HIGH_MATCH_THRESHOLD do backend (app/services/matching.py).
 const int kHighMatchThreshold = 85;
 
+/// E-mail do "Fale conosco" (menu lateral → Ajuda e suporte).
+const String kSupportEmail = 'laura.luchez@gmail.com';
+
 /// Lista curada de instrumentos oferecida no cadastro (e reaproveitável em
 /// outras telas, como edição de perfil).
 ///

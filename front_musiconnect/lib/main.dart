@@ -10,10 +10,12 @@ import 'presentation/screens/auth/login_screen.dart';
 import 'presentation/screens/auth/reset_password_screen.dart';
 import 'presentation/screens/auth/welcome_screen.dart';
 import 'presentation/screens/favorites_screens.dart';
+import 'presentation/screens/help_screen.dart';
 import 'presentation/screens/map_explorer_screen.dart';
 import 'presentation/screens/matcher_screen.dart';
 import 'presentation/screens/profile/profile_screen.dart';
 import 'presentation/widgets/auth/auth_common.dart';
+import 'presentation/widgets/auth/logout_flow.dart';
 
 /// Chave global do Navigator — o deep link de confirmação de e-mail pode
 /// chegar a qualquer momento (app em qualquer tela, ou recém-aberto por
@@ -163,6 +165,10 @@ class _MainNavigationState extends State<MainNavigation>
     with SingleTickerProviderStateMixin {
   int _selectedIndex = 1; // começa na aba Mapa
 
+  // Usuário logado, atualizado quando o perfil é editado — repassado às
+  // abas e ao cabeçalho do menu lateral.
+  late AuthUser _user = widget.user;
+
   // Pedido para a aba Mapa focar num pino de instituição ou marcador de
   // cidade — vindo do "Ver no mapa" ou de uma instituição favorita. O mapa
   // zera depois de atender.
@@ -226,7 +232,7 @@ class _MainNavigationState extends State<MainNavigation>
   void _openSavedOpportunities() {
     Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => SavedOpportunitiesScreen(
-        user: widget.user,
+        user: _user,
         onOpenMap: (opp) => _focusOnMap(MapFocusTarget.opportunity(opp)),
       ),
     ));
@@ -241,50 +247,84 @@ class _MainNavigationState extends State<MainNavigation>
     ));
   }
 
+  void _openHelp() {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => const HelpScreen(),
+    ));
+  }
+
   /// Item do menu lateral: fecha o menu e abre a tela.
   void _fromDrawer(VoidCallback open) {
     Navigator.of(context).pop();
     open();
   }
 
-  /// Menu lateral (ícone hambúrguer do header) — por enquanto só os
-  /// favoritos. Sem contadores aqui: as quantidades aparecem nas próprias
-  /// telas e no Perfil.
+  /// Menu lateral (ícone hambúrguer do header): você (leva ao Perfil) e
+  /// favoritos no topo; ajuda e sair embaixo. Sem contadores aqui: as
+  /// quantidades aparecem nas próprias telas e no Perfil.
   Widget _buildDrawer() {
     return Drawer(
       backgroundColor: Colors.white,
       child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(24, 20, 24, 20),
-              child: AuthLogo(fontSize: 22),
-            ),
-            const Divider(height: 1),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
-              child: Text(
-                'FAVORITOS',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.grey[500],
-                  letterSpacing: 0.4,
+        // Rolável + altura mínima da tela: o Spacer empurra ajuda/sair pro
+        // rodapé, mas em tela baixa (ou fonte grande) o menu rola em vez de
+        // estourar.
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: IntrinsicHeight(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _DrawerHeader(
+                      user: _user,
+                      onTap: () => _fromDrawer(() => _onItemTapped(_profileTab)),
+                    ),
+                    const Divider(height: 1),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+                      child: Text(
+                        'FAVORITOS',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.grey[500],
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                    ),
+                    _DrawerItem(
+                      icon: Icons.favorite_rounded,
+                      label: 'Oportunidades salvas',
+                      onTap: () => _fromDrawer(_openSavedOpportunities),
+                    ),
+                    _DrawerItem(
+                      icon: Icons.business_rounded,
+                      label: 'Instituições favoritas',
+                      onTap: () => _fromDrawer(_openFavoriteInstitutions),
+                    ),
+                    const Spacer(),
+                    const SizedBox(height: 16),
+                    _DrawerItem(
+                      icon: Icons.help_outline_rounded,
+                      label: 'Ajuda e suporte',
+                      onTap: () => _fromDrawer(_openHelp),
+                    ),
+                    const Divider(height: 1, indent: 24, endIndent: 24),
+                    // Mesmo fluxo do "Sair da conta" do Perfil.
+                    _DrawerItem(
+                      icon: Icons.logout_rounded,
+                      label: 'Sair',
+                      showChevron: false,
+                      onTap: () => _fromDrawer(() => confirmAndLogout(this.context)),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                 ),
               ),
             ),
-            _DrawerItem(
-              icon: Icons.favorite_rounded,
-              label: 'Oportunidades salvas',
-              onTap: () => _fromDrawer(_openSavedOpportunities),
-            ),
-            _DrawerItem(
-              icon: Icons.business_rounded,
-              label: 'Instituições favoritas',
-              onTap: () => _fromDrawer(_openFavoriteInstitutions),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -314,18 +354,19 @@ class _MainNavigationState extends State<MainNavigation>
   Widget build(BuildContext context) {
     final screens = <Widget>[
       _buildPlaceholder('Dashboard'),
-      MapExplorerScreen(user: widget.user, focusRequest: _mapFocusRequest),
+      MapExplorerScreen(user: _user, focusRequest: _mapFocusRequest),
       MatcherScreen(
-        user: widget.user,
+        user: _user,
         onSwitchToMap: (opportunity) =>
             _focusOnMap(MapFocusTarget.opportunity(opportunity)),
         tabRequest: _matcherTabRequest,
       ),
       ProfileScreen(
-        user: widget.user,
+        user: _user,
         onOpenMatches: _openMatches,
         onOpenSavedOpportunities: _openSavedOpportunities,
         onOpenFavoriteInstitutions: _openFavoriteInstitutions,
+        onUserChanged: (user) => setState(() => _user = user),
       ),
     ];
 
@@ -445,12 +486,92 @@ class _MainNavigationState extends State<MainNavigation>
   }
 }
 
+/// Topo do menu lateral: inicial, nome e e-mail do usuário (mesmo círculo
+/// em gradiente do Perfil, menor). Tocar leva à aba Perfil.
+class _DrawerHeader extends StatelessWidget {
+  final AuthUser user;
+  final VoidCallback onTap;
+
+  const _DrawerHeader({required this.user, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final initial = user.name.isNotEmpty ? user.name[0].toUpperCase() : '?';
+    return InkWell(
+      onTap: onTap,
+      splashColor: kAuthPink.withOpacity(0.18),
+      highlightColor: kAuthPink.withOpacity(0.08),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [kAuthPurple, kAuthPink],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  initial,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    user.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: kAuthTextDark,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    user.email,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 12.5, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _DrawerItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  // Seta ">" — só em itens que abrem outra tela (não no "Sair").
+  final bool showChevron;
 
-  const _DrawerItem({required this.icon, required this.label, required this.onTap});
+  const _DrawerItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.showChevron = true,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -465,7 +586,9 @@ class _DrawerItem extends StatelessWidget {
           color: kAuthTextDark,
         ),
       ),
-      trailing: Icon(Icons.chevron_right_rounded, color: Colors.grey[400]),
+      trailing: showChevron
+          ? Icon(Icons.chevron_right_rounded, color: Colors.grey[400])
+          : null,
       onTap: onTap,
     );
   }

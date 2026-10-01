@@ -3,6 +3,7 @@ import '../../../data/models/providers/auth_service.dart';
 import '../../../data/models/providers/favorites_service.dart';
 import '../../../data/models/providers/match_count_service.dart';
 import '../../widgets/auth/auth_common.dart';
+import '../../widgets/auth/logout_flow.dart';
 import '../auth/welcome_screen.dart';
 import 'change_password_screen.dart';
 import 'edit_profile_screen.dart';
@@ -29,12 +30,17 @@ class ProfileScreen extends StatefulWidget {
   final VoidCallback? onOpenSavedOpportunities;
   final VoidCallback? onOpenFavoriteInstitutions;
 
+  // Avisa o MainNavigation depois de editar o perfil (ex: o cabeçalho do
+  // menu lateral mostra o nome atualizado).
+  final ValueChanged<AuthUser>? onUserChanged;
+
   const ProfileScreen({
     super.key,
     required this.user,
     this.onOpenMatches,
     this.onOpenSavedOpportunities,
     this.onOpenFavoriteInstitutions,
+    this.onUserChanged,
   });
 
   @override
@@ -65,6 +71,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
     if (updated == null) return;
     setState(() => _user = updated);
+    widget.onUserChanged?.call(updated);
     // Instrumentos/ramo/localização mudam o match de cada oportunidade.
     MatchCountService.instance.refresh();
   }
@@ -75,20 +82,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Future<void> _logout() async {
-    final confirmed = await _confirm(
-      title: 'Sair da conta',
-      message: 'Tem certeza que deseja sair?',
-      confirmLabel: 'Sair',
-    );
-    if (!confirmed) return;
-    await _authService.logout();
-    if (!mounted) return;
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const WelcomeScreen()),
-      (route) => false,
-    );
-  }
+  // Mesmo fluxo do "Sair" do menu lateral.
+  Future<void> _logout() => confirmAndLogout(context);
 
   Future<void> _deleteAccount() async {
     final password = await showDialog<String>(
@@ -107,25 +102,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
     }
-  }
-
-  Future<bool> _confirm({
-    required String title,
-    required String message,
-    required String confirmLabel,
-  }) async {
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (_) => AuthDialog.message(
-        title: title,
-        message: message,
-        primaryLabel: confirmLabel,
-        onPrimary: () => Navigator.of(context).pop(true),
-        secondaryLabel: 'Cancelar',
-        onSecondary: () => Navigator.of(context).pop(false),
-      ),
-    );
-    return result ?? false;
   }
 
   @override
