@@ -171,8 +171,10 @@ class OpportunitiesService {
   /// filtros (Instrumento, País, Estado, Cidade) — cruzados com o que já
   /// está selecionado nos OUTROS campos (busca facetada): passe os filtros
   /// atualmente escolhidos pra que a lista de cada campo reflita só o que
-  /// tem oportunidade de verdade dado o resto da seleção.
+  /// tem oportunidade de verdade dado o resto da seleção. [q] é o texto da
+  /// barra de busca — vazio ou nulo não filtra nada.
   Future<FilterOptions> fetchFilterOptions({
+    String? q,
     List<String>? instruments,
     List<String>? countries,
     List<String>? states,
@@ -180,6 +182,7 @@ class OpportunitiesService {
   }) async {
     try {
       final params = <String, dynamic>{
+        if (q != null && q.trim().isNotEmpty) 'q': q.trim(),
         if (instruments != null && instruments.isNotEmpty) 'instrument': instruments,
         if (countries != null && countries.isNotEmpty) 'country': countries,
         if (states != null && states.isNotEmpty) 'state': states,

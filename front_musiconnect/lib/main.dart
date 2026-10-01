@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'data/models/providers/auth_service.dart';
 import 'data/models/providers/favorites_service.dart';
+import 'data/models/providers/match_count_service.dart';
 import 'presentation/screens/auth/login_screen.dart';
 import 'presentation/screens/auth/reset_password_screen.dart';
 import 'presentation/screens/auth/welcome_screen.dart';
@@ -167,6 +168,13 @@ class _MainNavigationState extends State<MainNavigation>
   // zera depois de atender.
   final ValueNotifier<MapFocusTarget?> _mapFocusRequest = ValueNotifier(null);
 
+  // Pedido para o Matcher mostrar uma aba (0 = Minhas oportunidades) —
+  // vindo do número de Matches do Perfil.
+  final ValueNotifier<int?> _matcherTabRequest = ValueNotifier(null);
+
+  static const int _matcherTab = 2;
+  static const int _profileTab = 3;
+
   late final AnimationController _iconPulse;
   late final Animation<double> _iconScale;
 
@@ -175,6 +183,8 @@ class _MainNavigationState extends State<MainNavigation>
     super.initState();
     // Estado dos corações (salvos/favoritos) de todas as telas.
     FavoritesService.instance.load();
+    // Número de Matches do Perfil.
+    MatchCountService.instance.refresh(clear: true);
     _iconPulse = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1800),
@@ -188,11 +198,20 @@ class _MainNavigationState extends State<MainNavigation>
   void dispose() {
     _iconPulse.dispose();
     _mapFocusRequest.dispose();
+    _matcherTabRequest.dispose();
     super.dispose();
   }
 
   void _onItemTapped(int index) {
     setState(() => _selectedIndex = index);
+    // Pega oportunidades novas (scraper) desde a última consulta.
+    if (index == _profileTab) MatchCountService.instance.refresh();
+  }
+
+  /// Matches do Perfil → aba Matcher em "Minhas oportunidades".
+  void _openMatches() {
+    setState(() => _selectedIndex = _matcherTab);
+    _matcherTabRequest.value = 0;
   }
 
   /// Vai para a aba Mapa focada no alvo. Fecha antes as telas empilhadas
@@ -205,25 +224,27 @@ class _MainNavigationState extends State<MainNavigation>
   }
 
   void _openSavedOpportunities() {
-    Navigator.of(context)
-      ..pop() // fecha o menu lateral
-      ..push(MaterialPageRoute(
-        builder: (_) => SavedOpportunitiesScreen(
-          user: widget.user,
-          onOpenMap: (opp) => _focusOnMap(MapFocusTarget.opportunity(opp)),
-        ),
-      ));
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => SavedOpportunitiesScreen(
+        user: widget.user,
+        onOpenMap: (opp) => _focusOnMap(MapFocusTarget.opportunity(opp)),
+      ),
+    ));
   }
 
   void _openFavoriteInstitutions() {
-    Navigator.of(context)
-      ..pop() // fecha o menu lateral
-      ..push(MaterialPageRoute(
-        builder: (_) => FavoriteInstitutionsScreen(
-          onOpenMap: (place) =>
-              _focusOnMap(MapFocusTarget.institution(place.osmId!)),
-        ),
-      ));
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => FavoriteInstitutionsScreen(
+        onOpenMap: (place) =>
+            _focusOnMap(MapFocusTarget.institution(place.osmId!)),
+      ),
+    ));
+  }
+
+  /// Item do menu lateral: fecha o menu e abre a tela.
+  void _fromDrawer(VoidCallback open) {
+    Navigator.of(context).pop();
+    open();
   }
 
   /// Menu lateral (ícone hambúrguer do header) — por enquanto só os
@@ -256,12 +277,12 @@ class _MainNavigationState extends State<MainNavigation>
             _DrawerItem(
               icon: Icons.favorite_rounded,
               label: 'Oportunidades salvas',
-              onTap: _openSavedOpportunities,
+              onTap: () => _fromDrawer(_openSavedOpportunities),
             ),
             _DrawerItem(
               icon: Icons.business_rounded,
               label: 'Instituições favoritas',
-              onTap: _openFavoriteInstitutions,
+              onTap: () => _fromDrawer(_openFavoriteInstitutions),
             ),
           ],
         ),
@@ -298,8 +319,14 @@ class _MainNavigationState extends State<MainNavigation>
         user: widget.user,
         onSwitchToMap: (opportunity) =>
             _focusOnMap(MapFocusTarget.opportunity(opportunity)),
+        tabRequest: _matcherTabRequest,
       ),
-      ProfileScreen(user: widget.user),
+      ProfileScreen(
+        user: widget.user,
+        onOpenMatches: _openMatches,
+        onOpenSavedOpportunities: _openSavedOpportunities,
+        onOpenFavoriteInstitutions: _openFavoriteInstitutions,
+      ),
     ];
 
     return Scaffold(

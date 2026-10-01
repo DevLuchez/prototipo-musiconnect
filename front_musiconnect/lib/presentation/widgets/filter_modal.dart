@@ -32,6 +32,9 @@ class FilterModal extends StatefulWidget {
   // sem esperar a primeira busca de opções responder.
   final Map<String, String> initialStateLabels;
   final OpportunitiesService service;
+  // Texto da barra de busca do Matcher — as opções mostradas respeitam a
+  // busca (null/vazio = sem busca).
+  final String? searchQuery;
   // Limites do slider "Escala de Match" — "Todas as oportunidades" usa
   // 0-100 (livre, sem filtrar por padrão); "Minhas oportunidades" trava em
   // 85-100 (nunca mostra abaixo do que a aba promete).
@@ -75,6 +78,7 @@ class FilterModal extends StatefulWidget {
     this.initialCities = const [],
     this.initialStateLabels = const {},
     required this.service,
+    this.searchQuery,
     this.matchScaleMin = 0,
     this.matchScaleMax = 100,
     this.initialMatchScale,
@@ -144,6 +148,7 @@ class _FilterModalState extends State<FilterModal> {
   Future<void> _refreshOptions() async {
     setState(() => _optionsLoading = true);
     final options = await widget.service.fetchFilterOptions(
+      q: widget.searchQuery,
       instruments: _instruments,
       countries: _countries,
       states: _states,

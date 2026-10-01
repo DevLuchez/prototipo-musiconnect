@@ -34,6 +34,11 @@ _AFFINITY_WEIGHT = 20
 _LOCATION_WEIGHT = 20
 _CONFIDENCE_WEIGHT = 15
 
+# A partir de quanto uma oportunidade é "compatível com o perfil" — é o
+# corte da aba "Minhas oportunidades" e o número de Matches do Perfil.
+# O app tem o mesmo valor em kHighMatchThreshold (core/constants.dart).
+HIGH_MATCH_THRESHOLD = 85
+
 
 @dataclass
 class MatchBreakdown:

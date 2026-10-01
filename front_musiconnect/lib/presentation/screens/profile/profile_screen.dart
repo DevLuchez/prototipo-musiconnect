@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../data/models/providers/auth_service.dart';
 import '../../../data/models/providers/favorites_service.dart';
+import '../../../data/models/providers/match_count_service.dart';
 import '../../widgets/auth/auth_common.dart';
 import '../auth/welcome_screen.dart';
 import 'change_password_screen.dart';
@@ -20,7 +21,21 @@ const _kRamoBlue = Color(0xFF2563EB);
 /// precisar de um gerenciador de estado global.
 class ProfileScreen extends StatefulWidget {
   final AuthUser user;
-  const ProfileScreen({super.key, required this.user});
+
+  // Atalhos dos números do card de estatísticas (recebidos do
+  // MainNavigation): Matches → Matcher em "Minhas oportunidades"; salvas e
+  // favoritas → as mesmas telas do menu lateral.
+  final VoidCallback? onOpenMatches;
+  final VoidCallback? onOpenSavedOpportunities;
+  final VoidCallback? onOpenFavoriteInstitutions;
+
+  const ProfileScreen({
+    super.key,
+    required this.user,
+    this.onOpenMatches,
+    this.onOpenSavedOpportunities,
+    this.onOpenFavoriteInstitutions,
+  });
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -48,7 +63,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final updated = await Navigator.of(context).push<AuthUser>(
       MaterialPageRoute(builder: (_) => EditProfileScreen(user: _user)),
     );
-    if (updated != null) setState(() => _user = updated);
+    if (updated == null) return;
+    setState(() => _user = updated);
+    // Instrumentos/ramo/localização mudam o match de cada oportunidade.
+    MatchCountService.instance.refresh();
   }
 
   void _changePassword() {
@@ -172,9 +190,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           style: TextStyle(fontSize: 13, color: Colors.grey[600]),
         ),
         const SizedBox(height: 22),
-        // "Matches" ainda é um número fixo (estatística de compatibilidade
-        // não existe no backend); salvas/favoritas são reais.
-        const _StatsCard(),
+        _StatsCard(
+          onOpenMatches: widget.onOpenMatches,
+          onOpenSavedOpportunities: widget.onOpenSavedOpportunities,
+          onOpenFavoriteInstitutions: widget.onOpenFavoriteInstitutions,
+        ),
         const SizedBox(height: 16),
         _InfoCard(
           instruments: _user.instruments,
@@ -217,12 +237,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
 }
 
 class _StatsCard extends StatelessWidget {
-  const _StatsCard();
+  final VoidCallback? onOpenMatches;
+  final VoidCallback? onOpenSavedOpportunities;
+  final VoidCallback? onOpenFavoriteInstitutions;
+
+  const _StatsCard({
+    this.onOpenMatches,
+    this.onOpenSavedOpportunities,
+    this.onOpenFavoriteInstitutions,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
+      // Padding menor que antes (16 → 8): o resto vem da área de toque de
+      // cada número, pra o efeito do toque ocupar a altura toda do card.
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -232,7 +262,18 @@ class _StatsCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Expanded(child: _StatItem(value: '142', label: 'Matches')),
+          // Oportunidades abertas com match alto (= total de "Minhas
+          // oportunidades"); "–" enquanto carrega ou se a consulta falhar.
+          Expanded(
+            child: ListenableBuilder(
+              listenable: MatchCountService.instance,
+              builder: (context, _) => _StatItem(
+                value: '${MatchCountService.instance.count ?? '–'}',
+                label: 'Matches',
+                onTap: onOpenMatches,
+              ),
+            ),
+          ),
           Container(width: 1, height: 30, color: Colors.grey[200]),
           // Oportunidades salvas / instituições favoritas — atualizam na
           // hora quando um coração é marcado em qualquer tela.
@@ -241,7 +282,8 @@ class _StatsCard extends StatelessWidget {
               listenable: FavoritesService.instance,
               builder: (context, _) => _StatItem(
                 value: '${FavoritesService.instance.opportunityCount}',
-                label: 'Salvas',
+                label: 'Oport. salvas',
+                onTap: onOpenSavedOpportunities,
               ),
             ),
           ),
@@ -251,7 +293,8 @@ class _StatsCard extends StatelessWidget {
               listenable: FavoritesService.instance,
               builder: (context, _) => _StatItem(
                 value: '${FavoritesService.instance.institutionCount}',
-                label: 'Favoritas',
+                label: 'Inst. favoritas',
+                onTap: onOpenFavoriteInstitutions,
               ),
             ),
           ),
@@ -264,10 +307,29 @@ class _StatsCard extends StatelessWidget {
 class _StatItem extends StatelessWidget {
   final String value;
   final String label;
-  const _StatItem({required this.value, required this.label});
+  // Leva à lista correspondente — efeito do toque em rosa, igual ao coração.
+  final VoidCallback? onTap;
+  const _StatItem({required this.value, required this.label, this.onTap});
 
   @override
   Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(12),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        splashColor: kAuthPink.withOpacity(0.18),
+        highlightColor: kAuthPink.withOpacity(0.08),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: _buildContent(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent() {
     return Column(
       children: [
         Text(

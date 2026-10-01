@@ -1,5 +1,10 @@
 // Cores e constantes globais
 
+/// A partir de quanto uma oportunidade é "compatível com o perfil" — corte
+/// da aba "Minhas oportunidades" e do número de Matches do Perfil. Igual a
+/// HIGH_MATCH_THRESHOLD do backend (app/services/matching.py).
+const int kHighMatchThreshold = 85;
+
 /// Lista curada de instrumentos oferecida no cadastro (e reaproveitável em
 /// outras telas, como edição de perfil).
 ///

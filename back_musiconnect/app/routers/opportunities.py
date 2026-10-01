@@ -4,6 +4,7 @@ Router de oportunidades musicais — aba Matcher do app Flutter.
 Endpoints:
   GET  /api/opportunities          — lista oportunidades ativas
   GET  /api/opportunities/cities   — oportunidades agrupadas por cidade (mapa)
+  GET  /api/opportunities/matches/count — nº de oportunidades compatíveis (Perfil)
   GET  /api/opportunities/{id}     — detalhes de uma oportunidade
   POST /api/opportunities/scrape   — dispara full scraping manual (dev/admin)
   POST /api/opportunities/enrich   — enriquece oportunidades brutas via LLM (Gemini)
@@ -23,8 +24,12 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from app.database import get_db, SessionLocal
 from app.models import CityLocation, Opportunity, User
 from app.schemas import CityOpportunitiesOut, OpportunityOut
-from app.routers.auth import get_current_user_optional
-from app.services.matching import compute_match_breakdown
+from app.routers.auth import get_current_user, get_current_user_optional
+from app.services.matching import (
+    HIGH_MATCH_THRESHOLD,
+    compute_match_breakdown,
+    compute_match_percentage,
+)
 from app.services.scrapers.musical_chairs_scraper import scrape_musical_chairs
 from app.services.llm_enricher import enrich_opportunities
 
@@ -138,6 +143,10 @@ async def _run_full_scrape() -> dict:
 @router.get("/", response_model=List[OpportunityOut])
 def list_opportunities(
     response: Response,
+    q: Optional[str] = Query(
+        None,
+        description="Busca livre (título, descrição, instituição, instrumentos, cidade, estado, país)",
+    ),
     type: Optional[List[str]] = Query(None, description="Tipo(s): audicao, emprego, curso, competicao"),
     source_name: Optional[str] = Query(None, description="Fonte: Funarte, Musical Chairs..."),
     instrument: Optional[List[str]] = Query(None, description="Instrumento(s) exigido(s) (ex: Violino)"),
@@ -160,7 +169,8 @@ def list_opportunities(
 
     Cada filtro aceita múltiplos valores (ex: ?instrument=Violino&instrument=Piano)
     — dentro do mesmo campo é OR (qualquer um dos valores serve), entre campos
-    diferentes é AND (todos os campos informados precisam bater).
+    diferentes é AND (todos os campos informados precisam bater). A busca
+    livre `q` também entra como AND com os filtros.
 
     O total real (antes do corte por `limit`) vai no header `X-Total-Count`,
     já que o corpo da resposta é só a página pedida — o cliente não deve
@@ -176,6 +186,9 @@ def list_opportunities(
         city=city,
         is_remote=is_remote,
     )
+
+    if q and q.strip():
+        query = _apply_search(query, q)
 
     if city_location_id is not None:
         # Mesmo recorte do marcador de cidade (ver get_opportunities_by_city):
@@ -203,6 +216,32 @@ def list_opportunities(
             opp.match_percentage = breakdown.total
             opp.match_breakdown = breakdown
     return items
+
+
+def _apply_search(query, q: str):
+    """
+    Busca livre da barra do Matcher: o termo pode aparecer em qualquer
+    parte do título, descrição, instituição organizadora, instrumentos,
+    cidade, estado ou país — sem diferenciar maiúsculas nem acentos
+    (mesma regra da busca de instituições do mapa).
+    """
+    # Escapa curingas do LIKE digitados pelo usuário
+    term = q.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    searchable = func.concat_ws(  # concat_ws pula os campos NULL
+        " ",
+        Opportunity.title,
+        Opportunity.description,
+        Opportunity.institution,
+        func.array_to_string(Opportunity.instruments, " "),
+        Opportunity.city,
+        Opportunity.state,
+        Opportunity.country,
+    )
+    return query.filter(
+        func.unaccent(func.lower(searchable)).like(
+            func.unaccent(func.lower(f"%{term}%")), escape="\\"
+        )
+    )
 
 
 def _only_open(query):
@@ -247,6 +286,7 @@ def _apply_filters(
 
 @router.get("/filter-options")
 def get_filter_options(
+    q: Optional[str] = Query(None, description="Busca livre já digitada no Matcher"),
     instrument: Optional[List[str]] = Query(None),
     country: Optional[List[str]] = Query(None),
     state: Optional[List[str]] = Query(None),
@@ -258,14 +298,18 @@ def get_filter_options(
     filtros (Instrumento, País, Estado, Cidade) — busca facetada/cruzada:
     cada campo é calculado aplicando os filtros JÁ escolhidos nos OUTROS
     campos (nunca nele mesmo), pra que escolher um instrumento estreite as
-    opções de localização mostradas, e vice-versa.
+    opções de localização mostradas, e vice-versa. A busca livre `q`, se
+    houver, vale para todos os campos.
 
     Precisa vir ANTES de /{opportunity_id} no router — senão o FastAPI
     tentaria casar "filter-options" como opportunity_id (int) e falharia.
     """
 
     def rows(*, exclude: str):
-        query = _apply_filters(
+        # Só oportunidades com prazo vigente — mesmo critério da listagem;
+        # senão o modal oferecia locais/instrumentos que só têm vencidas e
+        # o filtro escolhido não retornava nada.
+        query = _only_open(_apply_filters(
             db.query(
                 Opportunity.instruments,
                 Opportunity.country,
@@ -276,7 +320,9 @@ def get_filter_options(
             country=country if exclude != "country" else None,
             state=state if exclude != "state" else None,
             city=city if exclude != "city" else None,
-        )
+        ))
+        if q and q.strip():
+            query = _apply_search(query, q)
         return query.all()
 
     instruments = sorted({
@@ -302,6 +348,28 @@ def get_filter_options(
         "states": states,
         "cities": cities,
     }
+
+
+@router.get("/matches/count")
+def count_matches(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """
+    Quantas oportunidades abertas são compatíveis com o perfil do usuário
+    logado (match >= HIGH_MATCH_THRESHOLD) — o número de Matches do
+    Perfil, igual ao total da aba "Minhas oportunidades".
+
+    O match é calculado em Python (services/matching.py), então percorre
+    todas as oportunidades visíveis — instantâneo no volume atual.
+
+    Precisa vir ANTES de /{opportunity_id} no router.
+    """
+    items = _only_open(_apply_filters(db.query(Opportunity))).all()
+    count = sum(
+        1 for opp in items if compute_match_percentage(user, opp) >= HIGH_MATCH_THRESHOLD
+    )
+    return {"count": count, "threshold": HIGH_MATCH_THRESHOLD}
 
 
 @router.get("/cities", response_model=List[CityOpportunitiesOut])

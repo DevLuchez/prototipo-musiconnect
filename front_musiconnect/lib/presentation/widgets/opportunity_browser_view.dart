@@ -288,6 +288,7 @@ class _OpportunityBrowserViewState extends State<OpportunityBrowserView> {
         initialCities: _activeCities,
         initialStateLabels: _stateLabels,
         service: widget.service,
+        searchQuery: _searchController.text,
         matchScaleMin: widget.matchScaleMin,
         matchScaleMax: widget.matchScaleMax,
         initialMatchScale: _matchScale,
