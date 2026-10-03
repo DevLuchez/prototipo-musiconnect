@@ -331,7 +331,7 @@ String _formatDate(DateTime d) =>
 /// Prazo em poucas palavras: relativo quando é urgente ("Fecha amanhã"),
 /// data quando não ("Até 25/10/2026").
 String deadlineShortLabel(DateTime? deadline) {
-  if (deadline == null) return 'Sem prazo informado';
+  if (deadline == null) return 'Prazo não informado';
   if (!isDeadlineUrgent(deadline)) return 'Até ${_formatDate(deadline)}';
   return switch (_daysUntil(deadline)) {
     0 => 'Fecha hoje',
