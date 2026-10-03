@@ -922,7 +922,8 @@ class AuthDialog extends StatelessWidget {
   final String? secondaryLabel;
   final VoidCallback? onSecondary;
   // Ações irreversíveis (ex: excluir conta) trocam o rosa padrão por
-  // vermelho nos dois botões, deixando o risco visualmente explícito.
+  // vermelho escuro (red[800], o mesmo da "Zona de atenção" do Perfil) nos
+  // dois botões, deixando o risco visualmente explícito.
   final bool destructive;
 
   const AuthDialog({
@@ -965,7 +966,7 @@ class AuthDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasTwoButtons = secondaryLabel != null;
-    final accent = destructive ? Colors.red : kAuthPink;
+    final accent = destructive ? Colors.red[800]! : kAuthPink;
     return AlertDialog(
       backgroundColor: Colors.white,
       surfaceTintColor: Colors.white,

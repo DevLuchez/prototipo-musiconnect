@@ -325,15 +325,13 @@ class _MainNavigationState extends State<MainNavigation>
                       onTap: () => _fromDrawer(_openHelp),
                     ),
                     const SizedBox(height: 4),
-                    // Mesmo fluxo do "Sair da conta" do Perfil. Fundo
-                    // vermelho claro + ícone no vermelho escuro da "Zona de
-                    // atenção" do Perfil.
+                    // Mesmo fluxo do "Sair da conta" do Perfil; ícone e texto
+                    // no vermelho escuro da "Zona de atenção" do Perfil.
                     _DrawerItem(
                       icon: Icons.logout_rounded,
                       label: 'Sair',
                       showChevron: false,
-                      iconColor: Colors.red[800],
-                      backgroundColor: Colors.red[50],
+                      color: Colors.red[800],
                       onTap: () => _fromDrawer(() => confirmAndLogout(this.context)),
                     ),
                     const SizedBox(height: 8),
@@ -568,50 +566,34 @@ class _DrawerItem extends StatelessWidget {
   final VoidCallback onTap;
   // Seta ">" — só em itens que abrem outra tela (não no "Sair").
   final bool showChevron;
-  final Color? iconColor;
-  // Com fundo, o item vira um bloco arredondado com margem lateral (ex: "Sair").
-  final Color? backgroundColor;
+  // Cor do ícone e do texto (padrão: ícone rosa, texto escuro).
+  final Color? color;
 
   const _DrawerItem({
     required this.icon,
     required this.label,
     required this.onTap,
     this.showChevron = true,
-    this.iconColor,
-    this.backgroundColor,
+    this.color,
   });
 
   @override
   Widget build(BuildContext context) {
-    final background = backgroundColor;
-    final tile = ListTile(
-      // Com fundo, margem 16 + padding 8 = mesmos 24 dos outros itens, então
-      // os ícones ficam alinhados.
-      contentPadding: EdgeInsets.symmetric(horizontal: background == null ? 24 : 8),
-      leading: Icon(icon, color: iconColor ?? kAuthPink, size: 22),
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24),
+      leading: Icon(icon, color: color ?? kAuthPink, size: 22),
       title: Text(
         label,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 15,
           fontWeight: FontWeight.w600,
-          color: kAuthTextDark,
+          color: color ?? kAuthTextDark,
         ),
       ),
       trailing: showChevron
           ? Icon(Icons.chevron_right_rounded, color: Colors.grey[400])
           : null,
       onTap: onTap,
-    );
-    if (background == null) return tile;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Material(
-        color: background,
-        borderRadius: BorderRadius.circular(12),
-        clipBehavior: Clip.antiAlias,
-        child: tile,
-      ),
     );
   }
 }

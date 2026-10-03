@@ -188,7 +188,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         const SizedBox(height: 24),
         Row(
           children: [
-            Icon(Icons.error_outline_rounded, size: 15, color: Colors.orange[800]),
+            Icon(Icons.error_outline_rounded, size: 15, color: Colors.red[800]),
             const SizedBox(width: 6),
             Text(
               'ZONA DE ATENÇÃO',
@@ -536,7 +536,9 @@ class _DangerRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final titleColor = destructive ? Colors.red : kAuthTextDark;
+    // Destrutivo ("Excluir conta") no mesmo vermelho escuro do título
+    // "ZONA DE ATENÇÃO".
+    final titleColor = destructive ? Colors.red[800] : kAuthTextDark;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
@@ -544,7 +546,7 @@ class _DangerRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         child: Row(
           children: [
-            Icon(icon, size: 20, color: destructive ? Colors.red : Colors.grey[600]),
+            Icon(icon, size: 20, color: destructive ? Colors.red[800] : Colors.grey[600]),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -557,7 +559,7 @@ class _DangerRow extends StatelessWidget {
                     subtitle,
                     style: TextStyle(
                       fontSize: 11.5,
-                      color: destructive ? Colors.red[300] : Colors.grey[500],
+                      color: destructive ? Colors.red[800] : Colors.grey[500],
                     ),
                   ),
                 ],
@@ -598,7 +600,7 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Essa ação é irreversível e permanente! Digite sua senha para confirmar.',
+            'Essa ação é irreversível e permanente! Digite sua senha para confirmar a deleção da sua conta no MusiConnect.',
             style: TextStyle(fontSize: 13.5, color: Colors.grey[600], height: 1.4),
           ),
           const SizedBox(height: 16),

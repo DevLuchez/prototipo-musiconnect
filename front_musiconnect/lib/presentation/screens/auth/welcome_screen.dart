@@ -69,7 +69,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
   void _startAutoplay() {
     _autoplayTimer?.cancel();
-    _autoplayTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+    _autoplayTimer = Timer.periodic(const Duration(seconds: 4), (_) {
       _controller.animateToPage(
         _page + 1,
         duration: const Duration(milliseconds: 600),
