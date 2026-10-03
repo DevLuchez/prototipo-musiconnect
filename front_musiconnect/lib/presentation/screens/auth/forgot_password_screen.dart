@@ -112,10 +112,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       style: TextStyle(fontSize: 13, color: Colors.grey[600], height: 1.4),
                     ),
                     const SizedBox(height: 24),
-                    const AuthImagePlaceholder(
+                    SizedBox(
                       height: 180,
-                      icon: Icons.lock_reset_rounded,
-                      iconSize: 56,
+                      width: double.infinity,
+                      child: Image.asset(
+                        'assets/images/forgot_password.png',
+                        fit: BoxFit.contain,
+                      ),
                     ),
                     const SizedBox(height: 24),
                     AuthTextField(
