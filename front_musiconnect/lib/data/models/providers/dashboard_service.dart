@@ -19,11 +19,15 @@ class DashboardData {
   /// Compatíveis que entraram no app nos últimos 7 dias.
   final List<OpportunityModel> newMatches;
 
+  /// Quantas abertas há de cada tipo ("audicao" → 48) — bloco "Explorar".
+  final Map<String, int> typeCounts;
+
   const DashboardData({
     required this.matchCount,
     required this.urgentSaved,
     required this.topMatches,
     required this.newMatches,
+    this.typeCounts = const {},
   });
 
   factory DashboardData.fromJson(Map<String, dynamic> json) {
@@ -36,6 +40,8 @@ class DashboardData {
       urgentSaved: opportunities('urgent_saved'),
       topMatches: opportunities('top_matches'),
       newMatches: opportunities('new_matches'),
+      typeCounts: (json['type_counts'] as Map<String, dynamic>? ?? {})
+          .map((type, count) => MapEntry(type, count as int)),
     );
   }
 }

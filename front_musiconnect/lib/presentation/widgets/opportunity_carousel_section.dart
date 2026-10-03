@@ -16,6 +16,9 @@ class OpportunityCarouselSection extends StatelessWidget {
   final List<OpportunityModel> items;
   final VoidCallback? onSeeAll;
   final ValueChanged<OpportunityModel> onCardTap;
+  // Cards enxutos e mais estreitos (OpportunityCompactCard) — usado no
+  // Início; o Matcher usa o card completo.
+  final bool compact;
 
   const OpportunityCarouselSection({
     super.key,
@@ -25,6 +28,7 @@ class OpportunityCarouselSection extends StatelessWidget {
     required this.items,
     this.onSeeAll,
     required this.onCardTap,
+    this.compact = false,
   });
 
   @override
@@ -82,13 +86,25 @@ class OpportunityCarouselSection extends StatelessWidget {
           // lista vertical a altura era livre (o Column só cresce conforme
           // o conteúdo); aqui precisa de um valor fixo porque é uma lista
           // horizontal, então damos folga de sobra em vez de cortar rente.
-          height: 220,
+          height: compact ? 176 : 220,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.only(left: 16, right: 6),
             itemCount: items.length,
             itemBuilder: (context, index) {
               final opp = items[index];
+              if (compact) {
+                return SizedBox(
+                  // Estreito o bastante pra mostrar o próximo card pela
+                  // metade — indica que dá pra arrastar.
+                  width: 210,
+                  child: OpportunityCompactCard(
+                    opportunity: opp,
+                    margin: const EdgeInsets.only(right: 12, bottom: 8, top: 2),
+                    onTap: () => onCardTap(opp),
+                  ),
+                );
+              }
               return SizedBox(
                 // Mesma largura que o card tinha na lista vertical (tela
                 // inteira menos a margem de 16 de cada lado).

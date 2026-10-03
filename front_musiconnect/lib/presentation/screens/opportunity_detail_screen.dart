@@ -1,17 +1,24 @@
-import 'dart:math' as math;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../data/models/opportunity_model.dart';
 import '../../data/models/providers/auth_service.dart';
+import '../widgets/auth/auth_common.dart';
 import '../widgets/favorite_button.dart';
+import '../widgets/match_ring.dart';
 
 const _pink = Color(0xFFEC4899);
 const _purple = Color(0xFFDF2881);
 const _green = Color(0xFF059669);
-// Fundo sólido do card com o título da oportunidade e o percentual — sem
-// gradiente.
-const _heroColor = Color(0xFF3D2556);
+
+/// Cor do anel de match do card do topo, pela faixa do percentual:
+/// vermelho < 50%, âmbar 50-84%, verde >= 85% (mesmo corte de "Minhas
+/// oportunidades").
+Color _matchBandColor(int percentage) {
+  if (percentage >= 85) return _green;
+  if (percentage >= 50) return const Color(0xFFF59E0B);
+  return const Color.fromARGB(255, 236, 72, 72);
+}
 
 /// Cor da tag de percentual (e do destaque do subcard "Edital") de acordo
 /// com o quanto um fator atingiu do seu próprio máximo — mesma faixa usada
@@ -180,10 +187,8 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen>
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(20, 44, 20, 20),
-            decoration: BoxDecoration(
-              color: _heroColor,
-              borderRadius: BorderRadius.circular(24),
-            ),
+            // Mesmo fundo do "Seu melhor match" do Início.
+            decoration: highlightCardDecoration(radius: 24),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -195,26 +200,30 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen>
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
-                      color: Colors.white,
+                      color: kAuthTextDark,
                       height: 1.3,
                     ),
                   ),
                 ),
                 const SizedBox(width: 16),
                 if (opp.matchPercentage != null)
-                  _MatchRing(percentage: opp.matchPercentage!, size: 58)
+                  MatchRing(
+                    percent: opp.matchPercentage!,
+                    size: 64,
+                    color: _matchBandColor(opp.matchPercentage!),
+                  )
                 else
                   Container(
-                    width: 58,
-                    height: 58,
+                    width: 64,
+                    height: 64,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.25),
+                      color: kAuthPink.withOpacity(0.12),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
                       Icons.music_note_rounded,
                       size: 28,
-                      color: Colors.white,
+                      color: kAuthPink,
                     ),
                   ),
               ],
@@ -547,7 +556,7 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen>
       icon: Icons.access_time_rounded,
       label: 'PRAZO',
       value: value,
-      valueColor: urgent ? Colors.red : null,
+      valueColor: urgent ? Colors.red[800] : null,
     );
   }
 
@@ -1023,109 +1032,6 @@ class _PercentPill extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Círculo com preenchimento transparente (mostra o gradiente do card por
-/// trás), percentual de match no centro em branco, e um contorno colorido
-/// de acordo com a faixa do percentual (rosa < 50%, âmbar 50-84%, verde
-/// >= 85% — mesmo corte usado pra "Minhas oportunidades") que preenche
-/// proporcionalmente a partir do topo no sentido horário (ex: 50% vai do
-/// centro superior até o centro inferior).
-class _MatchRing extends StatelessWidget {
-  final int percentage;
-  final double size;
-  const _MatchRing({required this.percentage, this.size = 72});
-
-  Color get _ringColor {
-    if (percentage >= 85) return _green;
-    if (percentage >= 50) return const Color(0xFFF59E0B);
-    return const Color.fromARGB(255, 236, 72, 72);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final strokeWidth = size / 16;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          width: size,
-          height: size,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              CustomPaint(
-                size: Size(size, size),
-                painter: _MatchRingPainter(percentage / 100, strokeWidth, _ringColor),
-              ),
-              Text(
-                '$percentage%',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                  fontSize: size * 0.26,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 3),
-        Text(
-          'MATCH',
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.85),
-            fontSize: 8,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.2,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _MatchRingPainter extends CustomPainter {
-  final double fraction;
-  final double strokeWidth;
-  final Color color;
-  const _MatchRingPainter(this.fraction, this.strokeWidth, this.color);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = size.center(Offset.zero);
-    final radius = (size.shortestSide - strokeWidth) / 2;
-
-    // Trilha do anel (contorno completo, translúcida) — sem disco de fundo,
-    // o preenchimento é transparente (mostra o gradiente do card atrás).
-    canvas.drawCircle(
-      center,
-      radius,
-      Paint()
-        ..color = Colors.white.withOpacity(0.3)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth,
-    );
-
-    // Progresso — cor de acordo com a faixa do percentual, começa no topo
-    // (12h) e vai no sentido horário.
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      -math.pi / 2,
-      2 * math.pi * fraction.clamp(0.0, 1.0),
-      false,
-      Paint()
-        ..color = color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth
-        ..strokeCap = StrokeCap.round,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_MatchRingPainter oldDelegate) =>
-      oldDelegate.fraction != fraction ||
-      oldDelegate.strokeWidth != strokeWidth ||
-      oldDelegate.color != color;
 }
 
 class _SectionTitle extends StatelessWidget {

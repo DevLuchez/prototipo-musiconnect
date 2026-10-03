@@ -24,7 +24,7 @@ class _MatcherTheme {
         return const Color(0xFFF59E0B); // âmbar
       case 'audicao':
       case 'audição':
-        return const Color(0xFFDF2881); // roxo
+        return const Color(0xFF7C3AED); // roxo (kAuthPurple)
       case 'emprego':
         return const Color(0xFF2563EB); // azul
       default:
@@ -32,6 +32,10 @@ class _MatcherTheme {
     }
   }
 }
+
+/// Cor de cada tipo de oportunidade (badge do card, faixa do card compacto,
+/// blocos "Explorar" do Início).
+Color opportunityTypeColor(String? type) => _MatcherTheme.typeColor(type);
 
 /// Card de oportunidade usado na listagem "Todas as oportunidades".
 class OpportunityCard extends StatelessWidget {
@@ -247,19 +251,6 @@ class OpportunityCard extends StatelessWidget {
     );
   }
 
-  String _formatDate(DateTime d) =>
-      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
-
-  /// Prazo com menos de [kUrgentDeadlineDays] dias até hoje (e ainda não
-  /// vencido) → destaque.
-  bool _isDeadlineUrgent(DateTime deadline) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final day = DateTime(deadline.year, deadline.month, deadline.day);
-    final diff = day.difference(today).inDays;
-    return diff >= 0 && diff < kUrgentDeadlineDays;
-  }
-
   Widget _buildMatchTag() {
     return Container(
       margin: const EdgeInsets.only(right: 6),
@@ -281,7 +272,7 @@ class OpportunityCard extends StatelessWidget {
 
   Widget _buildDeadline() {
     final deadline = opportunity.deadline;
-    final urgent = deadline != null && _isDeadlineUrgent(deadline);
+    final urgent = deadline != null && isDeadlineUrgent(deadline);
     final text = deadline != null
         ? 'Até ${_formatDate(deadline)}'
         : 'Prazo não informado';
@@ -314,6 +305,160 @@ class OpportunityCard extends StatelessWidget {
         const SizedBox(width: 3),
         Text(text, style: TextStyle(fontSize: 11, color: Colors.grey[500])),
       ],
+    );
+  }
+}
+
+// ── Prazo: regras compartilhadas (card, card compacto e destaque do Início) ──
+
+/// Data sem horário (o prazo é um dia, não um instante).
+DateTime _dayOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+
+/// Dias até o prazo (0 = hoje, negativo = já venceu).
+int _daysUntil(DateTime deadline) =>
+    _dayOnly(deadline).difference(_dayOnly(DateTime.now())).inDays;
+
+/// Prazo com menos de [kUrgentDeadlineDays] dias até hoje (e ainda não
+/// vencido) → destaque em vermelho.
+bool isDeadlineUrgent(DateTime deadline) {
+  final diff = _daysUntil(deadline);
+  return diff >= 0 && diff < kUrgentDeadlineDays;
+}
+
+String _formatDate(DateTime d) =>
+    '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+
+/// Prazo em poucas palavras: relativo quando é urgente ("Fecha amanhã"),
+/// data quando não ("Até 25/10/2026").
+String deadlineShortLabel(DateTime? deadline) {
+  if (deadline == null) return 'Sem prazo informado';
+  if (!isDeadlineUrgent(deadline)) return 'Até ${_formatDate(deadline)}';
+  return switch (_daysUntil(deadline)) {
+    0 => 'Fecha hoje',
+    1 => 'Fecha amanhã',
+    final n => 'Fecha em $n dias',
+  };
+}
+
+/// Card enxuto dos carrosséis do Início: faixa na cor do tipo, tipo + % de
+/// match, título e prazo — sem descrição/instrumentos/local (o detalhe
+/// está a um toque). Precisa de largura/altura fixas vindas de fora.
+class OpportunityCompactCard extends StatelessWidget {
+  final OpportunityModel opportunity;
+  final VoidCallback onTap;
+  final EdgeInsetsGeometry margin;
+
+  const OpportunityCompactCard({
+    super.key,
+    required this.opportunity,
+    required this.onTap,
+    this.margin = EdgeInsets.zero,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final opp = opportunity;
+    final typeColor = _MatcherTheme.typeColor(opp.type);
+    final match = opp.matchPercentage;
+    final urgent = opp.deadline != null && isDeadlineUrgent(opp.deadline!);
+
+    return Container(
+      margin: margin,
+      decoration: BoxDecoration(
+        color: _MatcherTheme.cardBg,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          splashColor: _MatcherTheme.pink.withOpacity(0.12),
+          highlightColor: _MatcherTheme.pink.withOpacity(0.05),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Faixa na cor do tipo — identifica a categoria de relance.
+              Container(height: 5, color: typeColor),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 4, 6),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Row(
+                          children: [
+                            _TypeBadge(type: opp.typeLabel, color: typeColor),
+                            const Spacer(),
+                            if (match != null)
+                              Text(
+                                '$match%',
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                  color: _MatcherTheme.purple,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Text(
+                          opp.title,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF1F2937),
+                            height: 1.3,
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.access_time_rounded,
+                            size: 13,
+                            color: urgent ? Colors.red[800] : Colors.grey[400],
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              deadlineShortLabel(opp.deadline),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: urgent ? FontWeight.w700 : FontWeight.w500,
+                                color: urgent ? Colors.red[800] : Colors.grey[500],
+                              ),
+                            ),
+                          ),
+                          FavoriteButton.opportunity(opp.id),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

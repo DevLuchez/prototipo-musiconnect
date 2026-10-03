@@ -14,10 +14,12 @@ confiança >= 0.80, prazo vigente):
   - new_matches: compatíveis que entraram no app nos últimos 7 dias — pelo
     `created_at` (gravado uma vez), não pelo `scraped_at`, que é
     atualizado toda vez que o RSS relista uma oportunidade antiga.
+  - type_counts: quantas abertas há de cada tipo (bloco "Explorar").
 """
 
+from collections import Counter
 from datetime import date, datetime, timedelta
-from typing import List
+from typing import Dict, List
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -47,6 +49,8 @@ class DashboardOut(BaseModel):
     urgent_saved: List[OpportunityOut]
     top_matches: List[OpportunityOut]
     new_matches: List[OpportunityOut]
+    # {"audicao": 52, "competicao": 44, ...} — todas as abertas, não só matches.
+    type_counts: Dict[str, int]
 
 
 @router.get("", response_model=DashboardOut)
@@ -91,4 +95,5 @@ def get_dashboard(
         urgent_saved=urgent_saved,
         top_matches=matches[:_CAROUSEL_LIMIT],
         new_matches=new_matches[:_CAROUSEL_LIMIT],
+        type_counts=dict(Counter(o.type for o in visible if o.type)),
     )
