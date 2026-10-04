@@ -58,6 +58,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -100,3 +101,16 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Ícone do app (gera os arquivos de cada plataforma):
+#   dart run flutter_launcher_icons
+# Android 8+ usa o ícone adaptativo: fundo rosa + "M" branco reduzido para
+# a área que o launcher nunca corta (assets/icon/ — fora do bundle do app).
+flutter_launcher_icons:
+  android: "ic_launcher"
+  ios: true
+  image_path: "assets/images/logo_1.png"
+  adaptive_icon_background: "#D82674"
+  adaptive_icon_foreground: "assets/icon/logo_1_foreground.png"
+  remove_alpha_ios: true
+  min_sdk_android: 21
