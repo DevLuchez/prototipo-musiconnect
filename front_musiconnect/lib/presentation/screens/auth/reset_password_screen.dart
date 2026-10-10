@@ -112,10 +112,14 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               children: [
                 const Center(child: AuthLogo(fontSize: 20)),
                 const SizedBox(height: 24),
-                const AuthImagePlaceholder(
+                // Mesma imagem do "Esqueci minha senha" — mesmo fluxo.
+                SizedBox(
                   height: 180,
-                  icon: Icons.lock_reset_rounded,
-                  iconSize: 56,
+                  width: double.infinity,
+                  child: Image.asset(
+                    'assets/images/forgot_password.png',
+                    fit: BoxFit.contain,
+                  ),
                 ),
                 const SizedBox(height: 24),
                 const Align(

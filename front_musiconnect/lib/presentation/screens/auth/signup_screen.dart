@@ -759,10 +759,13 @@ class _EmailConfirmStepState extends State<_EmailConfirmStep> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const AuthImagePlaceholder(
+          SizedBox(
             height: 220,
-            icon: Icons.mark_email_read_outlined,
-            iconSize: 64,
+            width: double.infinity,
+            child: Image.asset(
+              'assets/images/confirm_email.png',
+              fit: BoxFit.contain,
+            ),
           ),
           const SizedBox(height: 24),
           const Text(
