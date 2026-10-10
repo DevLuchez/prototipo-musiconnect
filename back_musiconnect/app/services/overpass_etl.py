@@ -49,6 +49,18 @@ OSM_TAGS = [
 LAT_STEPS = range(-90, 91, 30)   # -90, -60, -30, 0, 30, 60, 90
 LNG_STEPS = range(-180, 181, 45)  # -180, -135, -90, -45, 0, 45, 90, 135, 180
 
+# Correções manuais sobre o OSM — aplicadas a cada coleta, então não se perdem
+# quando o ETL roda de novo.
+# Objetos ignorados: pins que duplicam outro na prática (mesmo lugar, outro
+# objeto no OSM).
+OSM_IGNORED_IDS = {
+    "node_6331636362",  # "Teatro SCAR" — fica a 25 m do pin "SCAR" (mesmo prédio)
+}
+# Nomes exibidos no lugar do nome do OSM.
+OSM_NAME_OVERRIDES = {
+    "node_6331636363": "SCAR – Sociedade Cultura Artística",
+}
+
 
 def _build_query(lat_s: float, lat_n: float, lng_w: float, lng_e: float) -> str:
     """Monta uma query Overpass que busca todos os tipos musicais em uma bbox."""
@@ -73,6 +85,9 @@ def _parse_element(elem: dict) -> Optional[dict]:
         tags = elem.get("tags", {})
         elem_type = elem.get("type", "")
         elem_id = elem.get("id")
+        osm_id = f"{elem_type}_{elem_id}"
+        if osm_id in OSM_IGNORED_IDS:
+            return None
 
         # Extrai coordenadas — nodes têm lat/lon direto, ways têm center
         if elem_type == "node":
@@ -87,7 +102,8 @@ def _parse_element(elem: dict) -> Optional[dict]:
             return None
 
         name = (
-            tags.get("name")
+            OSM_NAME_OVERRIDES.get(osm_id)
+            or tags.get("name")
             or tags.get("name:en")
             or tags.get("name:pt")
         )
@@ -112,7 +128,7 @@ def _parse_element(elem: dict) -> Optional[dict]:
         website, email = extract_contacts(tags)
 
         return {
-            "osm_id": f"{elem_type}_{elem_id}",
+            "osm_id": osm_id,
             "name": name,
             "address": address,
             "lat": lat,
