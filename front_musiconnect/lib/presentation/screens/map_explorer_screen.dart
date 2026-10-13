@@ -1146,29 +1146,41 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
             ),
 
           // ── Botão de legenda (esquerda) ─────────────────────────
+          // Ícone + a palavra "Legenda": só o ícone não era reconhecido.
           Positioned(
             bottom: 16,
             left: 16,
-            child: Tooltip(
-              message: 'Legenda',
-              child: GestureDetector(
-                onTap: _showLegend,
-                child: Container(
-                  height: 42,
-                  width: 42,
-                  decoration: BoxDecoration(
-                    color: _pinkTint,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 10,
-                        offset: const Offset(1, 1),
+            child: GestureDetector(
+              onTap: _showLegend,
+              child: Container(
+                height: 42,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                decoration: BoxDecoration(
+                  color: _pinkTint,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(1, 1),
+                    ),
+                  ],
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.info_outline_rounded,
+                        size: 18, color: _pinkIcon),
+                    SizedBox(width: 6),
+                    Text(
+                      'Legenda',
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                        color: _pinkIcon,
                       ),
-                    ],
-                  ),
-                  child: const Icon(Icons.legend_toggle_rounded,
-                      size: 20, color: _pinkIcon),
+                    ),
+                  ],
                 ),
               ),
             ),

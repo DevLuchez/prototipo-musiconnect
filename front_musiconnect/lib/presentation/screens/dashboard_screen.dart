@@ -11,12 +11,13 @@ import '../widgets/match_ring.dart';
 import '../widgets/opportunity_browser_view.dart';
 import '../widgets/opportunity_card.dart';
 import '../widgets/opportunity_carousel_section.dart';
+import 'help_screen.dart';
 import 'opportunity_detail_screen.dart';
 
 /// Aba Início (tela inicial do app): resumo do que importa hoje —
-/// saudação, novidades, destaque do melhor match, categorias para
-/// explorar, prazos das salvas e demais matches, em cards enxutos. Seções
-/// vazias não aparecem.
+/// saudação (com atalho para as perguntas frequentes), novidades, destaque
+/// do melhor match, categorias para explorar e prazos das salvas, em cards
+/// enxutos. Seções vazias não aparecem.
 class DashboardScreen extends StatefulWidget {
   final AuthUser user;
 
@@ -145,9 +146,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         .toList();
     final nothingToShow =
         urgent.isEmpty && data.topMatches.isEmpty && data.newMatches.isEmpty;
-    // O melhor match vai no destaque; o carrossel mostra os seguintes.
+    // Só o melhor match vai pro Início (destaque); os demais ficam em Minhas
+    // oportunidades, a um toque na barra de baixo.
     final best = data.topMatches.isEmpty ? null : data.topMatches.first;
-    final otherMatches = data.topMatches.skip(1).toList();
 
     return ListView(
       // Sempre rolável — senão o "puxar pra atualizar" não funciona.
@@ -175,15 +176,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 'Oportunidades salvas que fecham nos próximos $kUrgentDeadlineDays dias',
             total: urgent.length,
             items: urgent,
-            onCardTap: _open,
-            compact: true,
-          ),
-        if (otherMatches.isNotEmpty)
-          OpportunityCarouselSection(
-            title: 'Outros matches para você',
-            total: data.matchCount,
-            items: otherMatches,
-            onSeeAll: () => widget.onOpenMatcher(0),
             onCardTap: _open,
             compact: true,
           ),
@@ -230,7 +222,49 @@ class _Greeting extends StatelessWidget {
             style:
                 TextStyle(fontSize: 14, color: Colors.grey[600], height: 1.4),
           ),
+          const SizedBox(height: 12),
+          const _HelpShortcut(),
         ],
+      ),
+    );
+  }
+}
+
+/// Pílula logo abaixo da saudação — primeira coisa lida no app — que abre
+/// as perguntas frequentes (a mesma tela do "Ajuda e suporte" do menu).
+class _HelpShortcut extends StatelessWidget {
+  const _HelpShortcut();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: kAuthPink.withOpacity(0.08),
+      borderRadius: BorderRadius.circular(20),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => const HelpScreen(),
+        )),
+        child: const Padding(
+          padding: EdgeInsets.fromLTRB(10, 7, 12, 7),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.help_outline_rounded, size: 16, color: kAuthPink),
+              SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  'Dúvidas? Veja as perguntas frequentes',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: kAuthPink,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

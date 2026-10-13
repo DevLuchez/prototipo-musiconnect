@@ -5,6 +5,7 @@ import '../../data/models/opportunity_model.dart';
 import '../../data/models/providers/auth_service.dart';
 import '../widgets/auth/auth_common.dart';
 import '../widgets/favorite_button.dart';
+import '../widgets/match_explainer.dart';
 import '../widgets/match_ring.dart';
 
 const _pink = Color(0xFFEC4899);
@@ -37,7 +38,7 @@ typedef OpenOpportunityOnMap = void Function(OpportunityModel opportunity);
 
 /// Tela de detalhes de uma oportunidade musical — duas abas arrastáveis
 /// (igual ao gesto da tela Matcher): "Informações do Edital" (conteúdo do
-/// edital) e "MusiMatch" (comparação do [MatchBreakdown] com o perfil do
+/// edital) e "Matcher" (comparação do [MatchBreakdown] com o perfil do
 /// usuário logado).
 class OpportunityDetailScreen extends StatefulWidget {
   final OpportunityModel opportunity;
@@ -110,7 +111,7 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen>
   List<String> get _displayInstruments =>
       opp.instruments.map(_normalizeInstrument).toSet().toList();
 
-  // ── Comparação "seu perfil vs. edital" (aba MusiMatch) ──────────────────
+  // ── Comparação "seu perfil vs. edital" (aba Matcher) ────────────────────
 
   List<String> get _userAffinityItems {
     final items = <String>[];
@@ -164,8 +165,8 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen>
                     child: _buildEdictTab(),
                   ),
                   _buildTabScroll(
-                    key: const PageStorageKey('musimatch'),
-                    child: _buildMusiMatchTab(),
+                    key: const PageStorageKey('matcher'),
+                    child: _buildMatcherTab(),
                   ),
                 ],
               ),
@@ -304,7 +305,7 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen>
                       color: active ? _purple : Colors.grey[500],
                     ),
                     const SizedBox(width: 5),
-                    const Text('MusiMatcher'),
+                    const Text('Matcher'),
                   ],
                 );
               },
@@ -333,7 +334,7 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen>
                 children: [
                   const TextSpan(
                     text:
-                        'O MusiMatcher é uma IA e pode cometer erros.\nVerifique as informações na fonte oficial: ',
+                        'O Matcher é uma IA e pode cometer erros.\nVerifique as informações na fonte oficial: ',
                   ),
                   TextSpan(
                     text: opp.sourceLabel,
@@ -598,9 +599,9 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen>
     );
   }
 
-  // ── Aba "MusiMatch" ──────────────────────────────────────────────────────
+  // ── Aba "Matcher" ────────────────────────────────────────────────────────
 
-  Widget _buildMusiMatchTab() {
+  Widget _buildMatcherTab() {
     final b = opp.matchBreakdown;
     if (b == null) {
       return Padding(
@@ -646,6 +647,25 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen>
                   Text(
                     'Seu Perfil vs. Edital',
                     style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                  ),
+                  const SizedBox(height: 4),
+                  GestureDetector(
+                    onTap: () => showMatchExplanation(context),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.info_outline_rounded, size: 14, color: _pink),
+                        SizedBox(width: 4),
+                        Text(
+                          'O que é match?',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: _pink,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -740,7 +760,7 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen>
             children: [
               Expanded(
                 child: Text(
-                  'MusiMatch AI avaliou este edital com $rawConfidence% de confiança',
+                  'O Matcher avaliou este edital com $rawConfidence% de confiança',
                   style: TextStyle(fontSize: 12, color: Colors.grey[500], height: 1.4),
                 ),
               ),
@@ -882,7 +902,7 @@ class _HighlightCard extends StatelessWidget {
   }
 }
 
-/// Card de comparação (aba "MusiMatch"): ícone + título + pill de pontos,
+/// Card de comparação (aba "Matcher"): ícone + título + pill de pontos,
 /// duas colunas ("seus dados" vs "edital"), cada uma dentro de um card
 /// interno (não só texto solto).
 class _ComparisonCard extends StatelessWidget {

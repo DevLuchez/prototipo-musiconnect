@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import '../../core/constants.dart';
 import '../../data/models/providers/auth_service.dart';
 import '../../data/models/providers/opportunities_service.dart';
+import '../widgets/match_explainer.dart';
 import '../widgets/opportunity_browser_view.dart';
 import 'opportunity_detail_screen.dart';
 
 const _pink = Color(0xFFEC4899);
 
-/// Tela Matcher com duas abas:
+/// Tela Matcher — faixa "o que é match" no topo e duas abas:
 ///   1. Minhas oportunidades (match >= [kHighMatchThreshold])
 ///   2. Todas as oportunidades
 ///
@@ -66,6 +67,9 @@ class _MatcherScreenState extends State<MatcherScreen>
   Widget build(BuildContext context) {
     return Column(
       children: [
+        // ── O que é match (sempre visível, acima das abas) ───────
+        const MatchExplainerBanner(),
+
         // ── TabBar ───────────────────────────────────────────────
         Container(
           color: Colors.white,

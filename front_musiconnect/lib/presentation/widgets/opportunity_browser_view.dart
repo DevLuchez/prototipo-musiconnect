@@ -49,7 +49,7 @@ class OpportunityBrowserView extends StatefulWidget {
   // Perfil do usuário logado — usado pelos filtros opcionais "Meu
   // instrumento"/"Perto de Mim" no FilterModal (iguais nas duas abas:
   // começam desligados, o usuário decide se liga) e passado adiante pra
-  // tela de detalhes (aba MusiMatch: "seu perfil vs. edital").
+  // tela de detalhes (aba Matcher: "seu perfil vs. edital").
   final AuthUser user;
 
   // Só usados no modo "subpágina de categoria" (drill-down interno — ver
