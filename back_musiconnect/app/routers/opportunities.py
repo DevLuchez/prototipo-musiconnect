@@ -6,8 +6,10 @@ Endpoints:
   GET  /api/opportunities/cities   — oportunidades agrupadas por cidade (mapa)
   GET  /api/opportunities/matches/count — nº de oportunidades compatíveis (Perfil)
   GET  /api/opportunities/{id}     — detalhes de uma oportunidade
-  POST /api/opportunities/scrape   — dispara full scraping manual (dev/admin)
-  POST /api/opportunities/enrich   — enriquece oportunidades brutas via LLM (Gemini)
+  POST /api/opportunities/scrape   — dispara full scraping manual (admin)
+  POST /api/opportunities/enrich   — enriquece oportunidades brutas via LLM (admin)
+
+As duas rotas POST exigem o header X-Admin-Key (ver app/security.py).
 """
 
 import logging
@@ -25,6 +27,7 @@ from app.database import get_db, SessionLocal
 from app.models import CityLocation, Opportunity, User
 from app.schemas import CityOpportunitiesOut, OpportunityOut
 from app.routers.auth import get_current_user, get_current_user_optional
+from app.security import require_admin_key
 from app.services.matching import (
     HIGH_MATCH_THRESHOLD,
     compute_match_breakdown,
@@ -423,7 +426,7 @@ def get_opportunity(
     return opp
 
 
-@router.post("/scrape")
+@router.post("/scrape", dependencies=[Depends(require_admin_key)])
 async def trigger_scrape(background_tasks: BackgroundTasks):
     """
     Dispara o scraping manual de todas as fontes em background.
@@ -437,7 +440,7 @@ async def trigger_scrape(background_tasks: BackgroundTasks):
     }
 
 
-@router.post("/enrich")
+@router.post("/enrich", dependencies=[Depends(require_admin_key)])
 async def trigger_enrich(background_tasks: BackgroundTasks):
     """
     Enriquece via Gemini todas as oportunidades brutas ainda não processadas.

@@ -1,4 +1,5 @@
 from typing import Optional
+from pydantic import Field
 from pydantic_settings import BaseSettings
 
 
@@ -16,6 +17,12 @@ class Settings(BaseSettings):
     # E-mail de confirmação de cadastro (Resend)
     resend_api_key: Optional[str] = None
     resend_from_email: str = "onboarding@resend.dev"
+
+    # Chave das rotas de administração (disparo manual de scraper/LLM/ETL
+    # e status do agendador) — enviada no header X-Admin-Key. Sem ela
+    # configurada, essas rotas ficam sempre bloqueadas. repr=False: não
+    # aparece em logs/erros que imprimem as configurações.
+    admin_api_key: Optional[str] = Field(default=None, repr=False)
 
     class Config:
         env_file = ".env"

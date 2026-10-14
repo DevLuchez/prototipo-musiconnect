@@ -1,19 +1,24 @@
 """
 Router de monitoramento do scheduler.
 
-Endpoints:
+Endpoints (todos exigem o header X-Admin-Key — ver app/security.py):
   GET /scheduler/status      — jobs ativos e próximas execuções
   POST /scheduler/run-etl    — dispara ETL imediatamente (dev/testes)
   POST /scheduler/resolve-institutions — vincula oportunidades ao mapa (backfill)
 """
 
 import logging
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from app.scheduler import scheduler
+from app.security import require_admin_key
 
 logger = logging.getLogger("routers.scheduler")
 
-router = APIRouter(prefix="/scheduler", tags=["scheduler"])
+router = APIRouter(
+    prefix="/scheduler",
+    tags=["scheduler"],
+    dependencies=[Depends(require_admin_key)],
+)
 
 
 @router.get("/status")

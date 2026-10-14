@@ -54,6 +54,9 @@ services:
       # E-mail de confirmação de cadastro (Resend)
       RESEND_API_KEY: ${RESEND_API_KEY}
       RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL}
+      # Chave das rotas de administração (header X-Admin-Key) — sem ela,
+      # essas rotas ficam sempre bloqueadas
+      ADMIN_API_KEY: ${ADMIN_API_KEY}
     ports:
       - "8000:8000"
     depends_on:
