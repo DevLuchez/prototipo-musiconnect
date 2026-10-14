@@ -14,6 +14,7 @@ import 'presentation/screens/favorites_screens.dart';
 import 'presentation/screens/help_screen.dart';
 import 'presentation/screens/map_explorer_screen.dart';
 import 'presentation/screens/matcher_screen.dart';
+import 'presentation/screens/privacy_policy_screen.dart';
 import 'presentation/screens/profile/profile_screen.dart';
 import 'presentation/widgets/auth/auth_common.dart';
 import 'presentation/widgets/auth/logout_flow.dart';
@@ -266,6 +267,12 @@ class _MainNavigationState extends State<MainNavigation>
     ));
   }
 
+  void _openPrivacyPolicy() {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => const PrivacyPolicyScreen(),
+    ));
+  }
+
   /// Item do menu lateral: fecha o menu e abre a tela.
   void _fromDrawer(VoidCallback open) {
     Navigator.of(context).pop();
@@ -273,8 +280,8 @@ class _MainNavigationState extends State<MainNavigation>
   }
 
   /// Menu lateral (ícone hambúrguer do header): você (leva ao Perfil) e
-  /// favoritos no topo; ajuda e sair embaixo. Sem contadores aqui: as
-  /// quantidades aparecem nas próprias telas e no Perfil.
+  /// favoritos no topo; política de privacidade, ajuda e sair embaixo. Sem
+  /// contadores aqui: as quantidades aparecem nas próprias telas e no Perfil.
   Widget _buildDrawer() {
     return Drawer(
       backgroundColor: Colors.white,
@@ -319,6 +326,11 @@ class _MainNavigationState extends State<MainNavigation>
                     ),
                     const Spacer(),
                     const SizedBox(height: 16),
+                    _DrawerItem(
+                      icon: Icons.privacy_tip_outlined,
+                      label: 'Política de privacidade',
+                      onTap: () => _fromDrawer(_openPrivacyPolicy),
+                    ),
                     _DrawerItem(
                       icon: Icons.help_outline_rounded,
                       label: 'Ajuda e suporte',

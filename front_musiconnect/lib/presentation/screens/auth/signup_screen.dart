@@ -6,6 +6,7 @@ import '../../../data/models/providers/auth_service.dart';
 import '../../../data/models/providers/geo_service.dart';
 import '../../widgets/app_loading_indicator.dart';
 import '../../widgets/auth/auth_common.dart';
+import '../privacy_policy_screen.dart';
 import 'login_screen.dart';
 import 'welcome_screen.dart';
 
@@ -53,6 +54,8 @@ class _SignupScreenState extends State<SignupScreen> {
   final _confirmPasswordController = TextEditingController();
   final _authService = AuthService();
   bool _signingUp = false;
+  // Consentimento com a Política de privacidade (LGPD) — obrigatório.
+  bool _privacyAccepted = false;
 
   // Passo do ícone ativo no indicador — acompanha a página atual
   // (interesses, localização, credenciais, confirmação de e-mail).
@@ -85,7 +88,7 @@ class _SignupScreenState extends State<SignupScreen> {
       _confirmPasswordController.text == _passwordController.text;
 
   bool get _credentialsValid =>
-      _nameValid && _emailValid && _passwordValid && _passwordsMatch;
+      _nameValid && _emailValid && _passwordValid && _passwordsMatch && _privacyAccepted;
 
   @override
   void initState() {
@@ -499,6 +502,14 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                 ),
         ),
+        const SizedBox(height: 20),
+        _PrivacyConsentRow(
+          value: _privacyAccepted,
+          onChanged: (v) => setState(() => _privacyAccepted = v),
+          onOpenPolicy: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
+          ),
+        ),
       ],
     );
   }
@@ -558,6 +569,77 @@ class _SignupScreenState extends State<SignupScreen> {
       onResend: _resendConfirmationEmail,
       onCheckConfirmed: _checkConfirmationAndProceed,
       onBack: () => _goToPage(2),
+    );
+  }
+}
+
+/// Caixa "Li e aceito a Política de privacidade" — o texto do link abre a
+/// política; tocar no resto da linha marca/desmarca.
+class _PrivacyConsentRow extends StatelessWidget {
+  final bool value;
+  final ValueChanged<bool> onChanged;
+  final VoidCallback onOpenPolicy;
+
+  const _PrivacyConsentRow({
+    required this.value,
+    required this.onChanged,
+    required this.onOpenPolicy,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => onChanged(!value),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 22,
+              height: 22,
+              child: Checkbox(
+                value: value,
+                onChanged: (v) => onChanged(v ?? false),
+                activeColor: kAuthPink,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  const Text(
+                    'Li e aceito a ',
+                    style: TextStyle(fontSize: 13.5, color: kAuthTextDark),
+                  ),
+                  GestureDetector(
+                    onTap: onOpenPolicy,
+                    child: const Text(
+                      'Política de privacidade',
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                        color: kAuthPink,
+                        decoration: TextDecoration.underline,
+                        decorationColor: kAuthPink,
+                      ),
+                    ),
+                  ),
+                  const Text(
+                    ' *',
+                    style: TextStyle(fontSize: 13.5, color: Colors.red),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

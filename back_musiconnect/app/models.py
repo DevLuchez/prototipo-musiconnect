@@ -233,6 +233,12 @@ class User(Base):
     password_reset_token = Column(String, nullable=True, unique=True, index=True)
     password_reset_sent_at = Column(DateTime, nullable=True)
 
+    # Prova do consentimento com a Política de privacidade (LGPD): quando
+    # foi aceita e qual versão do texto. NULL só em contas anteriores a
+    # essa exigência.
+    privacy_accepted_at = Column(DateTime, nullable=True)
+    privacy_policy_version = Column(String(20), nullable=True)
+
     created_at = Column(DateTime, server_default=func.now())
 
 

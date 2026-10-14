@@ -13,6 +13,11 @@ const int kUrgentDeadlineDays = 7;
 /// E-mail do "Fale conosco" (menu lateral → Ajuda e suporte).
 const String kSupportEmail = 'laura.luchez@gmail.com';
 
+/// Versão do texto da Política de privacidade (data da última alteração).
+/// O backend tem o mesmo valor em PRIVACY_POLICY_VERSION
+/// (app/routers/auth.py) — atualizar os dois juntos quando o texto mudar.
+const String kPrivacyPolicyVersion = '2026-10-13';
+
 /// Lista curada de instrumentos oferecida no cadastro (e reaproveitável em
 /// outras telas, como edição de perfil).
 ///

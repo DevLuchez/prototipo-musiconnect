@@ -50,6 +50,11 @@ from app.services.email_service import send_confirmation_email, send_password_re
 # Tempo de validade do link de redefinição de senha.
 PASSWORD_RESET_EXPIRY = timedelta(minutes=30)
 
+# Versão do texto da Política de privacidade aceita no cadastro (data da
+# última alteração). O app tem o mesmo valor em kPrivacyPolicyVersion
+# (core/constants.dart) — atualizar os dois juntos quando o texto mudar.
+PRIVACY_POLICY_VERSION = "2026-10-13"
+
 logger = logging.getLogger("routers.auth")
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -67,6 +72,13 @@ def _verify_password(password: str, password_hash: str) -> bool:
 
 def _generate_token() -> str:
     return secrets.token_urlsafe(32)
+
+
+def _record_privacy_consent(user: User, now: datetime) -> None:
+    """Guarda a prova do consentimento (LGPD): quando e qual versão da
+    Política de privacidade o usuário aceitou."""
+    user.privacy_accepted_at = now
+    user.privacy_policy_version = PRIVACY_POLICY_VERSION
 
 
 def get_current_user(
@@ -131,6 +143,7 @@ async def signup(data: SignupIn, db: Session = Depends(get_db)):
     user.confirmation_token = token
     user.confirmation_sent_at = now
     user.email_confirmed = False
+    _record_privacy_consent(user, now)
 
     db.commit()
 

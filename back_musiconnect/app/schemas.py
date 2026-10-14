@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional, List
 from datetime import date, datetime
 
@@ -129,6 +129,17 @@ class SignupIn(BaseModel):
     country: Optional[str] = None
     state: Optional[str] = None
     city: Optional[str] = None
+
+    # Consentimento explícito com a Política de privacidade (LGPD) —
+    # obrigatório e precisa ser True; sem ele o cadastro é recusado.
+    privacy_accepted: bool
+
+    @field_validator("privacy_accepted")
+    @classmethod
+    def _must_accept_privacy(cls, value: bool) -> bool:
+        if not value:
+            raise ValueError("É preciso aceitar a Política de privacidade.")
+        return value
 
 
 class ResendIn(BaseModel):

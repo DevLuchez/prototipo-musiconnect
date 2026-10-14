@@ -1,7 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <!-- Sem permissão de localização: o app nunca lê o GPS (a localização do
+         perfil é escolhida em listas no cadastro). Pedir sem usar contraria
+         a LGPD e a Política de privacidade do app. -->
     <application
         android:label="MusiConnect"
         android:name="${applicationName}"

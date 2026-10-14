@@ -114,6 +114,9 @@ class AuthService {
               'country': country,
               'state': state,
               'city': city,
+              // Só chega aqui com a caixa da Política de privacidade marcada
+              // (o botão "Cadastrar" fica desabilitado sem ela).
+              'privacy_accepted': true,
             }),
           )
           .timeout(_timeout);

@@ -63,6 +63,9 @@ _STATEMENTS = [
      WHERE created_at IS NULL
     """,
     "ALTER TABLE opportunities ALTER COLUMN created_at SET DEFAULT now()",
+    # ── Consentimento com a Política de privacidade (LGPD) ────────────────
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS privacy_accepted_at TIMESTAMP",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS privacy_policy_version VARCHAR(20)",
 ]
 
 
