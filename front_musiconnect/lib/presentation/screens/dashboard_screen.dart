@@ -15,9 +15,9 @@ import 'help_screen.dart';
 import 'opportunity_detail_screen.dart';
 
 /// Aba Início (tela inicial do app): resumo do que importa hoje —
-/// saudação (com atalho para as perguntas frequentes), novidades, destaque
-/// do melhor match, categorias para explorar e prazos das salvas, em cards
-/// enxutos. Seções vazias não aparecem.
+/// saudação (com atalho para as perguntas frequentes), destaque do melhor
+/// match, categorias para explorar e prazos das salvas, em cards enxutos.
+/// Seções vazias não aparecem.
 class DashboardScreen extends StatefulWidget {
   final AuthUser user;
 
@@ -144,8 +144,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final urgent = data.urgentSaved
         .where((o) => favorites.isOpportunitySaved(o.id))
         .toList();
-    final nothingToShow =
-        urgent.isEmpty && data.topMatches.isEmpty && data.newMatches.isEmpty;
+    final nothingToShow = urgent.isEmpty && data.topMatches.isEmpty;
     // Só o melhor match vai pro Início (destaque); os demais ficam em Minhas
     // oportunidades, a um toque na barra de baixo.
     final best = data.topMatches.isEmpty ? null : data.topMatches.first;
@@ -156,14 +155,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       padding: const EdgeInsets.only(bottom: 24),
       children: [
         _Greeting(firstName: _firstName),
-        if (data.newMatches.isNotEmpty)
-          OpportunityCarouselSection(
-            title: 'Novas para você',
-            total: data.newMatches.length,
-            items: data.newMatches,
-            onCardTap: _open,
-            compact: true,
-          ),
         if (best != null)
           _BestMatchHero(opportunity: best, onTap: () => _open(best)),
         _ExploreGrid(counts: data.typeCounts, onOpen: _openCategory),
