@@ -16,7 +16,7 @@ class Settings(BaseSettings):
 
     # E-mail de confirmação de cadastro (Resend)
     resend_api_key: Optional[str] = None
-    resend_from_email: str = "onboarding@resend.dev"
+    resend_from_email: str = "nao-responda@musiconnect.app.br"
 
     # Chave das rotas de administração (disparo manual de scraper/LLM/ETL
     # e status do agendador) — enviada no header X-Admin-Key. Sem ela
@@ -24,8 +24,25 @@ class Settings(BaseSettings):
     # aparece em logs/erros que imprimem as configurações.
     admin_api_key: Optional[str] = Field(default=None, repr=False)
 
+    # Endereço público do app — base dos links dos e-mails
+    # (https://musiconnect.app.br/confirmar?token=...).
+    public_base_url: str = "https://musiconnect.app.br"
+
+    # App Links do Android (/.well-known/assetlinks.json): pacote do app e
+    # impressões digitais SHA-256 das chaves que o assinam, separadas por
+    # vírgula. Não são segredo — o Android as publica. Hoje só a chave de
+    # debug (flutter run); acrescentar a de release quando ela existir.
+    android_package_name: str = "musiconnect.com.prototipo_musiconnect"
+    android_cert_fingerprints: str = (
+        "66:57:2B:37:AF:36:19:1E:42:FE:20:62:29:D8:80:7F:"
+        "AE:98:FF:54:41:5B:20:66:71:E0:E1:54:F7:0C:E9:EC"
+    )
+
     class Config:
         env_file = ".env"
+        # O .env também guarda variáveis que não são da API (ex:
+        # TEST_DATABASE_URL, usada só pelos testes).
+        extra = "ignore"
 
 
 settings = Settings()

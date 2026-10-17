@@ -168,17 +168,15 @@ async def resend_confirmation(data: ResendIn, db: Session = Depends(get_db)):
     return {"status": "sent" if sent else "email_failed", "email": user.email}
 
 
-@router.post("/confirm")
-def confirm_email(data: ConfirmIn, db: Session = Depends(get_db)):
-    """
-    Confirma o e-mail a partir do token do link (chamado pelo app assim
-    que o deep link `musiconnect://confirm?token=...` é recebido).
-    """
-    user = db.query(User).filter(User.confirmation_token == data.token).first()
+def confirm_by_token(db: Session, token: str) -> tuple[str, User | None]:
+    """Confirma o cadastro dono do token. Devolve ("confirmed" |
+    "already_confirmed" | "invalid", usuário). Usada pela API (app) e pela
+    página /confirmar (navegador)."""
+    user = db.query(User).filter(User.confirmation_token == token).first()
     if not user:
-        raise HTTPException(status_code=400, detail="Link de confirmação inválido.")
+        return "invalid", None
     if user.email_confirmed:
-        return {"status": "already_confirmed", "email": user.email}
+        return "already_confirmed", user
 
     user.email_confirmed = True
     user.confirmed_at = datetime.now(timezone.utc)
@@ -187,7 +185,19 @@ def confirm_email(data: ConfirmIn, db: Session = Depends(get_db)):
     db.commit()
 
     logger.info("[Auth] E-mail confirmado: %s", user.email)
-    return {"status": "confirmed", "email": user.email}
+    return "confirmed", user
+
+
+@router.post("/confirm")
+def confirm_email(data: ConfirmIn, db: Session = Depends(get_db)):
+    """
+    Confirma o e-mail a partir do token do link (chamado pelo app assim
+    que o link do e-mail abre o app).
+    """
+    status, user = confirm_by_token(db, data.token)
+    if status == "invalid":
+        raise HTTPException(status_code=400, detail="Link de confirmação inválido.")
+    return {"status": status, "email": user.email}
 
 
 @router.get("/status", response_model=ConfirmStatusOut)
@@ -255,27 +265,30 @@ async def forgot_password(data: ForgotPasswordIn, db: Session = Depends(get_db))
     }
 
 
-@router.post("/reset-password")
-def reset_password(data: ResetPasswordIn, db: Session = Depends(get_db)):
-    """
-    Efetiva a nova senha a partir do token do link (chamado pelo app assim
-    que o deep link `musiconnect://reset-password?token=...` é recebido,
-    ou pela tela de definir nova senha).
-    """
-    user = db.query(User).filter(User.password_reset_token == data.token).first()
+def find_valid_reset_user(db: Session, token: str) -> tuple[str, User | None]:
+    """Usuário dono de um link de redefinição ainda válido. Devolve
+    ("ok" | "invalid" | "expired", usuário)."""
+    user = db.query(User).filter(User.password_reset_token == token).first()
     if not user or user.password_reset_sent_at is None:
-        raise HTTPException(status_code=400, detail="Link de redefinição inválido.")
+        return "invalid", None
 
     sent_at = user.password_reset_sent_at
     if sent_at.tzinfo is None:
         sent_at = sent_at.replace(tzinfo=timezone.utc)
     if datetime.now(timezone.utc) - sent_at > PASSWORD_RESET_EXPIRY:
-        raise HTTPException(
-            status_code=400,
-            detail="Esse link de redefinição expirou. Solicite um novo.",
-        )
+        return "expired", None
+    return "ok", user
 
-    user.password_hash = _hash_password(data.password)
+
+def reset_by_token(db: Session, token: str, new_password: str) -> str:
+    """Troca a senha pelo link de redefinição. Devolve "reset" |
+    "invalid" | "expired". Usada pela API (app) e pela página
+    /redefinir-senha (navegador)."""
+    status, user = find_valid_reset_user(db, token)
+    if status != "ok":
+        return status
+
+    user.password_hash = _hash_password(new_password)
     # Invalida o token — cada link só redefine uma vez.
     user.password_reset_token = None
     user.password_reset_sent_at = None
@@ -285,7 +298,24 @@ def reset_password(data: ResetPasswordIn, db: Session = Depends(get_db)):
     db.commit()
 
     logger.info("[Auth] Senha redefinida: %s", user.email)
-    return {"status": "reset", "email": user.email}
+    return "reset"
+
+
+@router.post("/reset-password")
+def reset_password(data: ResetPasswordIn, db: Session = Depends(get_db)):
+    """
+    Efetiva a nova senha a partir do token do link (chamado pela tela de
+    definir nova senha do app, aberta pelo link do e-mail).
+    """
+    status = reset_by_token(db, data.token, data.password)
+    if status == "invalid":
+        raise HTTPException(status_code=400, detail="Link de redefinição inválido.")
+    if status == "expired":
+        raise HTTPException(
+            status_code=400,
+            detail="Esse link de redefinição expirou. Solicite um novo.",
+        )
+    return {"status": "reset"}
 
 
 @router.get("/me", response_model=UserOut)

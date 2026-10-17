@@ -20,6 +20,7 @@ from app.routers import favorites
 from app.routers import institutions
 from app.routers import opportunities
 from app.routers import scheduler as scheduler_router
+from app.routers import web_links
 from app.scheduler import setup_scheduler
 
 logging.basicConfig(
@@ -85,6 +86,7 @@ app.include_router(favorites.router)
 app.include_router(institutions.router)
 app.include_router(opportunities.router)
 app.include_router(scheduler_router.router)
+app.include_router(web_links.router)
 
 
 @app.get("/")

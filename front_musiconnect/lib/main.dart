@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'core/deep_links.dart';
 import 'data/models/providers/auth_service.dart';
 import 'data/models/providers/favorites_service.dart';
 import 'data/models/providers/match_count_service.dart';
@@ -49,9 +50,9 @@ class _MusicConnectAppState extends State<MusicConnectApp> {
   @override
   void initState() {
     super.initState();
-    // Link de confirmação de e-mail: musiconnect://confirm?token=...
-    // (esquema customizado — sem domínio próprio verificado, Universal/App
-    // Links não são possíveis; ver AndroidManifest.xml/Info.plist).
+    // Links dos e-mails de confirmação e de redefinição de senha
+    // (https://musiconnect.app.br/... — ver core/deep_links.dart e
+    // AndroidManifest.xml).
     _linkSubscription = _appLinks.uriLinkStream.listen(_handleIncomingLink);
   }
 
@@ -62,15 +63,14 @@ class _MusicConnectAppState extends State<MusicConnectApp> {
   }
 
   Future<void> _handleIncomingLink(Uri uri) async {
-    if (uri.scheme != 'musiconnect') return;
-    final token = uri.queryParameters['token'];
-    if (token == null) return;
+    final link = DeepLink.parse(uri);
+    if (link == null) return;
 
-    switch (uri.host) {
-      case 'confirm':
-        await _handleConfirmLink(token);
-      case 'reset-password':
-        _handleResetPasswordLink(token);
+    switch (link.action) {
+      case DeepLinkAction.confirmEmail:
+        await _handleConfirmLink(link.token);
+      case DeepLinkAction.resetPassword:
+        _handleResetPasswordLink(link.token);
     }
   }
 

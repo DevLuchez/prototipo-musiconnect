@@ -32,9 +32,21 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            <!-- Deep link de confirmação de e-mail (musiconnect://confirm?token=...).
-                 Esquema de URL customizado — sem domínio próprio verificado,
-                 App Links (https://) não são possíveis; ver app/services/email_service.py. -->
+            <!-- App Links: links dos e-mails de confirmação e de redefinição
+                 de senha (https://musiconnect.app.br/confirmar e
+                 /redefinir-senha). autoVerify: o Android confere o
+                 /.well-known/assetlinks.json do domínio e passa a abrir o app
+                 direto, sem perguntar. Ver core/deep_links.dart. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https" android:host="musiconnect.app.br" android:path="/confirmar"/>
+                <data android:scheme="https" android:host="musiconnect.app.br" android:path="/redefinir-senha"/>
+            </intent-filter>
+            <!-- Links antigos (musiconnect://...) — mantidos para e-mails
+                 enviados antes da troca para https (o Gmail os removia). -->
+            <!-- Deep link de confirmação de e-mail (musiconnect://confirm?token=...). -->
             <intent-filter android:autoVerify="false">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>

@@ -1,10 +1,11 @@
 """
 Envio de e-mail transacional via Resend (https://resend.com).
 
-Sem domínio próprio verificado no Resend, o remetente é obrigatoriamente
-onboarding@resend.dev, e só é possível enviar para o e-mail da própria
-conta cadastrada no Resend (modo sandbox) — suficiente para testar o
-fluxo de confirmação de cadastro no protótipo.
+O remetente vem de RESEND_FROM_EMAIL e usa o domínio próprio
+musiconnect.app.br, verificado no Resend (registros DKIM/SPF no DNS do
+registro.br) — assim o envio funciona para qualquer destinatário. Com o
+remetente de teste onboarding@resend.dev, o Resend só entrega para o
+e-mail da própria conta.
 """
 
 import logging
@@ -17,20 +18,18 @@ logger = logging.getLogger("services.email")
 
 _RESEND_URL = "https://api.resend.com/emails"
 
-# Esquema de URL customizado do app — sem domínio próprio verificado,
-# Universal Links/App Links não são possíveis; um link com esse esquema
-# abre o app diretamente no celular (se instalado), sem precisar de
-# hospedagem nem verificação de domínio.
-CONFIRM_DEEP_LINK_SCHEME = "musiconnect://confirm"
-RESET_PASSWORD_DEEP_LINK_SCHEME = "musiconnect://reset-password"
+# Links https no domínio do app (o Gmail remove links musiconnect://). Com
+# o app instalado, o Android abre o app direto (App Links, verificados por
+# /.well-known/assetlinks.json); sem o app, abrem as páginas de
+# app/routers/web_links.py.
 
 
 def build_confirmation_link(token: str) -> str:
-    return f"{CONFIRM_DEEP_LINK_SCHEME}?token={token}"
+    return f"{settings.public_base_url}/confirmar?token={token}"
 
 
 def build_reset_password_link(token: str) -> str:
-    return f"{RESET_PASSWORD_DEEP_LINK_SCHEME}?token={token}"
+    return f"{settings.public_base_url}/redefinir-senha?token={token}"
 
 
 async def _send_email(*, to_email: str, subject: str, html: str) -> bool:
