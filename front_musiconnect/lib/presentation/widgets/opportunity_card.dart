@@ -8,7 +8,6 @@ class _MatcherTheme {
   static const pink = Color(0xFFEC4899);
   static const purple = Color(0xFFDF2881);
   static const cardBg = Colors.white;
-  static const pageBg = Color(0xFFF8F8FA);
 
   static Color sourceColor(String? source) {
     // Musical Chairs é a fonte principal — verde distinto

@@ -1,0 +1,6 @@
+[run]
+# Caminhos relativos à pasta de onde o pytest roda (a raiz do repositório
+# no CI) — é o formato que o SonarCloud entende.
+relative_files = True
+omit =
+    */tests/*

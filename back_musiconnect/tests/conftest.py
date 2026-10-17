@@ -11,19 +11,23 @@ não enxerga os dados de outro.
 """
 
 import os
+from pathlib import Path
 
-import pytest
 from dotenv import load_dotenv
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, text
-from sqlalchemy.engine import make_url
-from sqlalchemy.orm import Session
 
-from app.database import get_db
-from app.main import app
-from app.models import Base
+# Antes de importar a API: ela lê DATABASE_URL ao ser importada. Localmente
+# vem do back_musiconnect/.env; no CI, das variáveis do workflow.
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
-load_dotenv()
+import pytest  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
+from sqlalchemy import create_engine, text  # noqa: E402
+from sqlalchemy.engine import make_url  # noqa: E402
+from sqlalchemy.orm import Session  # noqa: E402
+
+from app.database import get_db  # noqa: E402
+from app.main import app  # noqa: E402
+from app.models import Base  # noqa: E402
 
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
 

@@ -1,0 +1,141 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# MusiConnect — Integração contínua
+#
+# A cada push na main (e em pull requests):
+#   backend  → sobe um PostGIS de teste e roda os testes do FastAPI com
+#              medição de cobertura
+#   app      → flutter analyze + flutter test com cobertura
+#   sonar    → envia código e cobertura dos dois ao SonarCloud (análise de
+#              qualidade e segurança). Só roda com o secret SONAR_TOKEN
+#              configurado no repositório.
+#
+# O deploy no servidor entra aqui quando o servidor existir.
+# ─────────────────────────────────────────────────────────────────────────────
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend (testes + cobertura)
+    runs-on: ubuntu-latest
+
+    services:
+      postgis:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # A API exige DATABASE_URL ao importar; os testes usam só o banco
+      # *_test (criado pela própria suíte).
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/musiconnect
+      TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/musiconnect_test
+      SCHEDULER_ENABLED: "false"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12" # mesma versão do Dockerfile
+          cache: pip
+          cache-dependency-path: back_musiconnect/requirements*.txt
+
+      - name: Instalar dependências
+        run: pip install -r back_musiconnect/requirements-dev.txt
+
+      # Roda a partir da raiz do repositório para os caminhos do relatório
+      # de cobertura baterem com os do SonarCloud (back_musiconnect/app/...).
+      - name: Testes
+        run: >-
+          pytest back_musiconnect/tests
+          --cov=back_musiconnect/app
+          --cov-config=back_musiconnect/.coveragerc
+          --cov-report=xml:coverage-backend.xml
+          --cov-report=term
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-backend
+          path: coverage-backend.xml
+
+  app:
+    name: App Flutter (análise + testes)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: front_musiconnect
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.4" # mesma versão usada no desenvolvimento
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      # Falha só com erros/avisos; avisos informativos não quebram o CI.
+      - name: Análise estática
+        run: flutter analyze --no-fatal-infos
+
+      - name: Testes
+        run: flutter test --coverage
+
+      # O SonarCloud lê os caminhos a partir da raiz do repositório.
+      - name: Ajustar caminhos da cobertura
+        run: sed -i 's|^SF:lib/|SF:front_musiconnect/lib/|' coverage/lcov.info
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-app
+          path: front_musiconnect/coverage/lcov.info
+
+  sonar:
+    name: SonarCloud
+    needs: [backend, app]
+    runs-on: ubuntu-latest
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+        if: env.SONAR_TOKEN != ''
+        with:
+          fetch-depth: 0 # histórico completo: o Sonar usa para "código novo"
+
+      - uses: actions/download-artifact@v4
+        if: env.SONAR_TOKEN != ''
+        with:
+          name: coverage-backend
+
+      - uses: actions/download-artifact@v4
+        if: env.SONAR_TOKEN != ''
+        with:
+          name: coverage-app
+          path: front_musiconnect/coverage
+
+      - name: Análise SonarCloud
+        if: env.SONAR_TOKEN != ''
+        uses: SonarSource/sonarqube-scan-action@v5
+        env:
+          SONAR_HOST_URL: https://sonarcloud.io
+
+      - name: SonarCloud não configurado
+        if: env.SONAR_TOKEN == ''
+        run: echo "Secret SONAR_TOKEN ausente — análise SonarCloud ignorada."

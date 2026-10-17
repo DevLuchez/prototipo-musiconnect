@@ -30,10 +30,12 @@ class Settings(BaseSettings):
 
     # App Links do Android (/.well-known/assetlinks.json): pacote do app e
     # impressões digitais SHA-256 das chaves que o assinam, separadas por
-    # vírgula. Não são segredo — o Android as publica. Hoje só a chave de
-    # debug (flutter run); acrescentar a de release quando ela existir.
+    # vírgula. Não são segredo — o Android as publica. Release (APK
+    # assinado com a chave de android/key.properties) e debug (flutter run).
     android_package_name: str = "musiconnect.com.prototipo_musiconnect"
     android_cert_fingerprints: str = (
+        "5C:00:89:89:49:A8:99:90:18:9B:7A:FC:93:FB:00:25:"
+        "09:A2:AA:86:5D:5D:23:D1:A6:AD:C3:11:B6:22:F4:40,"
         "66:57:2B:37:AF:36:19:1E:42:FE:20:62:29:D8:80:7F:"
         "AE:98:FF:54:41:5B:20:66:71:E0:E1:54:F7:0C:E9:EC"
     )

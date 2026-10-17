@@ -11,6 +11,9 @@ back_musiconnect/.pytest_cache/
 back_musiconnect/*.egg-info/
 back_musiconnect/dist/
 back_musiconnect/.mypy_cache/
+.coverage
+coverage-backend.xml
+front_musiconnect/coverage/
 
 # ─── Flutter / Dart ───────────────────────────────────────────────────────────
 front_musiconnect/build/
