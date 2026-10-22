@@ -26,7 +26,9 @@ from sqlalchemy.orm import Session
 
 logger = logging.getLogger("services.osm_contacts")
 
-_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+# Domínio em rótulos separados por ponto (sem sobreposição entre as partes,
+# o que evita a lentidão por backtracking apontada pelo SonarCloud).
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s.]+(?:\.[^@\s.]+)+$")
 
 # Respostas de sites que existem mas recusam robôs (Cloudflare, Instagram…)
 _BLOCKED_BUT_ALIVE = {401, 403, 405, 429, 503}

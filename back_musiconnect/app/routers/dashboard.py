@@ -18,7 +18,7 @@ confiança >= 0.80, prazo vigente):
 """
 
 from collections import Counter
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Dict, List
 
 from fastapi import APIRouter, Depends
@@ -68,7 +68,7 @@ def get_dashboard(
     # Maior match primeiro; empate → prazo mais próximo (sem prazo por último).
     matches.sort(key=lambda o: (-o.match_percentage, o.deadline or date.max))
 
-    new_since = datetime.utcnow() - _NEW_WINDOW
+    new_since = datetime.now(timezone.utc).replace(tzinfo=None) - _NEW_WINDOW
     new_matches = sorted(
         (o for o in matches if o.created_at and o.created_at >= new_since),
         key=lambda o: o.created_at,

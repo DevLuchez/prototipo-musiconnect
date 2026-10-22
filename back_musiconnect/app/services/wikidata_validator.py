@@ -51,7 +51,7 @@ def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 def _parse_wkt_point(wkt: str) -> Optional[tuple[float, float]]:
     """Converte 'Point(-46.63 -23.55)' em (lat, lon)."""
-    m = re.match(r"Point\(\s*([+-]?\d+\.?\d*)\s+([+-]?\d+\.?\d*)\s*\)", wkt, re.IGNORECASE)
+    m = re.match(r"Point\(\s*([+-]?\d+(?:\.\d+)?)\s+([+-]?\d+(?:\.\d+)?)\s*\)", wkt, re.IGNORECASE)
     if m:
         return float(m.group(2)), float(m.group(1))  # lat, lon
     return None

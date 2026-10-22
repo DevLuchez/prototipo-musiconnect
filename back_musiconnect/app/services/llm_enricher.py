@@ -16,7 +16,7 @@ Confiança (llm_confidence):
 import asyncio
 import json
 import logging
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import Optional
 
 #import google.generativeai as genai
@@ -68,6 +68,11 @@ A data de hoje é {today}.
 
 Texto do edital:
 {raw_text[:3000]}"""
+
+
+def _utc_now() -> datetime:
+    """Agora em UTC, sem fuso — as colunas do banco são timestamp sem fuso."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def _parse_llm_response(text: str) -> Optional[dict]:
@@ -158,7 +163,7 @@ def _apply_enrichment(opp: Opportunity, data: dict) -> None:
         opp.is_active = False
 
     opp.llm_confidence = float(data.get("llm_confidence", 0.5))
-    opp.enriched_at    = datetime.utcnow()
+    opp.enriched_at    = _utc_now()
 
 
 async def enrich_opportunities() -> dict:
@@ -242,7 +247,7 @@ async def enrich_opportunities() -> dict:
                         f"(confiança: {opp.llm_confidence:.2f})"
                     )
                 else:
-                    opp.enriched_at    = datetime.utcnow()
+                    opp.enriched_at    = _utc_now()
                     opp.llm_confidence = 0.0
                     db.commit()
                     failed += 1
