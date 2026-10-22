@@ -9,6 +9,7 @@ Endpoints (todos exigem o header X-Admin-Key — ver app/security.py):
 
 import logging
 from fastapi import APIRouter, Depends
+from app.background import run_in_background
 from app.scheduler import scheduler
 from app.security import require_admin_key
 
@@ -55,9 +56,8 @@ async def run_etl_now():
     Útil para testes locais e validação no Oracle Cloud.
     """
     from app.services.etl_task import run_full_etl
-    import asyncio
 
-    asyncio.create_task(run_full_etl())
+    run_in_background(run_full_etl())
 
     return {
         "status": "started",
@@ -72,9 +72,8 @@ async def resolve_institutions_now():
     pipeline diário. Serve também de backfill para as já existentes.
     """
     from app.services.institution_resolver import resolve_opportunity_institutions
-    import asyncio
 
-    asyncio.create_task(resolve_opportunity_institutions())
+    run_in_background(resolve_opportunity_institutions())
 
     return {
         "status": "started",
