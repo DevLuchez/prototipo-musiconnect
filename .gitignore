@@ -27,6 +27,9 @@ front_musiconnect/ios/Pods/
 front_musiconnect/ios/.symlinks/
 front_musiconnect/macos/Pods/
 front_musiconnect/macos/.symlinks/
+# Configuração do Firebase (baixada do console; fica fora do repositório público)
+front_musiconnect/android/app/google-services.json
+front_musiconnect/ios/Runner/GoogleService-Info.plist
 
 # ─── IDEs ─────────────────────────────────────────────────────────────────────
 .idea/

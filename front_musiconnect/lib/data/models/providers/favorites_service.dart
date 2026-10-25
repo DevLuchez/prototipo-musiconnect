@@ -5,6 +5,7 @@ import '../opportunity_model.dart';
 import '../place_model.dart';
 import '../../../core/config/api_config.dart';
 import 'auth_service.dart';
+import '../../../core/monitoring.dart';
 
 /// Oportunidades salvas (Matcher) e instituições favoritas (mapa) do
 /// usuário logado — ver /api/favorites no backend.
@@ -67,15 +68,27 @@ class FavoritesService extends ChangeNotifier {
 
   /// Salva/remove a oportunidade. Retorna false se o backend recusou (o
   /// coração volta ao estado anterior — cabe a quem chamou avisar o usuário).
-  Future<bool> toggleOpportunity(int id) =>
-      _toggle(_opportunityIds, id, '${ApiConfig.favorites}/opportunities/$id');
+  Future<bool> toggleOpportunity(int id) async {
+    final adding = !_opportunityIds.contains(id);
+    final ok = await _toggle(
+        _opportunityIds, id, '${ApiConfig.favorites}/opportunities/$id');
+    if (ok) Monitoring.logEvent(adding ? 'save_opportunity' : 'unsave_opportunity');
+    return ok;
+  }
 
   /// Favorita/desfavorita a instituição. Mesmo contrato de [toggleOpportunity].
-  Future<bool> toggleInstitution(String osmId) => _toggle(
-        _institutionIds,
-        osmId,
-        '${ApiConfig.favorites}/institutions/${Uri.encodeComponent(osmId)}',
-      );
+  Future<bool> toggleInstitution(String osmId) async {
+    final adding = !_institutionIds.contains(osmId);
+    final ok = await _toggle(
+      _institutionIds,
+      osmId,
+      '${ApiConfig.favorites}/institutions/${Uri.encodeComponent(osmId)}',
+    );
+    if (ok) {
+      Monitoring.logEvent(adding ? 'favorite_institution' : 'unfavorite_institution');
+    }
+    return ok;
+  }
 
   Future<bool> _toggle<T>(Set<T> ids, T id, String url) async {
     final adding = !ids.contains(id);

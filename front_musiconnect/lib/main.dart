@@ -4,6 +4,7 @@ import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'core/deep_links.dart';
+import 'core/monitoring.dart';
 import 'data/models/providers/auth_service.dart';
 import 'data/models/providers/favorites_service.dart';
 import 'data/models/providers/match_count_service.dart';
@@ -26,8 +27,9 @@ import 'presentation/widgets/auth/logout_flow.dart';
 /// contexto que não depende de qual widget está montado no momento.
 final navigatorKey = GlobalKey<NavigatorState>();
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Monitoring.init();
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.dark,
@@ -216,8 +218,12 @@ class _MainNavigationState extends State<MainNavigation>
     super.dispose();
   }
 
+  // Nome de cada aba no Analytics (as abas não são rotas).
+  static const _tabScreenNames = ['inicio', 'mapa', 'matcher', 'perfil'];
+
   void _onItemTapped(int index) {
     setState(() => _selectedIndex = index);
+    Monitoring.logScreen(_tabScreenNames[index]);
     // Pega oportunidades novas (scraper) desde a última consulta.
     if (index == _profileTab) MatchCountService.instance.refresh();
     if (index == _homeTab) _homeRefresh.value++;
@@ -226,6 +232,7 @@ class _MainNavigationState extends State<MainNavigation>
   /// Vai para o Matcher numa aba (0 = Minhas oportunidades, 1 = Todas).
   void _openMatcher(int tab) {
     setState(() => _selectedIndex = _matcherTab);
+    Monitoring.logScreen(_tabScreenNames[_matcherTab]);
     _matcherTabRequest.value = tab;
   }
 
@@ -240,6 +247,7 @@ class _MainNavigationState extends State<MainNavigation>
     final route = ModalRoute.of(context);
     if (route != null) Navigator.of(context).popUntil((r) => r == route);
     setState(() => _selectedIndex = _mapTab);
+    Monitoring.logScreen(_tabScreenNames[_mapTab]);
     _mapFocusRequest.value = target;
   }
 

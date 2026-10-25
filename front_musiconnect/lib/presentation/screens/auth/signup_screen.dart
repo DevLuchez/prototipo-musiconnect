@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import '../../../core/constants.dart';
+import '../../../core/monitoring.dart';
 import '../../../data/models/providers/auth_service.dart';
 import '../../../data/models/providers/geo_service.dart';
 import '../../widgets/app_loading_indicator.dart';
@@ -221,6 +222,7 @@ class _SignupScreenState extends State<SignupScreen> {
         state: _selectedState?.name,
         city: _selectedCity?.name,
       );
+      Monitoring.logEvent('sign_up');
       if (!mounted) return;
       _goToPage(3);
     } on AuthException catch (e) {

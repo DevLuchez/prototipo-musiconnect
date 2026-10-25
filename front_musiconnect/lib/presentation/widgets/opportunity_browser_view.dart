@@ -7,6 +7,7 @@ import 'app_loading_indicator.dart';
 import 'filter_modal.dart';
 import 'opportunity_card.dart';
 import 'opportunity_carousel_section.dart';
+import '../../core/monitoring.dart';
 
 const _pink = Color(0xFFEC4899);
 
@@ -320,6 +321,7 @@ class _OpportunityBrowserViewState extends State<OpportunityBrowserView> {
             _myInstrumentToggle = instrumentToggle;
             _myLocationToggle = locationToggle;
           });
+          Monitoring.logEvent('apply_filter');
           _load();
         },
       ),

@@ -5,6 +5,7 @@ import '../../widgets/auth/auth_common.dart';
 import 'forgot_password_screen.dart';
 import 'signup_screen.dart';
 import 'welcome_screen.dart';
+import '../../../core/monitoring.dart';
 
 /// Tela de Login.
 class LoginScreen extends StatefulWidget {
@@ -60,6 +61,7 @@ class _LoginScreenState extends State<LoginScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
+      Monitoring.logEvent('login');
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => MainNavigation(user: user)),

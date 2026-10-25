@@ -7,6 +7,7 @@ import '../widgets/auth/auth_common.dart';
 import '../widgets/favorite_button.dart';
 import '../widgets/match_explainer.dart';
 import '../widgets/match_ring.dart';
+import '../../core/monitoring.dart';
 
 const _pink = Color(0xFFEC4899);
 const _purple = Color(0xFFDF2881);
@@ -70,6 +71,7 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    Monitoring.logEvent('view_opportunity', {'type': opp.type ?? 'desconhecido'});
   }
 
   @override
