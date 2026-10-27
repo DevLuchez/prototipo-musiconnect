@@ -19,7 +19,9 @@ pluginManagement {
 plugins {
     id "dev.flutter.flutter-plugin-loader" version "1.0.0"
     id "com.android.application" version "8.1.0" apply false
-    id "org.jetbrains.kotlin.android" version "1.8.22" apply false
+    // Kotlin 2.1+: as libs do Firebase Analytics (play-services-measurement 23.x)
+    // são compiladas com Kotlin 2.2, que o compilador 1.8 não consegue ler
+    id "org.jetbrains.kotlin.android" version "2.1.21" apply false
     // Firebase: lê o google-services.json e envia os mapeamentos do Crashlytics
     id "com.google.gms.google-services" version "4.4.2" apply false
     id "com.google.firebase.crashlytics" version "3.0.2" apply false
