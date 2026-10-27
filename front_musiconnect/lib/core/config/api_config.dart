@@ -18,7 +18,7 @@ class ApiConfig {
   // IP atual da máquina na rede Wi-Fi (rodar: Get-NetIPAddress -AddressFamily IPv4)
   // Atenção: esse IP muda se a rede Wi-Fi mudar ou o DHCP renovar o lease —
   // se o app voltar a acusar timeout, confira esse valor de novo.
-  static const String _deviceBaseUrl      = 'http://10.197.73.134:8000';
+  static const String _deviceBaseUrl      = 'http://10.197.73.152:8000';
 
   static const String baseUrl = _deviceBaseUrl; // celular físico na mesma Wi-Fi
 
