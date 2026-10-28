@@ -365,10 +365,9 @@ async def scrape_musical_chairs() -> list[dict]:
 
     async with httpx.AsyncClient(
         headers={
-            "User-Agent": (
-                "Mozilla/5.0 (compatible; MusiConnectBot/1.0; "
-                "+https://musiconnect.app)"
-            )
+            # Sem "Mozilla": o anti-robô do site (Anubis) desafia quem se
+            # apresenta como navegador e devolve HTML no lugar do RSS
+            "User-Agent": "MusiConnectBot/1.0 (+https://musiconnect.app)"
         }
     ) as client:
         tasks = [_fetch_feed(client, instr) for instr in INSTRUMENTS]

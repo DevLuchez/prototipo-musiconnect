@@ -72,10 +72,9 @@ async def backfill(dry_run: bool = False, reenrich: bool = False) -> None:
         sem = asyncio.Semaphore(_DETAIL_CONCURRENCY)
         async with httpx.AsyncClient(
             headers={
-                "User-Agent": (
-                    "Mozilla/5.0 (compatible; MusiConnectBot/1.0; "
-                    "+https://musiconnect.app)"
-                )
+                # Sem "Mozilla": o anti-robô do site (Anubis) desafia quem se
+                # apresenta como navegador e devolve HTML no lugar da página
+                "User-Agent": "MusiConnectBot/1.0 (+https://musiconnect.app)"
             }
         ) as client:
             details = await asyncio.gather(
