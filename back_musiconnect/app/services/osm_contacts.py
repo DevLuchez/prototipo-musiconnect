@@ -2,7 +2,7 @@
 Site e e-mail das instituições, a partir das tags do OpenStreetMap.
 
 Ponto único usado pelos três caminhos que gravam contatos:
-  - ETL noturno (overpass_etl.run_etl)
+  - ETL noturno (osm_etl.run_etl)
   - backfill das instituições já existentes (scripts/backfill_osm_contacts.py)
   - resolvedor de oportunidades, ao criar a instituição
     (institution_factory.get_or_create_institution, via extratags do Nominatim)

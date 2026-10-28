@@ -6,7 +6,7 @@ sem modificar o comportamento do script manual `python -m scripts.run_etl`.
 """
 
 import logging
-from app.services.overpass_etl import run_etl
+from app.services.osm_etl import run_etl
 from app.services.musicbrainz_validator import run_musicbrainz_validation
 from app.services.wikidata_validator import run_wikidata_validation
 
@@ -16,7 +16,7 @@ logger = logging.getLogger("scheduler.etl")
 async def run_full_etl() -> None:
     """
     Executa o pipeline ETL completo:
-      Etapa 1 — OpenStreetMap via Overpass API
+      Etapa 1 — OpenStreetMap via QLever
       Etapa 2 — Validação MusicBrainz
       Etapa 3 — Validação Wikidata
 
@@ -29,11 +29,11 @@ async def run_full_etl() -> None:
 
     # ── Etapa 1: OpenStreetMap ────────────────────────────────────
     try:
-        logger.info("[ETL] Etapa 1/3 — OpenStreetMap (Overpass API)...")
-        stats = await run_etl(concurrency=4)
+        logger.info("[ETL] Etapa 1/3 — OpenStreetMap (QLever)...")
+        stats = await run_etl()
         logger.info(
             f"[ETL] OSM concluído: {stats['records_upserted']} registros "
-            f"em {stats['cells_processed']} células"
+            f"em {stats['types_processed']} tipos de instituição"
         )
     except Exception as exc:
         logger.error(f"[ETL] Erro na Etapa 1 (OSM): {exc}", exc_info=True)

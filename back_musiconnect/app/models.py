@@ -33,7 +33,7 @@ class Institution(Base):
     category = Column(String, nullable=False)
 
     # Fonte de onde veio:
-    #   osm      → ETL do Overpass (overpass_etl.py)
+    #   osm      → ETL do OpenStreetMap (osm_etl.py)
     #   pipeline → criada pelo resolvedor a partir da organizadora de uma
     #              oportunidade (institution_resolver.py)
     #   curated  → cadastro manual futuro (ex: parceiros da SCAR)

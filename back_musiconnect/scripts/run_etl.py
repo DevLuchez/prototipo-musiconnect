@@ -4,7 +4,6 @@ Script para executar o ETL e (opcionalmente) a validação cruzada.
 Uso:
     python -m scripts.run_etl                   ← só OSM
     python -m scripts.run_etl --validate        ← OSM + MusicBrainz + Wikidata
-    python -m scripts.run_etl --concurrency 6   ← OSM com mais paralelismo
 """
 
 import asyncio
@@ -15,7 +14,7 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.services.overpass_etl import run_etl
+from app.services.osm_etl import run_etl
 from app.services.musicbrainz_validator import run_musicbrainz_validation
 from app.services.wikidata_validator import run_wikidata_validation
 
@@ -29,12 +28,6 @@ logging.basicConfig(
 def main():
     parser = argparse.ArgumentParser(description="ETL MusicConnect: OSM + validação")
     parser.add_argument(
-        "--concurrency",
-        type=int,
-        default=4,
-        help="Células OSM processadas em paralelo (padrão: 4)",
-    )
-    parser.add_argument(
         "--validate",
         action="store_true",
         help="Roda validação MusicBrainz + Wikidata após o ETL do OSM",
@@ -42,13 +35,13 @@ def main():
     args = parser.parse_args()
 
     # ── Etapa 1: OSM ──────────────────────────────────────────────────────────
-    print(f"\n[ETL] MusicConnect — Etapa 1/3: OpenStreetMap (concorrência: {args.concurrency})")
+    print("\n[ETL] MusicConnect — Etapa 1/3: OpenStreetMap (QLever)")
     print("Isso pode levar alguns minutos para cobertura global completa...\n")
 
-    stats = asyncio.run(run_etl(concurrency=args.concurrency))
+    stats = asyncio.run(run_etl())
 
     print(f"\n[ETL] OSM concluído!")
-    print(f"   Células processadas: {stats['cells_processed']}")
+    print(f"   Tipos processados:   {stats['types_processed']}")
     print(f"   Registros no banco:  {stats['records_upserted']}")
 
     if not args.validate:

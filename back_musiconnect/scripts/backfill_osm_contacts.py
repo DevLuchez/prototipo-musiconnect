@@ -31,7 +31,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.database import SessionLocal
 from app.services.osm_contacts import extract_contacts, save_contacts
-from app.services.overpass_etl import HEADERS, OVERPASS_MIRRORS
 
 logging.basicConfig(
     level=logging.INFO,
@@ -43,10 +42,18 @@ logger = logging.getLogger("scripts.backfill_osm_contacts")
 
 BATCH_SIZE = 500
 
-# Consulta por ID é leve — o servidor principal responde em ~1s. O ETL
-# prioriza o kumi.systems (melhor para a varredura pesada por região), mas
-# ele costuma travar com 504 por minutos; aqui ele fica por último.
-_MIRRORS = sorted(OVERPASS_MIRRORS, key=lambda m: "overpass-api.de" not in m)
+# Overpass só aqui: consulta por ID é leve (o ETL passou a usar o QLever).
+# O servidor principal responde em ~1s; o kumi.systems costuma travar com
+# 504 por minutos, então fica por último.
+HEADERS = {
+    "User-Agent": "MusicConnect/1.0 (TCC academico Flutter - musiconnect)",
+    "Referer": "https://musiconnect.app",
+}
+_MIRRORS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.openstreetmap.ru/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+]
 _OSM_ID_RE = re.compile(r"^(node|way|relation)_(\d+)$")
 
 
