@@ -105,8 +105,15 @@ class _MatcherScreenState extends State<MatcherScreen>
                 matchScaleMin: kHighMatchThreshold.toDouble(),
                 matchScaleMax: 100,
                 onOpenMap: widget.onSwitchToMap,
+                emptyCategoriesIcon: Icons.auto_awesome_rounded,
                 emptyCategoriesMessage:
-                    'Nenhuma oportunidade com alta compatibilidade encontrada ainda. Ajuste a escala de match no filtro ou volte mais tarde.',
+                    'Ainda não encontramos oportunidades com alta '
+                    'compatibilidade com o seu perfil.',
+                emptyCategoriesAction: TextButton(
+                  onPressed: () => _tabController.animateTo(1),
+                  style: TextButton.styleFrom(foregroundColor: _pink),
+                  child: const Text('Ver todas as oportunidades'),
+                ),
                 emptySearchMessage:
                     'Nenhuma oportunidade com alta compatibilidade encontrada.',
               ),
@@ -114,6 +121,10 @@ class _MatcherScreenState extends State<MatcherScreen>
                 service: _service,
                 user: widget.user,
                 onOpenMap: widget.onSwitchToMap,
+                emptyCategoriesMessage:
+                    'Nenhuma oportunidade aberta no momento.\n'
+                    'Novos editais, audições e concursos aparecem aqui '
+                    'assim que forem publicados.',
               ),
             ],
           ),

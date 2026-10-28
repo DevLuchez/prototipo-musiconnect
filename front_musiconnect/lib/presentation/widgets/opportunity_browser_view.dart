@@ -47,6 +47,11 @@ class OpportunityBrowserView extends StatefulWidget {
   final String emptyCategoriesMessage;
   final String emptySearchMessage;
 
+  // Ícone e ação (opcional) do estado vazio dos carrosséis — mesmo visual
+  // do vazio das telas de favoritos.
+  final IconData emptyCategoriesIcon;
+  final Widget? emptyCategoriesAction;
+
   // Perfil do usuário logado — usado pelos filtros opcionais "Meu
   // instrumento"/"Perto de Mim" no FilterModal (iguais nas duas abas:
   // começam desligados, o usuário decide se liga) e passado adiante pra
@@ -69,6 +74,8 @@ class OpportunityBrowserView extends StatefulWidget {
     this.matchScaleMax = 100,
     this.emptyCategoriesMessage = 'Nenhuma oportunidade disponível.',
     this.emptySearchMessage = 'Nenhuma oportunidade disponível.',
+    this.emptyCategoriesIcon = Icons.library_music_outlined,
+    this.emptyCategoriesAction,
     this.lockedType,
     this.lockedTitle,
     this.onBack,
@@ -624,10 +631,23 @@ class _OpportunityBrowserViewState extends State<OpportunityBrowserView> {
       return Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 40),
-          child: Text(
-            widget.emptyCategoriesMessage,
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(widget.emptyCategoriesIcon,
+                  size: 48, color: Colors.grey[300]),
+              const SizedBox(height: 12),
+              Text(
+                widget.emptyCategoriesMessage,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontSize: 14, color: Colors.grey[500], height: 1.4),
+              ),
+              if (widget.emptyCategoriesAction != null) ...[
+                const SizedBox(height: 8),
+                widget.emptyCategoriesAction!,
+              ],
+            ],
           ),
         ),
       );
