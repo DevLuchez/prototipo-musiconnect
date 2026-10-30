@@ -5,9 +5,10 @@
 #   backend  → sobe um PostGIS de teste e roda os testes do FastAPI com
 #              medição de cobertura
 #   app      → flutter analyze + flutter test com cobertura
-#   sonar    → envia código e cobertura dos dois ao SonarCloud (análise de
-#              qualidade e segurança). Só roda com o secret SONAR_TOKEN
-#              configurado no repositório.
+#   sonar    → envia código e cobertura ao SonarCloud (análise de qualidade
+#              e segurança), em dois projetos: a API e o app, cada um com a
+#              própria nota. Só roda com o secret SONAR_TOKEN configurado no
+#              repositório.
 #
 # O deploy no servidor entra aqui quando o servidor existir.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -130,11 +131,19 @@ jobs:
           name: coverage-app
           path: front_musiconnect/coverage
 
-      - name: Análise SonarCloud
+      - name: Análise SonarCloud — API
         if: env.SONAR_TOKEN != ''
         uses: SonarSource/sonarqube-scan-action@v5
         env:
           SONAR_HOST_URL: https://sonarcloud.io
+
+      - name: Análise SonarCloud — App
+        if: env.SONAR_TOKEN != ''
+        uses: SonarSource/sonarqube-scan-action@v5
+        env:
+          SONAR_HOST_URL: https://sonarcloud.io
+        with:
+          args: -Dproject.settings=sonar-project-app.properties
 
       - name: SonarCloud não configurado
         if: env.SONAR_TOKEN == ''
