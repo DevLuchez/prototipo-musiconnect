@@ -149,52 +149,6 @@ class PlaceModel {
     return labels[category] ?? 'Local Musical';
   }
 
-  // ── Google Places API ─────────────────────────────────────────
-
-  static PlaceModel? tryFromGooglePlaces(Map<String, dynamic> json) {
-    try {
-      return PlaceModel.fromGooglePlaces(json);
-    } catch (e) {
-      return null;
-    }
-  }
-
-  factory PlaceModel.fromGooglePlaces(Map<String, dynamic> json) {
-    final geometry = json['geometry'] as Map<String, dynamic>;
-    final location = geometry['location'] as Map<String, dynamic>;
-    final lat = (location['lat'] as num).toDouble();
-    final lng = (location['lng'] as num).toDouble();
-
-    final name = json['name'] as String? ?? 'Local desconhecido';
-    final address = json['vicinity'] as String?;
-    final placeId = json['place_id'] as String? ?? name;
-
-    // Mapeia os tipos do Google Places para categorias internas
-    final types = (json['types'] as List<dynamic>?)?.cast<String>() ?? [];
-    String category = 'music';
-    if (types.contains('school') || types.contains('university')) {
-      category = 'music_school';
-    } else if (types.contains('night_club')) {
-      category = 'nightclub';
-    } else if (types.contains('movie_theater') ||
-        types.contains('performing_arts_theater')) {
-      category = 'theatre';
-    } else if (types.contains('bar') || types.contains('restaurant')) {
-      category = 'music_venue';
-    } else if (types.contains('store') || types.contains('shopping_mall')) {
-      category = 'musical_instrument';
-    }
-
-    return PlaceModel(
-      id: 'gp_$placeId',
-      name: name,
-      address: address,
-      lat: lat,
-      lng: lng,
-      category: category,
-    );
-  }
-
   /// Rótulo amigável para exibição na UI.
   String get categoryLabel => PlaceModel._labelFromCategory(category);
 }
