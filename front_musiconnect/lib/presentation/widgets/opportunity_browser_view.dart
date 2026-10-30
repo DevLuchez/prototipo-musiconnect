@@ -1,37 +1,24 @@
 import 'package:flutter/material.dart';
 import '../../data/models/opportunity_model.dart';
-import '../../data/models/providers/auth_service.dart';
-import '../../data/models/providers/opportunities_service.dart';
+import '../../data/services/auth_service.dart';
+import '../../data/services/opportunities_service.dart';
 import '../screens/opportunity_detail_screen.dart';
+import '../view_models/opportunity_browser_view_model.dart';
 import 'app_loading_indicator.dart';
 import 'filter_modal.dart';
 import 'opportunity_card.dart';
 import 'opportunity_carousel_section.dart';
-import '../../core/monitoring.dart';
 
 const _pink = Color(0xFFEC4899);
-
-/// Prévia de uma categoria (tipo de oportunidade) pro carrossel do modo
-/// padrão (sem busca/filtro ativo).
-class _CategoryPreview {
-  final String typeKey;
-  final String label;
-  final List<OpportunityModel> items;
-  final int total;
-
-  const _CategoryPreview({
-    required this.typeKey,
-    required this.label,
-    required this.items,
-    required this.total,
-  });
-}
 
 /// Busca + filtro + carrosséis por categoria + lista plana de resultados —
 /// o layout completo usado tanto pela aba "Todas as oportunidades" quanto
 /// por "Minhas oportunidades" (mesmo widget, só muda a faixa da Escala de
 /// Match). A subpágina "Ver todas" de uma categoria é o próprio widget se
 /// renderizando de novo, travado num tipo ([lockedType]) — ver [build].
+///
+/// Estado e regras ficam no [OpportunityBrowserViewModel]; esta tela só
+/// desenha e navega.
 class OpportunityBrowserView extends StatefulWidget {
   final OpportunitiesService service;
 
@@ -87,200 +74,25 @@ class OpportunityBrowserView extends StatefulWidget {
 }
 
 class _OpportunityBrowserViewState extends State<OpportunityBrowserView> {
-  // Estado da listagem (modo busca/filtro — lista plana)
-  List<OpportunityModel> _opportunities = [];
-  // Total real que atende aos filtros no backend — pode ser maior que
-  // _opportunities.length, já que a busca é limitada por `limit`.
-  int _totalCount = 0;
-  bool _loading = true;
-  String? _error;
+  late final _viewModel = OpportunityBrowserViewModel(
+    service: widget.service,
+    matchScaleMin: widget.matchScaleMin,
+    matchScaleMax: widget.matchScaleMax,
+    lockedType: widget.lockedType,
+    lockedTitle: widget.lockedTitle,
+  )..start();
 
-  // Estado dos carrosséis por categoria (modo padrão — navegação por tipo)
-  // — só usado quando widget.lockedType == null.
-  List<_CategoryPreview> _categories = [];
-  bool _categoriesLoading = true;
-
-  // Categoria aberta (subpágina "Ver todas") — embutida aqui em vez de
-  // empurrada via Navigator.push, pra manter o header/navbar globais do
-  // app visíveis (um push cobriria o Scaffold inteiro de MainNavigation).
-  String? _drillType;
-  String? _drillLabel;
-
-  // Filtros ativos — cada campo aceita múltiplos valores selecionados.
   final _searchController = TextEditingController();
-  List<String> _activeTypes = [];
-  List<String> _activeInstruments = [];
-  List<String> _activeCountries = [];
-  List<String> _activeStates = [];
-  List<String> _activeCities = [];
-  // Rótulo por extenso dos estados ativos (ex: "MT" -> "MT | Montana"),
-  // devolvido pelo modal junto com a seleção — usado nos chips abaixo.
-  Map<String, String> _stateLabels = {};
-
-  late RangeValues _matchScale =
-      RangeValues(widget.matchScaleMin, widget.matchScaleMax);
-
-  // "Meu instrumento" / "Perto de Mim" — opcionais e iguais nas duas abas:
-  // começam desligados, o usuário decide se liga.
-  bool _myInstrumentToggle = false;
-  bool _myLocationToggle = false;
-
-  bool get _matchScaleActive =>
-      _matchScale.start > widget.matchScaleMin ||
-      _matchScale.end < widget.matchScaleMax;
-
-  // Enquanto não há busca/filtro ativo, mostra os carrosséis por categoria;
-  // assim que o usuário busca ou filtra (inclusive estreitando a Escala de
-  // Match), mostra a lista plana de resultados.
-  bool get _searchMode =>
-      _searchController.text.isNotEmpty ||
-      _activeFiltersCount > 0 ||
-      widget.lockedType != null;
-
-  int get _activeFiltersCount =>
-      _activeTypes.length +
-      _activeInstruments.length +
-      _activeCountries.length +
-      _activeStates.length +
-      _activeCities.length +
-      (_matchScaleActive ? 1 : 0);
-
-  String get _searchHint {
-    if (widget.lockedType == null) return 'Busque por oportunidades...';
-    final plural = kOpportunityTypePluralLabels[widget.lockedType] ??
-        widget.lockedTitle!.toLowerCase();
-    return 'Busque por $plural...';
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.lockedType != null) {
-      // Subpágina de categoria: já entra buscando a lista travada nesse tipo.
-      _load();
-    } else {
-      _loadCategories();
-    }
-  }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _viewModel.dispose();
     super.dispose();
   }
 
-  /// Busca oportunidades e, se a Escala de Match estiver restrita (fora dos
-  /// limites completos do widget), filtra o resultado por
-  /// `matchPercentage` — buscando um lote maior antes de cortar por
-  /// [limit], senão o corte aconteceria ANTES do filtro e a prévia (ex: do
-  /// carrossel) ficaria incompleta. Sem filtro de match ativo, o
-  /// comportamento e o payload são idênticos a uma chamada direta ao
-  /// serviço (mesmo `limit` pedido).
-  Future<OpportunitiesResult> _fetch({
-    String? q,
-    List<String>? types,
-    List<String>? instruments,
-    List<String>? countries,
-    List<String>? states,
-    List<String>? cities,
-    required int limit,
-  }) async {
-    // Diferente de [_matchScaleActive] (que só reflete se o usuário mexeu
-    // no slider): aqui o que importa é se o range atual exclui QUALQUER
-    // oportunidade possível (0-100) — em "Minhas oportunidades", o range
-    // de repouso já é 85-100, então o filtro precisa rodar mesmo sem o
-    // usuário ter tocado no slider, senão a aba mostraria tudo (0-100%).
-    final filterNeeded = _matchScale.start > 0 || _matchScale.end < 100;
-
-    final result = await widget.service.fetchOpportunities(
-      q: q,
-      types: types,
-      instruments: instruments,
-      countries: countries,
-      states: states,
-      cities: cities,
-      // O backend já deixa passar quem não tem prazo informado
-      // (deadline IS NULL OR deadline >= hoje) — só exclui quem
-      // realmente já venceu.
-      onlyActive: true,
-      limit: filterNeeded ? 500 : limit,
-    );
-    if (!filterNeeded) return result;
-
-    final filtered = result.items.where((o) {
-      final m = o.matchPercentage ?? 0;
-      return m >= _matchScale.start && m <= _matchScale.end;
-    }).toList()
-      ..sort(
-        (a, b) => (b.matchPercentage ?? 0).compareTo(a.matchPercentage ?? 0),
-      );
-    return OpportunitiesResult(
-      items: filtered.take(limit).toList(),
-      total: filtered.length,
-    );
-  }
-
-  Future<void> _loadCategories() async {
-    setState(() => _categoriesLoading = true);
-
-    final entries = kOpportunityTypeLabels.entries.toList();
-    final results = await Future.wait(
-      entries.map((e) => _fetch(types: [e.key], limit: 10)),
-    );
-
-    final categories = <_CategoryPreview>[];
-    for (var i = 0; i < entries.length; i++) {
-      final result = results[i];
-      if (result.total == 0) continue; // esconde categoria sem nada
-      categories.add(_CategoryPreview(
-        typeKey: entries[i].key,
-        label: entries[i].value,
-        items: result.items,
-        total: result.total,
-      ));
-    }
-
-    if (!mounted) return;
-    setState(() {
-      _categories = categories;
-      _categoriesLoading = false;
-    });
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-
-    try {
-      final result = await _fetch(
-        q: _searchController.text.isEmpty ? null : _searchController.text,
-        types: widget.lockedType != null
-            ? [widget.lockedType!]
-            : (_activeTypes.isEmpty ? null : _activeTypes),
-        instruments: _activeInstruments,
-        countries: _activeCountries,
-        states: _activeStates,
-        cities: _activeCities,
-        limit: 500,
-      );
-      if (!mounted) return;
-      setState(() {
-        _opportunities = result.items;
-        _totalCount = result.total;
-        _loading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = 'Não foi possível carregar as oportunidades.';
-        _loading = false;
-      });
-    }
-  }
-
   void _openFilters() {
+    final vm = _viewModel;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -289,23 +101,23 @@ class _OpportunityBrowserViewState extends State<OpportunityBrowserView> {
         // O filtro de tipo fica escondido dentro de uma subpágina de
         // categoria — o tipo já está travado pela navegação ali.
         showTypeFilter: widget.lockedType == null,
-        initialTypes: _activeTypes,
-        initialInstruments: _activeInstruments,
-        initialCountries: _activeCountries,
-        initialStates: _activeStates,
-        initialCities: _activeCities,
-        initialStateLabels: _stateLabels,
+        initialTypes: vm.activeTypes,
+        initialInstruments: vm.activeInstruments,
+        initialCountries: vm.activeCountries,
+        initialStates: vm.activeStates,
+        initialCities: vm.activeCities,
+        initialStateLabels: vm.stateLabels,
         service: widget.service,
         searchQuery: _searchController.text,
         matchScaleMin: widget.matchScaleMin,
         matchScaleMax: widget.matchScaleMax,
-        initialMatchScale: _matchScale,
+        initialMatchScale: RangeValues(vm.matchScaleStart, vm.matchScaleEnd),
         myInstruments: widget.user.instruments,
         myCountry: widget.user.country,
         myState: widget.user.state,
         myCity: widget.user.city,
-        initialInstrumentToggle: _myInstrumentToggle,
-        initialLocationToggle: _myLocationToggle,
+        initialInstrumentToggle: vm.myInstrumentToggle,
+        initialLocationToggle: vm.myLocationToggle,
         onApply: ({
           required types,
           required instruments,
@@ -317,36 +129,21 @@ class _OpportunityBrowserViewState extends State<OpportunityBrowserView> {
           required instrumentToggle,
           required locationToggle,
         }) {
-          setState(() {
-            _activeTypes = types;
-            _activeInstruments = instruments;
-            _activeCountries = countries;
-            _activeStates = states;
-            _activeCities = cities;
-            _stateLabels = stateLabels;
-            _matchScale = matchScale;
-            _myInstrumentToggle = instrumentToggle;
-            _myLocationToggle = locationToggle;
-          });
-          Monitoring.logEvent('apply_filter');
-          _load();
+          vm.applyFilters(
+            types: types,
+            instruments: instruments,
+            countries: countries,
+            states: states,
+            cities: cities,
+            stateLabels: stateLabels,
+            matchStart: matchScale.start,
+            matchEnd: matchScale.end,
+            instrumentToggle: instrumentToggle,
+            locationToggle: locationToggle,
+          );
         },
       ),
     );
-  }
-
-  void _openDrill(String typeKey, String label) {
-    setState(() {
-      _drillType = typeKey;
-      _drillLabel = label;
-    });
-  }
-
-  void _closeDrill() {
-    setState(() {
-      _drillType = null;
-      _drillLabel = null;
-    });
   }
 
   void _openDetail(OpportunityModel opp) {
@@ -363,11 +160,19 @@ class _OpportunityBrowserViewState extends State<OpportunityBrowserView> {
 
   @override
   Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: _viewModel,
+      builder: (context, _) => _buildView(),
+    );
+  }
+
+  Widget _buildView() {
+    final vm = _viewModel;
     // Subpágina "Ver todas" de uma categoria — mesmo widget, travado no
     // tipo escolhido, com o header local de voltar e sem carrosséis.
-    if (widget.lockedType == null && _drillType != null) {
+    if (widget.lockedType == null && vm.drillType != null) {
       return OpportunityBrowserView(
-        key: ValueKey(_drillType),
+        key: ValueKey(vm.drillType),
         service: widget.service,
         user: widget.user,
         onOpenMap: widget.onOpenMap,
@@ -375,9 +180,9 @@ class _OpportunityBrowserViewState extends State<OpportunityBrowserView> {
         matchScaleMax: widget.matchScaleMax,
         emptyCategoriesMessage: widget.emptyCategoriesMessage,
         emptySearchMessage: widget.emptySearchMessage,
-        lockedType: _drillType,
-        lockedTitle: _drillLabel,
-        onBack: _closeDrill,
+        lockedType: vm.drillType,
+        lockedTitle: vm.drillLabel,
+        onBack: vm.closeDrill,
       );
     }
 
@@ -431,10 +236,11 @@ class _OpportunityBrowserViewState extends State<OpportunityBrowserView> {
                   ),
                   child: TextField(
                     controller: _searchController,
-                    onSubmitted: (_) => _load(),
+                    onChanged: (text) => vm.query = text,
+                    onSubmitted: vm.search,
                     textAlignVertical: TextAlignVertical.center,
                     decoration: InputDecoration(
-                      hintText: _searchHint,
+                      hintText: vm.searchHint,
                       hintStyle: TextStyle(
                           fontSize: 13.5, color: Colors.grey[400]),
                       prefixIcon: Icon(Icons.search_rounded,
@@ -445,7 +251,7 @@ class _OpportunityBrowserViewState extends State<OpportunityBrowserView> {
                           ? GestureDetector(
                               onTap: () {
                                 _searchController.clear();
-                                _load();
+                                vm.search('');
                               },
                               child: Icon(Icons.close_rounded,
                                   size: 16, color: Colors.grey[400]),
@@ -487,7 +293,7 @@ class _OpportunityBrowserViewState extends State<OpportunityBrowserView> {
                         size: 20,
                         color: Color(0xFFDF2881),
                       ),
-                      if (_activeFiltersCount > 0)
+                      if (vm.activeFiltersCount > 0)
                         Positioned(
                           top: 6,
                           right: 6,
@@ -500,7 +306,7 @@ class _OpportunityBrowserViewState extends State<OpportunityBrowserView> {
                             ),
                             child: Center(
                               child: Text(
-                                '$_activeFiltersCount',
+                                '${vm.activeFiltersCount}',
                                 style: const TextStyle(
                                   fontSize: 8,
                                   fontWeight: FontWeight.w700,
@@ -518,20 +324,17 @@ class _OpportunityBrowserViewState extends State<OpportunityBrowserView> {
           ),
         ),
 
-        if (_searchMode) ...[
+        if (vm.searchMode) ...[
           // Contagem de resultados
-          if (!_loading && _error == null)
+          if (!vm.isLoading && vm.error == null)
             Container(
               color: Colors.white,
               padding: EdgeInsets.fromLTRB(
-                  16, 8, 16, _activeFiltersCount > 0 ? 4 : 10),
+                  16, 8, 16, vm.activeFiltersCount > 0 ? 4 : 10),
               child: SizedBox(
                 width: double.infinity,
                 child: Text(
-                  (_opportunities.length < _totalCount
-                          ? '${_opportunities.length} de $_totalCount oportunidades encontradas'
-                          : '$_totalCount oportunidades encontradas') +
-                      (_activeFiltersCount > 0 ? ' contendo os filtros:' : ''),
+                  vm.resultCountLabel,
                   textAlign: TextAlign.left,
                   style: TextStyle(
                     fontSize: 12,
@@ -543,7 +346,7 @@ class _OpportunityBrowserViewState extends State<OpportunityBrowserView> {
             ),
 
           // Chips de filtros ativos
-          if (_activeFiltersCount > 0)
+          if (vm.activeFiltersCount > 0)
             Container(
               color: Colors.white,
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
@@ -551,60 +354,36 @@ class _OpportunityBrowserViewState extends State<OpportunityBrowserView> {
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    if (_matchScaleActive)
+                    if (vm.matchScaleActive)
                       _ActiveFilterChip(
                         label:
-                            '${_matchScale.start.round()}-${_matchScale.end.round()}% match',
-                        onRemove: () {
-                          setState(() => _matchScale = RangeValues(
-                              widget.matchScaleMin, widget.matchScaleMax));
-                          _load();
-                        },
+                            '${vm.matchScaleStart.round()}-${vm.matchScaleEnd.round()}% match',
+                        onRemove: vm.resetMatchScale,
                       ),
-                    for (final v in _activeTypes)
+                    for (final v in vm.activeTypes)
                       _ActiveFilterChip(
                         label: kOpportunityTypeLabels[v] ?? v,
-                        onRemove: () {
-                          setState(() => _activeTypes =
-                              _activeTypes.where((x) => x != v).toList());
-                          _load();
-                        },
+                        onRemove: () => vm.removeType(v),
                       ),
-                    for (final v in _activeInstruments)
+                    for (final v in vm.activeInstruments)
                       _ActiveFilterChip(
                         label: v,
-                        onRemove: () {
-                          setState(() => _activeInstruments =
-                              _activeInstruments.where((x) => x != v).toList());
-                          _load();
-                        },
+                        onRemove: () => vm.removeInstrument(v),
                       ),
-                    for (final v in _activeCountries)
+                    for (final v in vm.activeCountries)
                       _ActiveFilterChip(
                         label: v,
-                        onRemove: () {
-                          setState(() => _activeCountries =
-                              _activeCountries.where((x) => x != v).toList());
-                          _load();
-                        },
+                        onRemove: () => vm.removeCountry(v),
                       ),
-                    for (final v in _activeStates)
+                    for (final v in vm.activeStates)
                       _ActiveFilterChip(
-                        label: _stateLabels[v] ?? v,
-                        onRemove: () {
-                          setState(() => _activeStates =
-                              _activeStates.where((x) => x != v).toList());
-                          _load();
-                        },
+                        label: vm.stateLabels[v] ?? v,
+                        onRemove: () => vm.removeState(v),
                       ),
-                    for (final v in _activeCities)
+                    for (final v in vm.activeCities)
                       _ActiveFilterChip(
                         label: v,
-                        onRemove: () {
-                          setState(() => _activeCities =
-                              _activeCities.where((x) => x != v).toList());
-                          _load();
-                        },
+                        onRemove: () => vm.removeCity(v),
                       ),
                   ],
                 ),
@@ -621,13 +400,14 @@ class _OpportunityBrowserViewState extends State<OpportunityBrowserView> {
   }
 
   Widget _buildCategoriesBrowser() {
-    if (_categoriesLoading) {
+    final vm = _viewModel;
+    if (vm.categoriesLoading) {
       return const Center(
         child: AppLoadingIndicator(size: 28, color: _pink),
       );
     }
 
-    if (_categories.isEmpty) {
+    if (vm.categories.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -655,16 +435,16 @@ class _OpportunityBrowserViewState extends State<OpportunityBrowserView> {
 
     return RefreshIndicator(
       color: _pink,
-      onRefresh: _loadCategories,
+      onRefresh: vm.loadCategories,
       child: ListView(
         padding: const EdgeInsets.only(bottom: 24),
         children: [
-          for (final category in _categories)
+          for (final category in vm.categories)
             OpportunityCarouselSection(
               title: category.label,
               total: category.total,
               items: category.items,
-              onSeeAll: () => _openDrill(category.typeKey, category.label),
+              onSeeAll: () => vm.openDrill(category.typeKey, category.label),
               onCardTap: _openDetail,
             ),
         ],
@@ -673,7 +453,8 @@ class _OpportunityBrowserViewState extends State<OpportunityBrowserView> {
   }
 
   Widget _buildContent() {
-    if (_loading) {
+    final vm = _viewModel;
+    if (vm.isLoading) {
       return const Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -689,7 +470,7 @@ class _OpportunityBrowserViewState extends State<OpportunityBrowserView> {
       );
     }
 
-    if (_error != null) {
+    if (vm.error != null) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -697,12 +478,12 @@ class _OpportunityBrowserViewState extends State<OpportunityBrowserView> {
             Icon(Icons.wifi_off_rounded, size: 48, color: Colors.grey[300]),
             const SizedBox(height: 16),
             Text(
-              _error!,
+              vm.error!,
               style: TextStyle(fontSize: 14, color: Colors.grey[500]),
             ),
             const SizedBox(height: 16),
             OutlinedButton(
-              onPressed: _load,
+              onPressed: vm.load,
               style: OutlinedButton.styleFrom(
                 foregroundColor: _pink,
                 side: const BorderSide(color: _pink),
@@ -717,7 +498,7 @@ class _OpportunityBrowserViewState extends State<OpportunityBrowserView> {
       );
     }
 
-    if (_opportunities.isEmpty) {
+    if (vm.opportunities.isEmpty) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -727,28 +508,17 @@ class _OpportunityBrowserViewState extends State<OpportunityBrowserView> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40),
               child: Text(
-                _searchController.text.isNotEmpty
-                    ? 'Nenhuma oportunidade encontrada para\n"${_searchController.text}"'
+                vm.query.isNotEmpty
+                    ? 'Nenhuma oportunidade encontrada para\n"${vm.query}"'
                     : widget.emptySearchMessage,
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 14, color: Colors.grey[500]),
               ),
             ),
-            if (_activeFiltersCount > 0) ...[
+            if (vm.activeFiltersCount > 0) ...[
               const SizedBox(height: 12),
               GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _activeTypes = [];
-                    _activeInstruments = [];
-                    _activeCountries = [];
-                    _activeStates = [];
-                    _activeCities = [];
-                    _matchScale = RangeValues(
-                        widget.matchScaleMin, widget.matchScaleMax);
-                  });
-                  _load();
-                },
+                onTap: vm.clearFilters,
                 child: const Text(
                   'Limpar filtros',
                   style: TextStyle(
@@ -766,12 +536,12 @@ class _OpportunityBrowserViewState extends State<OpportunityBrowserView> {
 
     return RefreshIndicator(
       color: _pink,
-      onRefresh: _load,
+      onRefresh: vm.load,
       child: ListView.builder(
         padding: const EdgeInsets.only(top: 8, bottom: 24),
-        itemCount: _opportunities.length,
+        itemCount: vm.opportunities.length,
         itemBuilder: (context, index) {
-          final opp = _opportunities[index];
+          final opp = vm.opportunities[index];
           return OpportunityCard(
             opportunity: opp,
             matchPercentage: opp.matchPercentage,

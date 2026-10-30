@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../core/monitoring.dart';
-import '../../../data/models/providers/auth_service.dart';
-import '../../../data/models/providers/favorites_service.dart';
-import '../../../data/models/providers/match_count_service.dart';
+import '../../../data/services/auth_service.dart';
+import '../../view_models/profile_view_model.dart';
 import '../../widgets/auth/auth_common.dart';
 import '../../widgets/auth/logout_flow.dart';
 import '../auth/welcome_screen.dart';
@@ -16,11 +14,9 @@ const _kRamoBlue = Color(0xFF2563EB);
 /// Aba Perfil: dados do usuário logado, com acesso a editar perfil, trocar
 /// senha, sair ou excluir a conta.
 ///
-/// Mantém seu próprio estado de [AuthUser] (inicializado com o valor
-/// recebido no login/boot) — como esta tela fica viva dentro do
-/// `IndexedStack` de [MainNavigation], atualizar esse estado localmente
-/// após uma edição já é suficiente para refletir os dados novos, sem
-/// precisar de um gerenciador de estado global.
+/// Estado e regras ficam no [ProfileViewModel] (que guarda o [AuthUser]
+/// atualizado após uma edição — esta tela fica viva dentro do
+/// `IndexedStack` de [MainNavigation]); a tela só desenha e navega.
 class ProfileScreen extends StatefulWidget {
   final AuthUser user;
 
@@ -49,39 +45,28 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final _authService = AuthService();
-  late AuthUser _user = widget.user;
+  late final _viewModel = ProfileViewModel(user: widget.user);
 
   @override
   void didUpdateWidget(ProfileScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Perfil editado fora daqui (ex: "Complete seu perfil" do Início).
-    if (oldWidget.user != widget.user) _user = widget.user;
+    // Perfil editado fora daqui (ex: pelo MainNavigation).
+    _viewModel.user = widget.user;
   }
 
-  String get _initial => _user.name.isNotEmpty ? _user.name[0].toUpperCase() : '?';
-
-  List<String> get _ramoLabels => [
-        if (_user.isProfessional) 'Profissional',
-        if (_user.isStudent) 'Estudante',
-      ];
-
-  String get _location {
-    final parts = [_user.city, _user.state, _user.country]
-        .where((p) => p != null && p.isNotEmpty)
-        .toList();
-    return parts.isEmpty ? 'Não informada' : parts.join(', ');
+  @override
+  void dispose() {
+    _viewModel.dispose();
+    super.dispose();
   }
 
   Future<void> _editProfile() async {
     final updated = await Navigator.of(context).push<AuthUser>(
-      MaterialPageRoute(builder: (_) => EditProfileScreen(user: _user)),
+      MaterialPageRoute(builder: (_) => EditProfileScreen(user: _viewModel.user)),
     );
     if (updated == null) return;
-    setState(() => _user = updated);
+    _viewModel.profileEdited(updated);
     widget.onUserChanged?.call(updated);
-    // Instrumentos/ramo/localização mudam o match de cada oportunidade.
-    MatchCountService.instance.refresh();
   }
 
   void _changePassword() {
@@ -99,21 +84,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
       builder: (_) => const _DeleteAccountDialog(),
     );
     if (password == null || password.isEmpty) return;
-    try {
-      await _authService.deleteAccount(password);
-      if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const WelcomeScreen()),
-        (route) => false,
-      );
-    } on AuthException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    final error = await _viewModel.deleteAccount(password);
+    if (!mounted) return;
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+      return;
     }
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+      (route) => false,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: _viewModel,
+      builder: (context, _) => _buildContent(),
+    );
+  }
+
+  Widget _buildContent() {
+    final vm = _viewModel;
+    final user = vm.user;
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
       children: [
@@ -131,7 +124,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             child: Center(
               child: Text(
-                _initial,
+                vm.initial,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 38,
@@ -147,7 +140,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             Flexible(
               child: Text(
-                _user.name,
+                user.name,
                 textAlign: TextAlign.center,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
@@ -169,25 +162,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         const SizedBox(height: 4),
         Text(
-          _user.email,
+          user.email,
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 13, color: Colors.grey[600]),
         ),
         const SizedBox(height: 22),
         _StatsCard(
+          matches: vm.matchCountLabel,
+          savedOpportunities: vm.savedOpportunitiesCount,
+          favoriteInstitutions: vm.favoriteInstitutionsCount,
           onOpenMatches: widget.onOpenMatches,
           onOpenSavedOpportunities: widget.onOpenSavedOpportunities,
           onOpenFavoriteInstitutions: widget.onOpenFavoriteInstitutions,
         ),
         const SizedBox(height: 16),
         _InfoCard(
-          instruments: _user.instruments,
-          ramoLabels: _ramoLabels,
-          location: _location,
+          instruments: user.instruments,
+          ramoLabels: vm.ramoLabels,
+          location: vm.location,
           onEdit: _editProfile,
         ),
         const SizedBox(height: 16),
-        const _UsageDataCard(),
+        _UsageDataCard(enabled: vm.usageDataEnabled, onChanged: vm.setUsageDataEnabled),
         const SizedBox(height: 24),
         Row(
           children: [
@@ -223,11 +219,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
 }
 
 class _StatsCard extends StatelessWidget {
+  final String matches;
+  final int savedOpportunities;
+  final int favoriteInstitutions;
   final VoidCallback? onOpenMatches;
   final VoidCallback? onOpenSavedOpportunities;
   final VoidCallback? onOpenFavoriteInstitutions;
 
   const _StatsCard({
+    required this.matches,
+    required this.savedOpportunities,
+    required this.favoriteInstitutions,
     this.onOpenMatches,
     this.onOpenSavedOpportunities,
     this.onOpenFavoriteInstitutions,
@@ -251,37 +253,28 @@ class _StatsCard extends StatelessWidget {
           // Oportunidades abertas com match alto (= total de "Minhas
           // oportunidades"); "–" enquanto carrega ou se a consulta falhar.
           Expanded(
-            child: ListenableBuilder(
-              listenable: MatchCountService.instance,
-              builder: (context, _) => _StatItem(
-                value: '${MatchCountService.instance.count ?? '–'}',
-                label: 'Matches',
-                onTap: onOpenMatches,
-              ),
+            child: _StatItem(
+              value: matches,
+              label: 'Matches',
+              onTap: onOpenMatches,
             ),
           ),
           Container(width: 1, height: 30, color: Colors.grey[200]),
           // Oportunidades salvas / instituições favoritas — atualizam na
           // hora quando um coração é marcado em qualquer tela.
           Expanded(
-            child: ListenableBuilder(
-              listenable: FavoritesService.instance,
-              builder: (context, _) => _StatItem(
-                value: '${FavoritesService.instance.opportunityCount}',
-                label: 'Oport. salvas',
-                onTap: onOpenSavedOpportunities,
-              ),
+            child: _StatItem(
+              value: '$savedOpportunities',
+              label: 'Oport. salvas',
+              onTap: onOpenSavedOpportunities,
             ),
           ),
           Container(width: 1, height: 30, color: Colors.grey[200]),
           Expanded(
-            child: ListenableBuilder(
-              listenable: FavoritesService.instance,
-              builder: (context, _) => _StatItem(
-                value: '${FavoritesService.instance.institutionCount}',
-                label: 'Inst. favoritas',
-                onTap: onOpenFavoriteInstitutions,
-              ),
+            child: _StatItem(
+              value: '$favoriteInstitutions',
+              label: 'Inst. favoritas',
+              onTap: onOpenFavoriteInstitutions,
             ),
           ),
         ],
@@ -475,7 +468,10 @@ class _InfoChip extends StatelessWidget {
 /// Chave "Enviar dados de uso e erros" (Firebase Analytics + Crashlytics) —
 /// o direito de oposição da LGPD, prometido na Política de privacidade.
 class _UsageDataCard extends StatelessWidget {
-  const _UsageDataCard();
+  final bool enabled;
+  final ValueChanged<bool> onChanged;
+
+  const _UsageDataCard({required this.enabled, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -488,33 +484,30 @@ class _UsageDataCard extends StatelessWidget {
         ],
       ),
       padding: const EdgeInsets.fromLTRB(20, 6, 12, 6),
-      child: ValueListenableBuilder<bool>(
-        valueListenable: Monitoring.usageDataEnabled,
-        builder: (context, enabled, _) => Row(
-          children: [
-            Icon(Icons.insights_outlined, size: 20, color: Colors.grey[600]),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Enviar dados de uso e erros',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: kAuthTextDark)),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Ajuda a melhorar o app. Sem nome nem e-mail.',
-                    style: TextStyle(fontSize: 11.5, color: Colors.grey[500]),
-                  ),
-                ],
-              ),
+      child: Row(
+        children: [
+          Icon(Icons.insights_outlined, size: 20, color: Colors.grey[600]),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Enviar dados de uso e erros',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: kAuthTextDark)),
+                const SizedBox(height: 2),
+                Text(
+                  'Ajuda a melhorar o app. Sem nome nem e-mail.',
+                  style: TextStyle(fontSize: 11.5, color: Colors.grey[500]),
+                ),
+              ],
             ),
-            Switch(
-              value: enabled,
-              activeColor: kAuthPink,
-              onChanged: Monitoring.setUsageDataEnabled,
-            ),
-          ],
-        ),
+          ),
+          Switch(
+            value: enabled,
+            activeColor: kAuthPink,
+            onChanged: onChanged,
+          ),
+        ],
       ),
     );
   }

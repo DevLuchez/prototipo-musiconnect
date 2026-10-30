@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../opportunity_model.dart';
-import '../../../core/config/api_config.dart';
+import '../models/opportunity_model.dart';
+import '../../core/config/api_config.dart';
 import 'auth_service.dart';
 
 /// Resultado de [OpportunitiesService.fetchOpportunities]: a página de

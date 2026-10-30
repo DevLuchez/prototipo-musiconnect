@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/constants.dart';
-import '../../data/models/providers/auth_service.dart';
-import '../../data/models/providers/opportunities_service.dart';
+import '../../data/services/auth_service.dart';
+import '../../data/services/opportunities_service.dart';
 import '../widgets/match_explainer.dart';
 import '../widgets/opportunity_browser_view.dart';
 import 'opportunity_detail_screen.dart';

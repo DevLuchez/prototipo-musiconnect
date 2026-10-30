@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../data/models/providers/favorites_service.dart';
+import '../../data/services/favorites_service.dart';
 
 const _pink = Color(0xFFEC4899);
 

@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import '../opportunity_model.dart';
-import '../place_model.dart';
-import '../../../core/config/api_config.dart';
+import '../models/opportunity_model.dart';
+import '../models/place_model.dart';
+import '../../core/config/api_config.dart';
 import 'auth_service.dart';
-import '../../../core/monitoring.dart';
+import '../../core/monitoring.dart';
 
 /// Oportunidades salvas (Matcher) e instituições favoritas (mapa) do
 /// usuário logado — ver /api/favorites no backend.

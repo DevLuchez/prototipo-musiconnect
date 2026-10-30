@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../../../core/config/api_config.dart';
+import '../../core/config/api_config.dart';
 
 /// Um país, estado ou cidade retornado pelo GeoNames — carrega o(s)
 /// código(s) necessários pra buscar o nível seguinte da cascata (ex: o

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/text_utils.dart';
 import '../../data/models/opportunity_model.dart';
-import '../../data/models/providers/opportunities_service.dart';
+import '../../data/services/opportunities_service.dart';
 
 const _pink = Color(0xFFEC4899);
 

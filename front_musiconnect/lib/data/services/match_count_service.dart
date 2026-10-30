@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import '../../../core/config/api_config.dart';
+import '../../core/config/api_config.dart';
 import 'auth_service.dart';
 
 /// Número de Matches do Perfil: quantas oportunidades abertas são

@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import '../../../data/models/providers/auth_service.dart';
+import '../../../data/services/auth_service.dart';
 import '../../widgets/auth/auth_common.dart';
 
 /// Tela "Esqueci minha senha": pede o e-mail, envia o link de

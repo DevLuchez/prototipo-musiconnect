@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../core/constants.dart';
 import '../../data/models/opportunity_model.dart';
-import '../../data/models/providers/auth_service.dart';
-import '../../data/models/providers/dashboard_service.dart';
-import '../../data/models/providers/favorites_service.dart';
-import '../../data/models/providers/opportunities_service.dart';
+import '../../data/services/auth_service.dart';
+import '../../data/services/opportunities_service.dart';
+import '../view_models/dashboard_view_model.dart';
 import '../widgets/app_loading_indicator.dart';
 import '../widgets/auth/auth_common.dart';
 import '../widgets/match_ring.dart';
@@ -18,6 +17,9 @@ import 'opportunity_detail_screen.dart';
 /// saudação (com atalho para as perguntas frequentes), destaque do melhor
 /// match, categorias para explorar e prazos das salvas, em cards enxutos.
 /// Seções vazias não aparecem.
+///
+/// Estado e regras ficam no [DashboardViewModel]; esta tela só desenha e
+/// navega.
 class DashboardScreen extends StatefulWidget {
   final AuthUser user;
 
@@ -42,41 +44,29 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  final _service = DashboardService();
-  late Future<DashboardData> _future = _service.fetch();
+  late final _viewModel = DashboardViewModel(user: widget.user)..load();
 
   @override
   void initState() {
     super.initState();
-    widget.refreshRequest?.addListener(_reload);
+    widget.refreshRequest?.addListener(_viewModel.load);
   }
 
   @override
   void didUpdateWidget(DashboardScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.refreshRequest != widget.refreshRequest) {
-      oldWidget.refreshRequest?.removeListener(_reload);
-      widget.refreshRequest?.addListener(_reload);
+      oldWidget.refreshRequest?.removeListener(_viewModel.load);
+      widget.refreshRequest?.addListener(_viewModel.load);
     }
-    // Perfil editado (aba Perfil) muda os matches.
-    if (oldWidget.user != widget.user) _reload();
+    _viewModel.user = widget.user;
   }
 
   @override
   void dispose() {
-    widget.refreshRequest?.removeListener(_reload);
+    widget.refreshRequest?.removeListener(_viewModel.load);
+    _viewModel.dispose();
     super.dispose();
-  }
-
-  Future<void> _reload() async {
-    final future = _service.fetch();
-    setState(() => _future = future);
-    await future.catchError((_) => const DashboardData(
-          matchCount: 0,
-          urgentSaved: [],
-          topMatches: [],
-          newMatches: [],
-        ));
   }
 
   /// Página de uma categoria — a mesma do "Ver todas" do Matcher (todas as
@@ -109,55 +99,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ));
   }
 
-  String get _firstName {
-    final name = widget.user.name.trim();
-    return name.isEmpty ? '' : name.split(RegExp(r'\s+')).first;
-  }
-
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<DashboardData>(
-      future: _future,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
+    return ListenableBuilder(
+      listenable: _viewModel,
+      builder: (context, _) {
+        if (_viewModel.isLoading) {
           return const Center(child: AppLoadingIndicator());
         }
-        if (snapshot.hasError || snapshot.data == null) {
-          return _ErrorState(onRetry: _reload);
+        if (_viewModel.hasError) {
+          return _ErrorState(onRetry: _viewModel.load);
         }
         return RefreshIndicator(
-          onRefresh: _reload,
+          onRefresh: _viewModel.load,
           color: kAuthPink,
-          // Escuta os corações: remover uma salva tira ela de "Prazos se
-          // aproximando" na hora, sem esperar recarregar.
-          child: ListenableBuilder(
-            listenable: FavoritesService.instance,
-            builder: (context, _) => _buildContent(snapshot.data!),
-          ),
+          child: _buildContent(),
         );
       },
     );
   }
 
-  Widget _buildContent(DashboardData data) {
-    final favorites = FavoritesService.instance;
-    final urgent = data.urgentSaved
-        .where((o) => favorites.isOpportunitySaved(o.id))
-        .toList();
-    final nothingToShow = urgent.isEmpty && data.topMatches.isEmpty;
-    // Só o melhor match vai pro Início (destaque); os demais ficam em Minhas
-    // oportunidades, a um toque na barra de baixo.
-    final best = data.topMatches.isEmpty ? null : data.topMatches.first;
+  Widget _buildContent() {
+    final vm = _viewModel;
+    final best = vm.bestMatch;
+    final urgent = vm.urgentSaved;
 
     return ListView(
       // Sempre rolável — senão o "puxar pra atualizar" não funciona.
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.only(bottom: 24),
       children: [
-        _Greeting(firstName: _firstName),
+        _Greeting(firstName: vm.firstName),
         if (best != null)
           _BestMatchHero(opportunity: best, onTap: () => _open(best)),
-        _ExploreGrid(counts: data.typeCounts, onOpen: _openCategory),
+        _ExploreGrid(counts: vm.typeCounts, onOpen: _openCategory),
         if (urgent.isNotEmpty)
           // Sem "Ver todas": a lista de salvas tem também as que não são
           // urgentes, então o total não bateria com o desta seção.
@@ -170,7 +145,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             onCardTap: _open,
             compact: true,
           ),
-        if (nothingToShow)
+        if (vm.nothingToShow)
           _EmptyState(onExplore: () => widget.onOpenMatcher(1)),
       ],
     );

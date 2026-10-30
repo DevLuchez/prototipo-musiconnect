@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../place_model.dart';
-import '../../../core/config/api_config.dart';
+import '../models/place_model.dart';
+import '../../core/config/api_config.dart';
 
 /// Consome o backend FastAPI MusiConnect.
 /// Endpoint principal: GET /api/institutions/nearby

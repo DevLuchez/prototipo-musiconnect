@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants.dart';
-import '../../../data/models/providers/auth_service.dart';
-import '../../../data/models/providers/geo_service.dart';
+import '../../../data/services/auth_service.dart';
+import '../../../data/services/geo_service.dart';
 import '../../widgets/auth/auth_common.dart';
 
 /// Edição de perfil: reaproveita os mesmos campos dos passos 1 e 2 do

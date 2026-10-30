@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
-import '../../../core/config/api_config.dart';
-import '../../../core/constants.dart';
+import '../../core/config/api_config.dart';
+import '../../core/constants.dart';
 
 /// Erro de autenticação com a mensagem já pronta pra exibir ao usuário
 /// (o backend manda mensagens em português, sem detalhe técnico).

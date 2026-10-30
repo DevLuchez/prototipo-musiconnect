@@ -7,9 +7,9 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../data/models/opportunity_model.dart';
 import '../../data/models/place_model.dart';
-import '../../data/models/providers/auth_service.dart';
-import '../../data/models/providers/musicconnect_api_service.dart';
-import '../../data/models/providers/opportunities_service.dart';
+import '../../data/services/auth_service.dart';
+import '../../data/services/opportunities_service.dart';
+import '../view_models/map_explorer_view_model.dart';
 import '../widgets/app_loading_indicator.dart';
 import '../widgets/favorite_button.dart';
 import '../widgets/opportunity_card.dart';
@@ -120,40 +120,18 @@ class MapExplorerScreen extends StatefulWidget {
 }
 
 class _MapExplorerScreenState extends State<MapExplorerScreen> {
-  GoogleMapController? _mapController;
-  final MusicConnectApiService _apiService = MusicConnectApiService();
-  Timer? _cameraDebounce;
-  Timer? _searchDebounce;
+  late final _viewModel = MapExplorerViewModel(
+    filterGroups: {for (final f in _categoryFilters) f.key: f.categories},
+  );
 
-  // Marcadores e lugares
-  final Map<MarkerId, Marker> _markers = {};
-  final List<PlaceModel> _places = [];
-  final Set<String> _loadedIds = {};
+  GoogleMapController? _mapController;
+  Timer? _cameraDebounce;
 
   LatLng _mapCenter = const LatLng(-26.4855, -49.0669); // Jaraguá do Sul/SC
-
-  // Abaixo desse zoom os marcadores ficam ilegíveis (muito sobrepostos),
-  // então simplesmente ficam ocultos até o usuário aproximar o suficiente.
-  static const double _markersMinZoom = 7.0;
-  bool _showMarkers = true; // zoom inicial (12.0) já está acima do limite
-
-  bool _isLoading = true;
-  bool _initialLoadDone = false;
-  bool _backendOffline = false;
-  int? _dbTotalCount;
-  int? _dbWithOpportunitiesCount;
 
   // Foco pendente — o pedido pode chegar antes da carga inicial terminar
   // ou do mapa nativo estar pronto.
   MapFocusTarget? _pendingFocus;
-
-  // Marcadores "oportunidades por cidade": oportunidades cuja organizadora
-  // não tem localização exata ficam numa bolinha com estrela, no centro da
-  // cidade — separada dos pinos de instituição.
-  final OpportunitiesService _opportunitiesService = OpportunitiesService();
-  List<CityOpportunities> _cities = [];
-  Map<MarkerId, Marker> _cityMarkers = {};
-  bool _showCityMarkers = true;
 
   // Ícones dos marcadores, desenhados uma vez na carga inicial e
   // reaproveitados por todos os pinos (chave = hue da categoria). Todos os
@@ -164,22 +142,16 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
   final Map<double, BitmapDescriptor> _starPinIcons = {};
   BitmapDescriptor? _starCityIcon;
 
+  // Marcadores já montados — reaproveitados entre redesenhos (só os pinos
+  // novos são montados). Os de cidade são remontados quando a lista de
+  // cidades do ViewModel muda.
+  final Map<String, Marker> _markerCache = {};
+  List<CityOpportunities>? _cityMarkersSource;
+  Set<Marker> _cityMarkerCache = {};
+
   // Busca
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocus = FocusNode();
-  List<PlaceModel> _searchResults = [];
-  bool _showSearchResults = false;
-
-  // Filtro por tipo de instituição — por padrão, todos os tipos ativos
-  // (nenhum filtro aplicado, todos os marcadores aparecem).
-  Set<String> _activeFilterKeys =
-      _categoryFilters.map((f) => f.key).toSet();
-  bool _onlyWithOpportunities = false;
-
-  int get _activeFilterCount =>
-      (_categoryFilters.length - _activeFilterKeys.length) +
-      (_onlyWithOpportunities ? 1 : 0) +
-      (_showCityMarkers ? 0 : 1);
 
   static final Map<String, double> _hues = {
     'music_school': BitmapDescriptor.hueAzure,
@@ -201,48 +173,20 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
   void dispose() {
     widget.focusRequest?.removeListener(_onFocusRequest);
     _cameraDebounce?.cancel();
-    _searchDebounce?.cancel();
     _mapController?.dispose();
     _searchController.dispose();
     _searchFocus.dispose();
+    _viewModel.dispose();
     super.dispose();
   }
 
   // ── Carga inicial ─────────────────────────────────────────────
 
   Future<void> _initialLoad() async {
-    final online = await _apiService.isReachable();
-    if (!mounted) return;
-
-    if (!online) {
-      setState(() {
-        _backendOffline = true;
-        _isLoading = false;
-        _initialLoadDone = true;
-      });
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
     // Antes de criar qualquer marcador, que já usa esses ícones
     await _prepareMarkerIcons();
-    final places = await _apiService.fetchAll(limit: 5000);
-    final stats = await _apiService.fetchStats();
-    if (!mounted) return;
-
-    for (final p in places) {
-      _addPlace(p);
-    }
-    _dbTotalCount = stats?.total;
-    _dbWithOpportunitiesCount = stats?.withOpportunities;
-    await _loadCities();
-    if (!mounted) return;
-
-    setState(() {
-      _isLoading = false;
-      _initialLoadDone = true;
-    });
+    await _viewModel.initialLoad();
+    if (!mounted || _viewModel.backendOffline) return;
     _nudgeMapRedraw();
     _focusPending();
   }
@@ -261,7 +205,7 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
   /// da cidade quando a organizadora não tem localização exata.
   Future<void> _focusPending() async {
     final target = _pendingFocus;
-    if (target == null || !_initialLoadDone || _mapController == null) return;
+    if (target == null || !_viewModel.initialLoadDone || _mapController == null) return;
     _pendingFocus = null;
 
     final osmId = target.institutionId;
@@ -280,12 +224,10 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
     ));
   }
 
-  /// Centraliza no pino da instituição e abre o detalhe dela. Se o pino
-  /// ainda não foi carregado (fora da carga inicial), busca no backend; se
-  /// algum filtro ativo o esconderia, limpa os filtros.
+  /// Centraliza no pino da instituição e abre o detalhe dela (buscando no
+  /// backend se o pino ainda não foi carregado).
   Future<void> _focusInstitution(String osmId) async {
-    final place = _places.where((p) => p.osmId == osmId).firstOrNull ??
-        await _apiService.fetchById(osmId);
+    final place = await _viewModel.findInstitution(osmId);
     if (!mounted) return;
     if (place == null) {
       _showNotFoundOnMap();
@@ -294,20 +236,11 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
     await _focusPlace(place);
   }
 
-  /// Adiciona o pino (se ainda não estava carregado), garante que nenhum
-  /// filtro o esconda, centraliza e abre o detalhe da instituição — usado
+  /// Garante que o pino apareça (o ViewModel adiciona e limpa filtros que
+  /// o esconderiam), centraliza e abre o detalhe da instituição — usado
   /// pelo "Ver no mapa" das oportunidades e pela barra de busca.
   Future<void> _focusPlace(PlaceModel place) async {
-    // Se já estava carregado, usa a instância do mapa (mesmo marcador)
-    final target =
-        _places.where((p) => p.id == place.id).firstOrNull ?? place;
-    setState(() {
-      _addPlace(target);
-      if (!_isVisible(target)) {
-        _activeFilterKeys = _categoryFilters.map((f) => f.key).toSet();
-        _onlyWithOpportunities = false;
-      }
-    });
+    final target = _viewModel.reveal(place);
     await _mapController?.animateCamera(
       CameraUpdate.newCameraPosition(
         CameraPosition(target: LatLng(target.lat, target.lng), zoom: 16),
@@ -318,48 +251,16 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
 
   /// Centraliza no marcador da cidade e abre a lista das oportunidades dela.
   Future<void> _focusCity(int cityId) async {
-    var city = _cities.where((c) => c.id == cityId).firstOrNull;
-    if (city == null) {
-      // Vínculo criado depois da carga inicial — recarrega os marcadores.
-      await _loadCities();
-      city = _cities.where((c) => c.id == cityId).firstOrNull;
-    }
+    final city = await _viewModel.revealCity(cityId);
     if (!mounted) return;
     if (city == null) {
       _showNotFoundOnMap();
       return;
     }
-
-    final target = city;
-    if (!_showCityMarkers) setState(() => _showCityMarkers = true);
     await _mapController?.animateCamera(
-      CameraUpdate.newLatLngZoom(LatLng(target.lat, target.lng), 11),
+      CameraUpdate.newLatLngZoom(LatLng(city.lat, city.lng), 11),
     );
-    if (mounted) _showCityDetail(target);
-  }
-
-  // ── Oportunidades por cidade ──────────────────────────────────
-
-  Future<void> _loadCities() async {
-    final cities = await _opportunitiesService.fetchCities();
-    final markers = <MarkerId, Marker>{};
-    for (final c in cities) {
-      final id = MarkerId('city_${c.id}');
-      markers[id] = Marker(
-        markerId: id,
-        position: LatLng(c.lat, c.lng),
-        icon: _starCityIcon ??
-            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRose),
-        anchor: const Offset(0.5, 0.5),
-        zIndex: 3.0,
-        onTap: () => _showCityDetail(c),
-      );
-    }
-    if (!mounted) return;
-    setState(() {
-      _cities = cities;
-      _cityMarkers = markers;
-    });
+    if (mounted) _showCityDetail(city);
   }
 
   // ── Ícones dos marcadores ─────────────────────────────────────
@@ -458,41 +359,18 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _CitySheet(city: city, user: widget.user),
+      builder: (_) => _CitySheet(
+        city: city,
+        user: widget.user,
+        loadOpportunities: () => _viewModel.opportunitiesOfCity(city.id),
+      ),
     );
-  }
-
-  // ── Busca no backend (ao mover câmera) ────────────────────────
-
-  Future<void> _fetchFromBackend(LatLng center, {int radiusM = 50000}) async {
-    if (!mounted) return;
-    setState(() {
-      _isLoading = true;
-    });
-
-    final places = await _apiService.fetchNearby(
-      lat: center.latitude,
-      lng: center.longitude,
-      radiusM: radiusM,
-      limit: 500,
-    );
-
-    if (!mounted) return;
-
-    for (final p in places) {
-      _addPlace(p);
-    }
-
-    setState(() => _isLoading = false);
-    // Sem nudge aqui: essa busca já é disparada por um movimento real de
-    // câmera do usuário, então o mapa já está ativo/repintando — nudgear de
-    // novo só reacionaria onCameraIdle e viraria um loop infinito de fetch.
   }
 
   /// Empurra a câmera 1px e volta, forçando o Android a repintar a
   /// superfície nativa do GoogleMap — sem esse empurrão, marcadores
-  /// recém-adicionados via setState só aparecem depois que o usuário
-  /// toca/arrasta o mapa (bug conhecido do google_maps_flutter no Android).
+  /// recém-adicionados só aparecem depois que o usuário toca/arrasta o
+  /// mapa (bug conhecido do google_maps_flutter no Android).
   void _nudgeMapRedraw() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _mapController?.moveCamera(CameraUpdate.scrollBy(1, 0));
@@ -500,72 +378,17 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
     });
   }
 
-  /// Adiciona uma instituição à lista e mapa de marcadores.
-  /// Retorna true se era nova (não duplicada).
-  bool _addPlace(PlaceModel p) {
-    if (_loadedIds.contains(p.id)) return false;
-    _loadedIds.add(p.id);
-    _places.add(p);
-    final mid = MarkerId(p.id);
-    _markers[mid] = _buildMarker(p);
-    return true;
-  }
-
   // ── Busca por texto ───────────────────────────────────────────
 
-  /// Busca no backend, em todas as instituições — o mapa só tem parte delas
-  /// em memória. Espera uma pausa na digitação antes de consultar; se o
-  /// backend falhar, cai na busca local (só no que já está carregado).
-  void _onSearchChanged(String query) {
-    _searchDebounce?.cancel();
-    final term = query.trim();
-    if (term.length < 2) {
-      setState(() {
-        _searchResults = [];
-        _showSearchResults = false;
-      });
-      return;
-    }
-    _searchDebounce = Timer(const Duration(milliseconds: 300), () async {
-      final results = await _apiService.search(term) ?? _searchLocal(term);
-      // Descarta respostas atrasadas de um termo que já foi alterado
-      if (!mounted || _searchController.text.trim() != term) return;
-      setState(() {
-        _searchResults = results;
-        _showSearchResults = true;
-      });
-    });
-  }
-
-  List<PlaceModel> _searchLocal(String term) {
-    final lower = term.toLowerCase();
-    return _places
-        .where((p) =>
-            p.name.toLowerCase().contains(lower) ||
-            (p.address?.toLowerCase().contains(lower) ?? false))
-        .take(8)
-        .toList();
-  }
-
   void _navigateToPlace(PlaceModel p) {
-    _searchDebounce?.cancel();
-    _searchController.clear();
-    _searchFocus.unfocus();
-    setState(() {
-      _searchResults = [];
-      _showSearchResults = false;
-    });
+    _clearSearch();
     _focusPlace(p);
   }
 
   void _clearSearch() {
-    _searchDebounce?.cancel();
     _searchController.clear();
     _searchFocus.unfocus();
-    setState(() {
-      _searchResults = [];
-      _showSearchResults = false;
-    });
+    _viewModel.clearSearch();
   }
 
   // ── Eventos do mapa ───────────────────────────────────────────
@@ -575,63 +398,36 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
     _focusPending();
     // Confirma o zoom real assim que o mapa nativo está pronto: o primeiro
     // onCameraMove pode reportar um zoom incorreto (view ainda sem
-    // dimensões finais), o que deixaria _showMarkers travado em false até
-    // o usuário mexer no mapa.
+    // dimensões finais), o que deixaria os pinos escondidos até o usuário
+    // mexer no mapa.
     c.getZoomLevel().then((zoom) {
-      if (!mounted) return;
-      final showMarkers = zoom >= _markersMinZoom;
-      if (showMarkers != _showMarkers) {
-        setState(() => _showMarkers = showMarkers);
-      }
+      if (mounted) _viewModel.onZoomChanged(zoom);
     });
   }
 
   void _onCameraMove(CameraPosition pos) {
     _mapCenter = pos.target;
-    final showMarkers = pos.zoom >= _markersMinZoom;
-    if (showMarkers != _showMarkers) {
-      setState(() => _showMarkers = showMarkers);
-    }
+    _viewModel.onZoomChanged(pos.zoom);
   }
 
   void _onCameraIdle() {
     _cameraDebounce?.cancel();
+    // Sem nudge depois dessa carga: ela já vem de um movimento real da
+    // câmera (o mapa está repintando) — nudgear reacionaria onCameraIdle e
+    // viraria um loop infinito de carga.
     _cameraDebounce = Timer(const Duration(milliseconds: 800), () {
-      if (!_backendOffline && !_isLoading) {
-        _fetchFromBackend(_mapCenter);
-      }
+      _viewModel.loadNearby(_mapCenter.latitude, _mapCenter.longitude);
     });
   }
 
   // ── Filtro por tipo ──────────────────────────────────────────────
 
-  /// Se a instituição passa pelos filtros ativos (tipo + "só com
-  /// oportunidades abertas"). Com todos os tipos selecionados (padrão),
-  /// qualquer categoria passa — inclusive as fora dos grupos conhecidos
-  /// (ex.: ruído de tags do OSM).
-  bool _isVisible(PlaceModel p) {
-    if (_onlyWithOpportunities && !p.hasActiveOpportunities) return false;
-    if (_activeFilterKeys.length == _categoryFilters.length) return true;
-    return _categoryFilters.any((f) =>
-        _activeFilterKeys.contains(f.key) && f.categories.contains(p.category));
-  }
-
-  /// Marcadores exibidos no mapa, considerando os filtros ativos.
-  Set<Marker> get _visibleMarkers {
-    if (_activeFilterCount == 0) return Set.of(_markers.values);
-    return _places
-        .where(_isVisible)
-        .map((p) => _markers[MarkerId(p.id)])
-        .whereType<Marker>()
-        .toSet();
-  }
-
   void _openCategoryFilter() {
-    // Seleção provisória — só é aplicada de fato (setState no estado da
-    // tela, que filtra os marcadores) quando o usuário toca em "Aplicar".
-    final draftKeys = Set<String>.of(_activeFilterKeys);
-    var draftOnlyWithOpportunities = _onlyWithOpportunities;
-    var draftShowCityMarkers = _showCityMarkers;
+    // Seleção provisória — só é aplicada de fato (no ViewModel, que filtra
+    // os marcadores) quando o usuário toca em "Aplicar".
+    final draftKeys = Set<String>.of(_viewModel.activeFilterKeys);
+    var draftOnlyWithOpportunities = _viewModel.onlyWithOpportunities;
+    var draftShowCityMarkers = _viewModel.showCityMarkers;
 
     showModalBottomSheet(
       context: context,
@@ -784,12 +580,11 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
                         flex: 2,
                         child: ElevatedButton(
                           onPressed: () {
-                            setState(() {
-                              _activeFilterKeys = draftKeys;
-                              _onlyWithOpportunities =
-                                  draftOnlyWithOpportunities;
-                              _showCityMarkers = draftShowCityMarkers;
-                            });
+                            _viewModel.applyFilters(
+                              keys: draftKeys,
+                              onlyWithOpportunities: draftOnlyWithOpportunities,
+                              showCityMarkers: draftShowCityMarkers,
+                            );
                             Navigator.of(context).pop();
                           },
                           style: ElevatedButton.styleFrom(
@@ -845,18 +640,56 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _DetailSheet(place: p, user: widget.user),
+      builder: (_) => _DetailSheet(
+        place: p,
+        user: widget.user,
+        loadOpportunities: () => _viewModel.opportunitiesOfInstitution(p.osmId!),
+      ),
     );
+  }
+
+  Marker _markerFor(PlaceModel p) => _markerCache.putIfAbsent(p.id, () => _buildMarker(p));
+
+  /// Pinos visíveis (pelos filtros do ViewModel), como marcadores do mapa.
+  Set<Marker> get _visibleMarkers => _viewModel.visiblePlaces.map(_markerFor).toSet();
+
+  /// Bolinhas com estrela das oportunidades por cidade.
+  Set<Marker> get _cityMarkers {
+    final cities = _viewModel.cities;
+    if (!identical(cities, _cityMarkersSource)) {
+      _cityMarkersSource = cities;
+      _cityMarkerCache = {
+        for (final c in cities)
+          Marker(
+            markerId: MarkerId('city_${c.id}'),
+            position: LatLng(c.lat, c.lng),
+            icon: _starCityIcon ??
+                BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRose),
+            anchor: const Offset(0.5, 0.5),
+            zIndex: 3.0,
+            onTap: () => _showCityDetail(c),
+          ),
+      };
+    }
+    return _cityMarkerCache;
   }
 
   // ── Build ─────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: _viewModel,
+      builder: (context, _) => _buildMap(),
+    );
+  }
+
+  Widget _buildMap() {
+    final vm = _viewModel;
     return GestureDetector(
       // Fecha a busca ao tocar fora
       onTap: () {
-        if (_showSearchResults) _clearSearch();
+        if (vm.showSearchResults) _clearSearch();
       },
       child: Stack(
         children: [
@@ -866,10 +699,10 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
             initialCameraPosition:
                 CameraPosition(target: _mapCenter, zoom: 12.0),
             // Instituições e cidades somem juntas abaixo de _markersMinZoom.
-            markers: _showMarkers
+            markers: vm.showMarkers
                 ? {
                     ..._visibleMarkers,
-                    if (_showCityMarkers) ..._cityMarkers.values,
+                    if (vm.showCityMarkers) ..._cityMarkers,
                   }
                 : const {},
             style: _mapStyle,
@@ -881,7 +714,7 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
           ),
 
           // ── Banner: backend offline ───────────────────────────
-          if (_backendOffline)
+          if (vm.backendOffline)
             Positioned(
               top: 0,
               left: 0,
@@ -907,7 +740,7 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
 
           // ── Barra de busca flutuante ──────────────────────────
           Positioned(
-            top: _backendOffline ? 48 : 12,
+            top: vm.backendOffline ? 48 : 12,
             left: 12,
             right: 12,
             child: Column(
@@ -934,7 +767,7 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
                         child: TextField(
                           controller: _searchController,
                           focusNode: _searchFocus,
-                          onChanged: _onSearchChanged,
+                          onChanged: vm.onSearchChanged,
                           textAlignVertical: TextAlignVertical.center,
                           decoration: InputDecoration(
                             hintText:
@@ -947,7 +780,7 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
                                 size: 18, color: Colors.grey[400]),
                             prefixIconConstraints:
                                 const BoxConstraints(minWidth: 40, minHeight: 0),
-                            suffixIcon: _showSearchResults
+                            suffixIcon: vm.showSearchResults
                                 ? GestureDetector(
                                     onTap: _clearSearch,
                                     child: Icon(Icons.close_rounded,
@@ -987,7 +820,7 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
                           children: [
                             const Icon(Icons.tune_rounded,
                                 size: 20, color: _pinkIcon),
-                            if (_activeFilterCount > 0)
+                            if (vm.activeFilterCount > 0)
                               Positioned(
                                 top: 6,
                                 right: 6,
@@ -1000,7 +833,7 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
                                   ),
                                   child: Center(
                                     child: Text(
-                                      '$_activeFilterCount',
+                                      '${vm.activeFilterCount}',
                                       style: const TextStyle(
                                         fontSize: 8,
                                         fontWeight: FontWeight.w700,
@@ -1018,7 +851,7 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
                 ),
 
                 // Lista de resultados
-                if (_showSearchResults)
+                if (vm.showSearchResults)
                   Container(
                     margin: const EdgeInsets.only(top: 6),
                     decoration: BoxDecoration(
@@ -1032,7 +865,7 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
                         ),
                       ],
                     ),
-                    child: _searchResults.isEmpty
+                    child: vm.searchResults.isEmpty
                         ? const Padding(
                             padding: EdgeInsets.all(16),
                             child: Text(
@@ -1045,11 +878,11 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
                         : ListView.separated(
                             shrinkWrap: true,
                             padding: const EdgeInsets.symmetric(vertical: 4),
-                            itemCount: _searchResults.length,
+                            itemCount: vm.searchResults.length,
                             separatorBuilder: (_, __) => Divider(
                                 height: 1, color: Colors.grey[100]),
                             itemBuilder: (_, i) {
-                              final p = _searchResults[i];
+                              final p = vm.searchResults[i];
                               return InkWell(
                                 onTap: () => _navigateToPlace(p),
                                 borderRadius: BorderRadius.circular(12),
@@ -1115,7 +948,7 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
           ),
 
           // ── Carregamento inicial ───────────────────────────────
-          if (_isLoading && _markers.isEmpty)
+          if (vm.isLoading && vm.places.isEmpty)
             Center(
               child: Container(
                 padding: const EdgeInsets.all(24),
@@ -1293,10 +1126,7 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          _dbTotalCount != null
-                              ? '$_dbTotalCount instituições catalogadas na base de dados'
-                                  '${_dbWithOpportunitiesCount != null ? ', $_dbWithOpportunitiesCount com oportunidades abertas' : ''}.'
-                              : 'Carregando total de instituições catalogadas...',
+                          _viewModel.catalogSummary,
                           style:
                               const TextStyle(color: Colors.grey, fontSize: 11),
                         ),
@@ -1333,7 +1163,12 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
 class _CitySheet extends StatefulWidget {
   final CityOpportunities city;
   final AuthUser user;
-  const _CitySheet({required this.city, required this.user});
+  final Future<List<OpportunityModel>> Function() loadOpportunities;
+  const _CitySheet({
+    required this.city,
+    required this.user,
+    required this.loadOpportunities,
+  });
 
   @override
   State<_CitySheet> createState() => _CitySheetState();
@@ -1346,10 +1181,8 @@ class _CitySheetState extends State<_CitySheet> {
   @override
   void initState() {
     super.initState();
-    OpportunitiesService()
-        .fetchOpportunities(cityLocationId: widget.city.id)
-        .then((result) {
-      if (mounted) setState(() => _opportunities = result.items);
+    widget.loadOpportunities().then((items) {
+      if (mounted) setState(() => _opportunities = items);
     });
   }
 
@@ -1447,7 +1280,12 @@ class _CitySheetState extends State<_CitySheet> {
 class _DetailSheet extends StatefulWidget {
   final PlaceModel place;
   final AuthUser user;
-  const _DetailSheet({required this.place, required this.user});
+  final Future<List<OpportunityModel>> Function() loadOpportunities;
+  const _DetailSheet({
+    required this.place,
+    required this.user,
+    required this.loadOpportunities,
+  });
 
   @override
   State<_DetailSheet> createState() => _DetailSheetState();
@@ -1462,9 +1300,8 @@ class _DetailSheetState extends State<_DetailSheet> {
   @override
   void initState() {
     super.initState();
-    final osmId = place.osmId;
-    if (place.hasActiveOpportunities && osmId != null) {
-      OpportunitiesService().fetchByInstitution(osmId).then((items) {
+    if (place.hasActiveOpportunities && place.osmId != null) {
+      widget.loadOpportunities().then((items) {
         if (mounted) setState(() => _opportunities = items);
       });
     }

@@ -2,7 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../data/models/opportunity_model.dart';
-import '../../data/models/providers/auth_service.dart';
+import '../../data/services/auth_service.dart';
 import '../widgets/auth/auth_common.dart';
 import '../widgets/favorite_button.dart';
 import '../widgets/match_explainer.dart';
