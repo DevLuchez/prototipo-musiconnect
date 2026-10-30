@@ -207,6 +207,25 @@ class _MainNavigationState extends State<MainNavigation>
     _iconScale = Tween<double>(begin: 1.0, end: 1.15).animate(
       CurvedAnimation(parent: _iconPulse, curve: Curves.easeInOut),
     );
+    // A política mudou desde o último aceite: pede o novo aceite antes de
+    // seguir (vale tanto para a sessão salva quanto para o login).
+    if (_user.needsPrivacyAcceptance) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _askPrivacyAcceptance());
+    }
+  }
+
+  void _askPrivacyAcceptance() {
+    Navigator.of(context).push(MaterialPageRoute(
+      fullscreenDialog: true,
+      builder: (routeContext) => PrivacyPolicyScreen(
+        onAccept: () async {
+          final user = await AuthService().acceptPrivacyPolicy();
+          if (!mounted) return;
+          setState(() => _user = user);
+          if (routeContext.mounted) Navigator.of(routeContext).pop();
+        },
+      ),
+    ));
   }
 
   @override

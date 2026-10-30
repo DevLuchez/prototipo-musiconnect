@@ -509,7 +509,7 @@ class _SignupScreenState extends State<SignupScreen> {
           value: _privacyAccepted,
           onChanged: (v) => setState(() => _privacyAccepted = v),
           onOpenPolicy: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
+            MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen(highlightChanges: false)),
           ),
         ),
       ],

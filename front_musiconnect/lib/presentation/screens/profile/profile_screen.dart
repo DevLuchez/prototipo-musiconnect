@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/monitoring.dart';
 import '../../../data/models/providers/auth_service.dart';
 import '../../../data/models/providers/favorites_service.dart';
 import '../../../data/models/providers/match_count_service.dart';
@@ -185,6 +186,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           location: _location,
           onEdit: _editProfile,
         ),
+        const SizedBox(height: 16),
+        const _UsageDataCard(),
         const SizedBox(height: 24),
         Row(
           children: [
@@ -464,6 +467,54 @@ class _InfoChip extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color),
+      ),
+    );
+  }
+}
+
+/// Chave "Enviar dados de uso e erros" (Firebase Analytics + Crashlytics) —
+/// o direito de oposição da LGPD, prometido na Política de privacidade.
+class _UsageDataCard extends StatelessWidget {
+  const _UsageDataCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 12, offset: const Offset(0, 4)),
+        ],
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 6, 12, 6),
+      child: ValueListenableBuilder<bool>(
+        valueListenable: Monitoring.usageDataEnabled,
+        builder: (context, enabled, _) => Row(
+          children: [
+            Icon(Icons.insights_outlined, size: 20, color: Colors.grey[600]),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Enviar dados de uso e erros',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: kAuthTextDark)),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Ajuda a melhorar o app. Sem nome nem e-mail.',
+                    style: TextStyle(fontSize: 11.5, color: Colors.grey[500]),
+                  ),
+                ],
+              ),
+            ),
+            Switch(
+              value: enabled,
+              activeColor: kAuthPink,
+              onChanged: Monitoring.setUsageDataEnabled,
+            ),
+          ],
+        ),
       ),
     );
   }

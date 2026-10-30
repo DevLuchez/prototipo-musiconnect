@@ -53,7 +53,7 @@ PASSWORD_RESET_EXPIRY = timedelta(minutes=30)
 # Versão do texto da Política de privacidade aceita no cadastro (data da
 # última alteração). O app tem o mesmo valor em kPrivacyPolicyVersion
 # (core/constants.dart) — atualizar os dois juntos quando o texto mudar.
-PRIVACY_POLICY_VERSION = "2026-10-13"
+PRIVACY_POLICY_VERSION = "2026-10-29"
 
 logger = logging.getLogger("routers.auth")
 
@@ -367,6 +367,15 @@ def change_password(
     result = UserOut.model_validate(user)
     result.token = user.session_token
     return result
+
+
+@router.post("/accept-privacy", response_model=UserOut)
+def accept_privacy(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Novo aceite da Política de privacidade por quem já tem conta — o app
+    pede ao abrir quando a versão aceita é anterior à atual."""
+    _record_privacy_consent(user, datetime.now(timezone.utc))
+    db.commit()
+    return user
 
 
 @router.post("/logout")

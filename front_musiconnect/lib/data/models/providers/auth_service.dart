@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import '../../../core/config/api_config.dart';
+import '../../../core/constants.dart';
 
 /// Erro de autenticação com a mensagem já pronta pra exibir ao usuário
 /// (o backend manda mensagens em português, sem detalhe técnico).
@@ -23,6 +24,8 @@ class AuthUser {
   final String? country;
   final String? state;
   final String? city;
+  // Versão da Política de privacidade aceita (null em contas antigas).
+  final String? privacyPolicyVersion;
 
   const AuthUser({
     required this.id,
@@ -34,7 +37,11 @@ class AuthUser {
     this.country,
     this.state,
     this.city,
+    this.privacyPolicyVersion,
   });
+
+  /// Aceitou uma versão anterior da política — precisa aceitar a atual.
+  bool get needsPrivacyAcceptance => privacyPolicyVersion != kPrivacyPolicyVersion;
 
   factory AuthUser.fromJson(Map<String, dynamic> json) => AuthUser(
         id: json['id'] as int,
@@ -48,6 +55,7 @@ class AuthUser {
         country: json['country'] as String?,
         state: json['state'] as String?,
         city: json['city'] as String?,
+        privacyPolicyVersion: json['privacy_policy_version'] as String?,
       );
 }
 
@@ -336,6 +344,27 @@ class AuthService {
       final body = json.decode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
       final token = body['token'] as String?;
       if (token != null) await _saveToken(token);
+    } on AuthException {
+      rethrow;
+    } catch (e) {
+      throw const AuthException(
+          'Não foi possível conectar ao servidor. Verifique sua conexão.');
+    }
+  }
+
+  /// Novo aceite da Política de privacidade (versão atual) por quem já tem
+  /// conta — devolve o usuário com a versão aceita atualizada.
+  Future<AuthUser> acceptPrivacyPolicy() async {
+    try {
+      final response = await http
+          .post(Uri.parse(ApiConfig.authAcceptPrivacy), headers: await _authHeaders())
+          .timeout(_timeout);
+      if (response.statusCode >= 400) {
+        throw AuthException(
+            _errorDetail(response, 'Não foi possível registrar o aceite.'));
+      }
+      final body = json.decode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+      return AuthUser.fromJson(body);
     } on AuthException {
       rethrow;
     } catch (e) {

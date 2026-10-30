@@ -194,6 +194,9 @@ class UserOut(BaseModel):
     country: Optional[str] = None
     state: Optional[str] = None
     city: Optional[str] = None
+    # Versão da Política de privacidade que o usuário aceitou — o app
+    # compara com a atual e pede um novo aceite quando a política muda.
+    privacy_policy_version: Optional[str] = None
     # Só vem preenchido nas respostas de login/troca de senha — o cliente
     # usa esse valor pra atualizar o token guardado localmente.
     token: Optional[str] = None

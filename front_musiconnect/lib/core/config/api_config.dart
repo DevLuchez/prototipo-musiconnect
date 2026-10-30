@@ -47,6 +47,7 @@ class ApiConfig {
   static const String authMe             = '$baseUrl/api/auth/me';
   static const String authChangePassword = '$baseUrl/api/auth/change-password';
   static const String authLogout         = '$baseUrl/api/auth/logout';
+  static const String authAcceptPrivacy  = '$baseUrl/api/auth/accept-privacy';
 
   // ── GeoNames (país/estado/cidade do cadastro) ──────────────────
   // Conta gratuita em https://www.geonames.org/login — depois de criar,
