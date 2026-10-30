@@ -135,3 +135,23 @@ def test_redefinir_com_link_expirado_nao_troca(api, db_session):
     assert "expirou" in response.text.lower()
     db_session.refresh(user)
     assert user.password_hash == "hash-antigo"
+
+
+def test_pagina_de_redefinicao_com_link_invalido_ou_expirado(api, db_session):
+    _user_com_reset(db_session, sent_minutes_ago=31)
+
+    expirado = api.get("/redefinir-senha", params={"token": "tok-reset"})
+    invalido = api.get("/redefinir-senha", params={"token": "nao-existe"})
+
+    assert expirado.status_code == 400 and "expirou" in expirado.text.lower()
+    assert invalido.status_code == 400
+
+
+def test_reset_pela_api_com_link_expirado(api, db_session):
+    _user_com_reset(db_session, sent_minutes_ago=31)
+
+    response = api.post("/api/auth/reset-password",
+                        json={"token": "tok-reset", "password": NOVA_SENHA})
+
+    assert response.status_code == 400
+    assert "expirou" in response.json()["detail"]

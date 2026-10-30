@@ -162,6 +162,43 @@ def test_mesma_organizadora_e_geocodificada_uma_vez_so(db_session, nominatim):
     ]
 
 
+def test_mesmo_nome_sem_cidade_conhecida_nao_casa_pelo_nome(db_session, nominatim):
+    make_institution(db_session, osm_id="node_1", name="Orquestra Z")
+    opp_id = make_opportunity(db_session, institution="Orquestra Z", city=None,
+                              state=None, country=None).id
+
+    stats = _run()
+
+    # Sem cidade não há como confirmar que é a mesma — e não há centro de cidade.
+    assert db_session.get(Opportunity, opp_id).institution_id is None
+    assert stats["unresolved"] == 1 and stats["linked_to_city"] == 0
+
+
+def test_erro_numa_oportunidade_nao_interrompe_as_outras(db_session, nominatim, monkeypatch):
+    make_opportunity(db_session, institution="Quebra", title="Quebra")
+    ok_id = make_opportunity(db_session, institution="Orquestra Ok", title="Ok").id
+    nominatim["places"]["Orquestra Ok, Jaraguá do Sul, Brasil"] = {
+        "osm_type": "node", "osm_id": 7, "lat": "-26.48", "lon": "-49.07", "category": "amenity",
+    }
+    real_place = institution_factory.geocode_place
+
+    async def flaky_place(client, query):
+        if query.startswith("Quebra"):
+            raise RuntimeError("falha inesperada")
+        return await real_place(client, query)
+
+    async def flaky_city(client, query):
+        raise RuntimeError("Nominatim fora do ar")
+
+    monkeypatch.setattr(institution_factory, "geocode_place", flaky_place)
+    monkeypatch.setattr(institution_resolver, "geocode", flaky_city)
+
+    stats = _run()
+
+    assert db_session.get(Opportunity, ok_id).institution_id == "node_7"
+    assert stats["linked"] == 1 and stats["linked_to_city"] == 0
+
+
 # ── Funções de apoio ─────────────────────────────────────────────────────
 
 def test_normalizacao_de_nomes():

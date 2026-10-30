@@ -110,3 +110,10 @@ def test_confianca_proporcional_e_limitada():
     assert compute_match_breakdown(_user(), _opp(llm_confidence=0.8)).confidence == 12
     assert compute_match_breakdown(_user(), _opp(llm_confidence=None)).confidence == 0
     assert compute_match_breakdown(_user(), _opp(llm_confidence=1.7)).confidence == 15
+
+
+def test_oportunidade_sem_tipo_tem_afinidade_neutra():
+    sem_tipo = compute_match_breakdown(_user(is_student=True), _opp(type=None))
+    tipo_desconhecido = compute_match_breakdown(_user(is_student=True), _opp(type="outro"))
+
+    assert sem_tipo.affinity == tipo_desconhecido.affinity  # neutro: metade do peso

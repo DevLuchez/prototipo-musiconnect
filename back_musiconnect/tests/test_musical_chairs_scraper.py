@@ -135,3 +135,73 @@ def test_coleta_completa(fake_site):
     # A já conhecida não é revisitada (cortesia com o site).
     assert "/jobs/333" not in fake_site
     assert records[f"{BASE}/jobs/333"]["institution"] is None
+
+
+# ── Falhas e casos de borda ──────────────────────────────────────────────
+
+def test_rss_sem_canal_ou_com_itens_incompletos():
+    assert mc._parse_feed("<rss></rss>", "violin") == []
+    sem_link = '<rss><channel><item><title>Sem link</title></item></channel></rss>'
+    assert mc._parse_feed(sem_link, "violin") == []
+
+
+def _with_client(handler, coro_fn):
+    async def run():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            return await coro_fn(client)
+    return asyncio.run(run())
+
+
+def test_feed_com_erro_http_ou_sem_rede_vira_lista_vazia():
+    assert _with_client(lambda r: httpx.Response(500),
+                        lambda c: mc._fetch_feed(c, "violin")) == []
+
+    def offline(request):
+        raise httpx.ConnectError("sem rede")
+    assert _with_client(offline, lambda c: mc._fetch_feed(c, "violin")) == []
+
+
+def test_pagina_de_detalhe_com_erro_transitorio_vira_none():
+    sem = asyncio.Semaphore(1)
+    result = _with_client(lambda r: httpx.Response(503),
+                          lambda c: mc._fetch_detail(c, f"{BASE}/jobs/1", sem))
+    assert result is None
+
+
+def test_detalhe_que_falhou_mantem_o_resumo_do_rss(monkeypatch):
+    monkeypatch.setattr(mc, "_fetch_known_source_urls", lambda urls: set())
+    records = [{"source_url": f"{BASE}/jobs/1", "institution": None, "deadline": None,
+                "description": "Resumo", "raw_text": "Resumo"}]
+
+    dead = _with_client(lambda r: httpx.Response(503),
+                        lambda c: mc._enrich_with_details(c, records))
+
+    assert dead == set()
+    assert records[0]["description"] == "Resumo"
+
+
+def test_sem_registros_novos_nao_visita_nenhuma_pagina(monkeypatch):
+    monkeypatch.setattr(mc, "_fetch_known_source_urls", lambda urls: set(urls))
+    visited = []
+
+    def handler(request):
+        visited.append(request.url.path)
+        return httpx.Response(200)
+
+    dead = _with_client(handler, lambda c: mc._enrich_with_details(
+        c, [{"source_url": f"{BASE}/jobs/1"}]))
+
+    assert dead == set() and visited == []
+
+
+def test_consulta_os_links_ja_gravados_no_banco(monkeypatch, db_session):
+    from tests.helpers import make_opportunity
+    import app.database as database
+
+    make_opportunity(db_session, title="Já gravada", source_url=f"{BASE}/jobs/1")
+    monkeypatch.setattr(database, "SessionLocal", lambda: db_session)
+
+    known = mc._fetch_known_source_urls([f"{BASE}/jobs/1", f"{BASE}/jobs/2"])
+
+    assert known == {f"{BASE}/jobs/1"}
+    assert mc._fetch_known_source_urls([]) == set()

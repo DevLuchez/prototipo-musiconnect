@@ -91,6 +91,23 @@ def test_reenviar_confirmacao(api, db_session, sent_emails):
     assert api.post("/api/auth/resend", json={"email": "ninguem@example.com"}).status_code == 404
 
 
+def test_reenviar_ou_confirmar_conta_ja_confirmada(api, db_session, sent_emails):
+    api.post("/api/auth/signup", json=SIGNUP)
+    token = sent_emails[0][2]
+    api.post("/api/auth/confirm", json={"token": token})
+
+    assert api.post("/api/auth/resend", json={"email": "nova@example.com"}).status_code == 409
+    user = _user_by_email(db_session, "nova@example.com")
+    # Mesmo token de novo (ainda guardado): responde "já confirmado", sem erro
+    user.confirmation_token = token
+    db_session.commit()
+    assert api.post("/api/auth/confirm", json={"token": token}).json()["status"] == "already_confirmed"
+
+
+def test_status_de_email_sem_cadastro(api):
+    assert api.get("/api/auth/status", params={"email": "ninguem@example.com"}).status_code == 404
+
+
 # ── Login, sessão e perfil ───────────────────────────────────────────────
 
 def test_login_devolve_token_que_abre_o_perfil(api, db_session):
