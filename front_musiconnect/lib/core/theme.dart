@@ -1,1 +1,0 @@
-// Temas e configuração visual do App

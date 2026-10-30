@@ -1,1 +1,0 @@
-// Segura a BottomNavigationBar e troca as telas

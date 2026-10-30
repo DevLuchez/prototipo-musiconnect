@@ -79,7 +79,6 @@ flutter:
 
   # Dataset curado de instituições musicais globais
   assets:
-    - assets/data/music_institutions.json
     - assets/images/
 
   # An image asset can refer to one or more resolution-specific "variants", see
