@@ -30,7 +30,6 @@ página totalmente diferente do esperado.
 """
 
 import asyncio
-import hashlib
 import logging
 import xml.etree.ElementTree as ET
 from datetime import date, datetime, timezone
@@ -85,11 +84,6 @@ def _classify_type(url: str) -> Optional[str]:
             return opp_type
     logger.debug(f"[MC] Segmento de URL não reconhecido, descartando: {path}")
     return None
-
-
-def _guid_to_id(url: str) -> str:
-    """Hash curto do GUID para uso como source_url normalizado."""
-    return hashlib.md5(url.encode()).hexdigest()[:12]
 
 
 def _strip_html(html_text: str) -> str:
