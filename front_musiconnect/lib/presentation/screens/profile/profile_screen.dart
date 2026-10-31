@@ -214,7 +214,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         const SizedBox(height: 20),
         Center(
           child: Text(
-            'MusiConnect v1.0.0 · Build 1',
+            vm.appVersionLabel,
             style: TextStyle(fontSize: 11, color: Colors.grey[400]),
           ),
         ),

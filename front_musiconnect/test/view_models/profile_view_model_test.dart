@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:prototipo_musiconnect/presentation/view_models/profile_view_model.dart';
 
 import '../helpers/fakes.dart';
@@ -115,5 +116,39 @@ void main() {
     // Os outros dois também: mudar não deve chamar um ViewModel descartado.
     matchCount.arrive(1);
     usageData.value = false;
+  });
+
+  group('versão do app no rodapé', () {
+    PackageInfo info({String version = '1.2.0', String buildNumber = '7'}) => PackageInfo(
+        appName: 'MusiConnect', packageName: 'x', version: version, buildNumber: buildNumber);
+
+    ProfileViewModel withVersion(Future<PackageInfo> Function() packageInfo) => ProfileViewModel(
+          user: fakeUser(),
+          authService: auth,
+          favorites: favorites,
+          matchCount: matchCount,
+          usageDataEnabled: usageData,
+          setUsageDataEnabled: (value) async {},
+          packageInfo: packageInfo,
+        );
+
+    test('versão e número do build do app instalado', () async {
+      final vm = withVersion(() async => info());
+      expect(vm.appVersionLabel, '');
+      await pumpEventQueue();
+      expect(vm.appVersionLabel, 'MusiConnect 1.2.0 (7)');
+    });
+
+    test('sem número de build, só a versão', () async {
+      final vm = withVersion(() async => info(buildNumber: ''));
+      await pumpEventQueue();
+      expect(vm.appVersionLabel, 'MusiConnect 1.2.0');
+    });
+
+    test('se não conseguir ler, fica vazio', () async {
+      final vm = withVersion(() async => throw Exception('sem plugin'));
+      await pumpEventQueue();
+      expect(vm.appVersionLabel, '');
+    });
   });
 }

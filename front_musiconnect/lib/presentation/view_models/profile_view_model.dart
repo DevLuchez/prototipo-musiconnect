@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../../core/monitoring.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/services/favorites_service.dart';
@@ -19,6 +20,7 @@ class ProfileViewModel extends ViewModel {
     MatchCountService? matchCount,
     ValueListenable<bool>? usageDataEnabled,
     Future<void> Function(bool enabled)? setUsageDataEnabled,
+    Future<PackageInfo> Function()? packageInfo,
   })  : _user = user,
         _authService = authService ?? AuthService(),
         _favorites = favorites ?? FavoritesService.instance,
@@ -28,6 +30,7 @@ class ProfileViewModel extends ViewModel {
     _favorites.addListener(notifyListeners);
     _matchCount.addListener(notifyListeners);
     _usageDataEnabled.addListener(notifyListeners);
+    _loadAppVersion(packageInfo ?? PackageInfo.fromPlatform);
   }
 
   final AuthService _authService;
@@ -67,6 +70,23 @@ class ProfileViewModel extends ViewModel {
   String get matchCountLabel => '${_matchCount.count ?? '–'}';
   int get savedOpportunitiesCount => _favorites.opportunityCount;
   int get favoriteInstitutionsCount => _favorites.institutionCount;
+
+  String _appVersion = '';
+
+  /// Rodapé: "MusiConnect 1.0.0 (3)" — versão e número do build do app
+  /// instalado (definidos no release). Vazio até ler, ou se não der.
+  String get appVersionLabel => _appVersion;
+
+  Future<void> _loadAppVersion(Future<PackageInfo> Function() packageInfo) async {
+    try {
+      final info = await packageInfo();
+      final build = info.buildNumber.isEmpty ? '' : ' (${info.buildNumber})';
+      _appVersion = 'MusiConnect ${info.version}$build';
+      notifyListeners();
+    } catch (_) {
+      // Sem a versão, o rodapé só fica vazio.
+    }
+  }
 
   bool get usageDataEnabled => _usageDataEnabled.value;
   Future<void> setUsageDataEnabled(bool enabled) => _setUsageDataEnabled(enabled);

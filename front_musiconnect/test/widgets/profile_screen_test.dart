@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:prototipo_musiconnect/data/services/auth_service.dart';
 import 'package:prototipo_musiconnect/presentation/screens/auth/welcome_screen.dart';
 import 'package:prototipo_musiconnect/presentation/screens/profile/change_password_screen.dart';
@@ -60,7 +61,10 @@ void main() {
   });
 
   testWidgets('mostra os dados do perfil e os números', (tester) async {
+    PackageInfo.setMockInitialValues(appName: 'MusiConnect', packageName: 'x', version: '1.0.0',
+        buildNumber: '3', buildSignature: '');
     await pumpProfile(tester);
+    expect(find.text('MusiConnect 1.0.0 (3)'), findsOneWidget);
 
     expect(find.text('L'), findsOneWidget); // avatar
     expect(find.text('Laura'), findsOneWidget);

@@ -53,6 +53,9 @@ dependencies:
   firebase_core: 4.7.0
   firebase_analytics: 12.3.0
   firebase_crashlytics: 5.2.0
+  # Versão do app no rodapé do Perfil. Fixa: 9.x usa o mecanismo do Gradle
+  # do Flutter mais novo que o 3.24.4 (mesmo problema do app_links).
+  package_info_plus: 8.1.0
 
 dev_dependencies:
   flutter_test:
