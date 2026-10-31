@@ -55,6 +55,9 @@ class FilterModal extends StatefulWidget {
   final String? myCity;
   final bool initialInstrumentToggle;
   final bool initialLocationToggle;
+  // Visitante: "Meu instrumento", "Perto de Mim" e a Escala de Match
+  // aparecem, mas bloqueados — os três dependem do perfil.
+  final bool profileFiltersLocked;
 
   final void Function({
     required List<String> types,
@@ -88,6 +91,7 @@ class FilterModal extends StatefulWidget {
     this.myCity,
     this.initialInstrumentToggle = false,
     this.initialLocationToggle = false,
+    this.profileFiltersLocked = false,
     required this.onApply,
   });
 
@@ -250,6 +254,7 @@ class _FilterModalState extends State<FilterModal> {
                     subtitle: 'Filtra pelo(s) instrumento(s) do seu perfil',
                     value: _instrumentToggle,
                     onChanged: _setInstrumentToggle,
+                    locked: widget.profileFiltersLocked,
                   ),
                   const Divider(height: 1),
                   _ToggleRow(
@@ -257,6 +262,7 @@ class _FilterModalState extends State<FilterModal> {
                     subtitle: 'Filtra pela localização do seu perfil',
                     value: _locationToggle,
                     onChanged: _setLocationToggle,
+                    locked: widget.profileFiltersLocked,
                   ),
 
                   const Divider(height: 1),
@@ -265,14 +271,32 @@ class _FilterModalState extends State<FilterModal> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Escala de Match',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF111827),
-                          ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Escala de Match',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: widget.profileFiltersLocked
+                                      ? Colors.grey[400]
+                                      : const Color(0xFF111827),
+                                ),
+                              ),
+                            ),
+                            if (widget.profileFiltersLocked)
+                              Icon(Icons.lock_outline_rounded,
+                                  size: 20, color: Colors.grey[400]),
+                          ],
                         ),
+                        if (widget.profileFiltersLocked) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            'Disponível com uma conta cadastrada',
+                            style: TextStyle(fontSize: 11.5, color: Colors.grey[500]),
+                          ),
+                        ],
                         RangeSlider(
                           values: _matchScale,
                           min: widget.matchScaleMin,
@@ -283,7 +307,10 @@ class _FilterModalState extends State<FilterModal> {
                             '${_matchScale.start.round()}%',
                             '${_matchScale.end.round()}%',
                           ),
-                          onChanged: (v) => setState(() => _matchScale = v),
+                          // Bloqueada: o slider fica desabilitado (cinza).
+                          onChanged: widget.profileFiltersLocked
+                              ? null
+                              : (v) => setState(() => _matchScale = v),
                         ),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -562,18 +589,21 @@ class _FilterModalState extends State<FilterModal> {
 }
 
 /// Linha "Meu instrumento" / "Perto de Mim" — checkbox que liga/desliga o
-/// filtro pelo perfil do usuário logado.
+/// filtro pelo perfil do usuário logado. [locked] (visitante): aparece com
+/// um cadeado no lugar da caixa, sem responder ao toque.
 class _ToggleRow extends StatelessWidget {
   final String title;
   final String subtitle;
   final bool value;
   final ValueChanged<bool> onChanged;
+  final bool locked;
 
   const _ToggleRow({
     required this.title,
     required this.subtitle,
     required this.value,
     required this.onChanged,
+    this.locked = false,
   });
 
   @override
@@ -588,25 +618,31 @@ class _ToggleRow extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF111827),
+                    color: locked ? Colors.grey[400] : const Color(0xFF111827),
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  subtitle,
+                  locked ? 'Disponível com uma conta cadastrada' : subtitle,
                   style: TextStyle(fontSize: 11.5, color: Colors.grey[500]),
                 ),
               ],
             ),
           ),
-          Checkbox(
-            value: value,
-            onChanged: (v) => onChanged(v ?? false),
-            activeColor: _pink,
-          ),
+          if (locked)
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Icon(Icons.lock_outline_rounded, size: 20, color: Colors.grey[400]),
+            )
+          else
+            Checkbox(
+              value: value,
+              onChanged: (v) => onChanged(v ?? false),
+              activeColor: _pink,
+            ),
         ],
       ),
     );

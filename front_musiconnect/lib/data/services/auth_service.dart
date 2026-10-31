@@ -26,6 +26,8 @@ class AuthUser {
   final String? city;
   // Versão da Política de privacidade aceita (null em contas antigas).
   final String? privacyPolicyVersion;
+  // Modo visitante (sem conta) — ver core/visitor_mode.dart.
+  final bool isVisitor;
 
   const AuthUser({
     required this.id,
@@ -38,7 +40,23 @@ class AuthUser {
     this.state,
     this.city,
     this.privacyPolicyVersion,
+    this.isVisitor = false,
   });
+
+  /// Quem entra sem conta: sem perfil (sem match nem favoritos). A política
+  /// já foi aceita na entrada, então nunca pede o novo aceite.
+  const AuthUser.visitor()
+      : id = 0,
+        email = '',
+        name = '',
+        instruments = const [],
+        isProfessional = false,
+        isStudent = false,
+        country = null,
+        state = null,
+        city = null,
+        privacyPolicyVersion = kPrivacyPolicyVersion,
+        isVisitor = true;
 
   /// Aceitou uma versão anterior da política — precisa aceitar a atual.
   bool get needsPrivacyAcceptance => privacyPolicyVersion != kPrivacyPolicyVersion;

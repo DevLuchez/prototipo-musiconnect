@@ -1,9 +1,20 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../../core/constants.dart';
+import '../../../core/monitoring.dart';
+import '../../../data/services/auth_service.dart';
+import '../../../main.dart';
 import '../../widgets/auth/auth_common.dart';
+import '../privacy_policy_screen.dart';
 import 'login_screen.dart';
 import 'signup_screen.dart';
+
+/// Versão da Política de privacidade aceita ao entrar sem conta — guardada
+/// no aparelho para não pedir o aceite a cada visita (só de novo se a
+/// política mudar). O modo visitante em si não fica guardado.
+const kVisitorPrivacyVersionKey = 'visitor_privacy_version';
 
 class _OnboardingPage {
   final String title;
@@ -94,6 +105,27 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   void _goSignup() {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const SignupScreen()),
+    );
+  }
+
+  /// "Entrar sem uma conta cadastrada": pede o aceite da política (uma vez
+  /// por versão) e abre o app no modo visitante.
+  Future<void> _enterAsVisitor() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    if (prefs.getString(kVisitorPrivacyVersionKey) != kPrivacyPolicyVersion) {
+      final accepted = await showDialog<bool>(
+        context: context,
+        builder: (_) => const _VisitorConsentDialog(),
+      );
+      if (accepted != true) return;
+      await prefs.setString(kVisitorPrivacyVersionKey, kPrivacyPolicyVersion);
+      if (!mounted) return;
+    }
+    Monitoring.logEvent('visitor_start');
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const MainNavigation(user: AuthUser.visitor())),
+      (route) => false,
     );
   }
 
@@ -195,14 +227,68 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               ),
             ),
             const SizedBox(height: 14),
-            Text(
-              'Entre na sua conta para continuar',
-              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+            // Mais discreto que "Cadastre-se" de propósito: visitar é para
+            // conhecer o app, a conta é o caminho principal.
+            TextButton(
+              onPressed: _enterAsVisitor,
+              style: TextButton.styleFrom(foregroundColor: Colors.grey[600]),
+              child: const Text(
+                'Entrar sem uma conta cadastrada',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Aceite da Política de privacidade antes de entrar sem conta — com a
+/// mesma caixa do cadastro.
+class _VisitorConsentDialog extends StatefulWidget {
+  const _VisitorConsentDialog();
+
+  @override
+  State<_VisitorConsentDialog> createState() => _VisitorConsentDialogState();
+}
+
+class _VisitorConsentDialogState extends State<_VisitorConsentDialog> {
+  bool _accepted = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return AuthDialog(
+      title: 'Entrar sem conta',
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Conheça o MusiConnect sem se cadastrar. O match, os favoritos e '
+            'os prazos ficam disponíveis só com uma conta. Ao fechar o app, '
+            'a visita termina.',
+            style: TextStyle(fontSize: 13.5, color: Colors.grey[600], height: 1.4),
+          ),
+          const SizedBox(height: 16),
+          PrivacyConsentRow(
+            value: _accepted,
+            onChanged: (v) => setState(() => _accepted = v),
+            onOpenPolicy: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => const PrivacyPolicyScreen(highlightChanges: false),
+            )),
+          ),
+        ],
+      ),
+      primaryLabel: 'Continuar',
+      onPrimary: _accepted ? () => Navigator.of(context).pop(true) : null,
+      secondaryLabel: 'Cancelar',
+      onSecondary: () => Navigator.of(context).pop(false),
     );
   }
 }

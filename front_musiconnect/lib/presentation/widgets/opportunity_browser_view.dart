@@ -118,6 +118,7 @@ class _OpportunityBrowserViewState extends State<OpportunityBrowserView> {
         myCity: widget.user.city,
         initialInstrumentToggle: vm.myInstrumentToggle,
         initialLocationToggle: vm.myLocationToggle,
+        profileFiltersLocked: widget.user.isVisitor,
         onApply: ({
           required types,
           required instruments,

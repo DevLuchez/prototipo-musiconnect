@@ -38,13 +38,19 @@ class FavoritesService extends ChangeNotifier {
     return {if (token != null) 'Authorization': 'Bearer $token'};
   }
 
+  /// Esquece os favoritos guardados — modo visitante, para nunca mostrar os
+  /// de quem estava logado antes neste aparelho.
+  void clear() {
+    _opportunityIds.clear();
+    _institutionIds.clear();
+    notifyListeners();
+  }
+
   /// Carrega os IDs salvos do usuário logado — chamado ao abrir o
   /// [MainNavigation]. Limpa antes, pra nunca mostrar os favoritos de quem
   /// estava logado antes neste aparelho.
   Future<void> load() async {
-    _opportunityIds.clear();
-    _institutionIds.clear();
-    notifyListeners();
+    clear();
     try {
       final response = await http
           .get(Uri.parse('${ApiConfig.favorites}/ids'), headers: await _authHeaders())

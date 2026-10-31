@@ -9,6 +9,7 @@ import '../widgets/auth/auth_common.dart';
 import '../widgets/match_ring.dart';
 import '../widgets/opportunity_browser_view.dart';
 import '../widgets/opportunity_card.dart';
+import '../widgets/visitor_invite.dart';
 import '../widgets/opportunity_carousel_section.dart';
 import 'help_screen.dart';
 import 'opportunity_detail_screen.dart';
@@ -135,7 +136,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       padding: const EdgeInsets.only(bottom: 24),
       children: [
         _Greeting(firstName: vm.firstName),
-        if (best != null)
+        if (vm.isVisitor)
+          const _VisitorHero()
+        else if (best != null)
           _BestMatchHero(opportunity: best, onTap: () => _open(best)),
         _ExploreGrid(counts: vm.typeCounts, onOpen: _openCategory),
         if (urgent.isNotEmpty)
@@ -236,6 +239,80 @@ class _HelpShortcut extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Modo visitante: o mesmo card do "Seu melhor match", com o convite para
+/// criar conta no lugar da oportunidade.
+class _VisitorHero extends StatelessWidget {
+  const _VisitorHero();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 18, 16, 0),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'SEU MELHOR MATCH',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1,
+                        color: kAuthPink,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Crie sua conta para descobrir a oportunidade que mais '
+                      'combina com você',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: kAuthTextDark,
+                        height: 1.25,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: kAuthPink.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.auto_awesome_rounded, color: kAuthPink, size: 28),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const AccountInviteButtons(),
+        ],
       ),
     );
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/visitor_mode.dart';
 import '../../core/constants.dart';
 import '../../data/models/opportunity_model.dart';
 import 'favorite_button.dart';
@@ -84,7 +85,8 @@ class OpportunityCard extends StatelessWidget {
               // ── Linha superior: match (esquerda) + prazo (direita) ──
               Row(
                 children: [
-                  if (matchPercentage != null) _buildMatchTag(),
+                  // Visitante: "–%" — o match existe, mas precisa de conta.
+                  if (matchPercentage != null || VisitorMode.active) _buildMatchTag(),
                   const Spacer(),
                   _buildDeadline(),
                 ],
@@ -254,7 +256,7 @@ class OpportunityCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
-        '$matchPercentage% de match',
+        '${matchPercentage ?? '–'}% de match',
         style: const TextStyle(
           fontSize: 10.5,
           fontWeight: FontWeight.w700,

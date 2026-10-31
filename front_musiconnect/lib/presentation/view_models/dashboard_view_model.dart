@@ -39,6 +39,9 @@ class DashboardViewModel extends ViewModel {
     load();
   }
 
+  /// Modo visitante: no lugar do melhor match, o convite para criar conta.
+  bool get isVisitor => _user.isVisitor;
+
   /// Primeiro nome para a saudação ("Laura Heloísa" → "Laura").
   String get firstName {
     final name = _user.name.trim();
@@ -61,7 +64,7 @@ class DashboardViewModel extends ViewModel {
   Map<String, int> get typeCounts => _data?.typeCounts ?? const {};
 
   /// Sem prazos nem matches: a tela convida a explorar todas.
-  bool get nothingToShow => urgentSaved.isEmpty && bestMatch == null;
+  bool get nothingToShow => !isVisitor && urgentSaved.isEmpty && bestMatch == null;
 
   Future<void> load() async {
     _isLoading = true;

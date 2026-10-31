@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'core/deep_links.dart';
 import 'core/monitoring.dart';
+import 'core/visitor_mode.dart';
 import 'data/services/auth_service.dart';
 import 'data/services/favorites_service.dart';
 import 'data/services/match_count_service.dart';
@@ -18,6 +19,7 @@ import 'presentation/screens/map_explorer_screen.dart';
 import 'presentation/screens/matcher_screen.dart';
 import 'presentation/screens/privacy_policy_screen.dart';
 import 'presentation/screens/profile/profile_screen.dart';
+import 'presentation/screens/profile/visitor_profile_screen.dart';
 import 'presentation/widgets/auth/auth_common.dart';
 import 'presentation/widgets/auth/logout_flow.dart';
 
@@ -193,13 +195,20 @@ class _MainNavigationState extends State<MainNavigation>
   late final AnimationController _iconPulse;
   late final Animation<double> _iconScale;
 
+  bool get _isVisitor => _user.isVisitor;
+
   @override
   void initState() {
     super.initState();
-    // Estado dos corações (salvos/favoritos) de todas as telas.
-    FavoritesService.instance.load();
-    // Número de Matches do Perfil.
-    MatchCountService.instance.refresh(clear: true);
+    VisitorMode.active = _isVisitor;
+    if (_isVisitor) {
+      FavoritesService.instance.clear();
+    } else {
+      // Estado dos corações (salvos/favoritos) de todas as telas.
+      FavoritesService.instance.load();
+      // Número de Matches do Perfil.
+      MatchCountService.instance.refresh(clear: true);
+    }
     _iconPulse = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1800),
@@ -244,7 +253,7 @@ class _MainNavigationState extends State<MainNavigation>
     setState(() => _selectedIndex = index);
     Monitoring.logScreen(_tabScreenNames[index]);
     // Pega oportunidades novas (scraper) desde a última consulta.
-    if (index == _profileTab) MatchCountService.instance.refresh();
+    if (index == _profileTab && !_isVisitor) MatchCountService.instance.refresh();
     if (index == _homeTab) _homeRefresh.value++;
   }
 
@@ -298,6 +307,16 @@ class _MainNavigationState extends State<MainNavigation>
     Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => const PrivacyPolicyScreen(),
     ));
+  }
+
+  /// Visitante: "Entrar ou criar conta" encerra a visita e volta à tela de
+  /// boas-vindas (Faça Login / Cadastre-se).
+  void _leaveVisit() {
+    VisitorMode.active = false;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+      (route) => false,
+    );
   }
 
   /// Item do menu lateral: fecha o menu e abre a tela.
@@ -366,13 +385,22 @@ class _MainNavigationState extends State<MainNavigation>
                     const SizedBox(height: 4),
                     // Mesmo fluxo do "Sair da conta" do Perfil; ícone e texto
                     // no vermelho escuro da "Zona de atenção" do Perfil.
-                    _DrawerItem(
-                      icon: Icons.logout_rounded,
-                      label: 'Sair',
-                      showChevron: false,
-                      color: Colors.red[800],
-                      onTap: () => _fromDrawer(() => confirmAndLogout(this.context)),
-                    ),
+                    if (_isVisitor)
+                      _DrawerItem(
+                        icon: Icons.login_rounded,
+                        label: 'Voltar ao menu inicial',
+                        showChevron: false,
+                        color: kAuthPink,
+                        onTap: () => _fromDrawer(_leaveVisit),
+                      )
+                    else
+                      _DrawerItem(
+                        icon: Icons.logout_rounded,
+                        label: 'Sair',
+                        showChevron: false,
+                        color: Colors.red[800],
+                        onTap: () => _fromDrawer(() => confirmAndLogout(this.context)),
+                      ),
                     const SizedBox(height: 8),
                   ],
                 ),
@@ -401,13 +429,16 @@ class _MainNavigationState extends State<MainNavigation>
             _focusOnMap(MapFocusTarget.opportunity(opportunity)),
         tabRequest: _matcherTabRequest,
       ),
-      ProfileScreen(
-        user: _user,
-        onOpenMatches: () => _openMatcher(0),
-        onOpenSavedOpportunities: _openSavedOpportunities,
-        onOpenFavoriteInstitutions: _openFavoriteInstitutions,
-        onUserChanged: _onUserChanged,
-      ),
+      if (_isVisitor)
+        const VisitorProfileScreen()
+      else
+        ProfileScreen(
+          user: _user,
+          onOpenMatches: () => _openMatcher(0),
+          onOpenSavedOpportunities: _openSavedOpportunities,
+          onOpenFavoriteInstitutions: _openFavoriteInstitutions,
+          onUserChanged: _onUserChanged,
+        ),
     ];
 
     return Scaffold(
@@ -527,7 +558,8 @@ class _MainNavigationState extends State<MainNavigation>
 }
 
 /// Topo do menu lateral: inicial, nome e e-mail do usuário (mesmo círculo
-/// em gradiente do Perfil, menor). Tocar leva à aba Perfil.
+/// em gradiente do Perfil, menor) — ou "Visitante" no modo sem conta.
+/// Tocar leva à aba Perfil.
 class _DrawerHeader extends StatelessWidget {
   final AuthUser user;
   final VoidCallback onTap;
@@ -537,6 +569,8 @@ class _DrawerHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final initial = user.name.isNotEmpty ? user.name[0].toUpperCase() : '?';
+    final name = user.isVisitor ? 'Visitante' : user.name;
+    final subtitle = user.isVisitor ? 'Sem conta cadastrada' : user.email;
     return InkWell(
       onTap: onTap,
       splashColor: kAuthPink.withOpacity(0.18),
@@ -557,14 +591,16 @@ class _DrawerHeader extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: Center(
-                child: Text(
-                  initial,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
+                child: user.isVisitor
+                    ? const Icon(Icons.person_rounded, color: Colors.white, size: 26)
+                    : Text(
+                        initial,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
               ),
             ),
             const SizedBox(width: 14),
@@ -573,7 +609,7 @@ class _DrawerHeader extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    user.name,
+                    name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -584,7 +620,7 @@ class _DrawerHeader extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    user.email,
+                    subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(fontSize: 12.5, color: Colors.grey[600]),

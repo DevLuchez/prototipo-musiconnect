@@ -1061,3 +1061,76 @@ class AuthPasswordRequirements extends StatelessWidget {
     );
   }
 }
+
+/// Caixa "Li e aceito a Política de privacidade" (cadastro e entrada sem
+/// conta) — o texto do link abre a política; tocar no resto da linha
+/// marca/desmarca.
+class PrivacyConsentRow extends StatelessWidget {
+  final bool value;
+  final ValueChanged<bool> onChanged;
+  final VoidCallback onOpenPolicy;
+
+  const PrivacyConsentRow({
+    super.key,
+    required this.value,
+    required this.onChanged,
+    required this.onOpenPolicy,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => onChanged(!value),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 22,
+              height: 22,
+              child: Checkbox(
+                value: value,
+                onChanged: (v) => onChanged(v ?? false),
+                activeColor: kAuthPink,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  const Text(
+                    'Li e aceito a ',
+                    style: TextStyle(fontSize: 13.5, color: kAuthTextDark),
+                  ),
+                  GestureDetector(
+                    onTap: onOpenPolicy,
+                    child: const Text(
+                      'Política de privacidade',
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                        color: kAuthPink,
+                        decoration: TextDecoration.underline,
+                        decorationColor: kAuthPink,
+                      ),
+                    ),
+                  ),
+                  const Text(
+                    ' *',
+                    style: TextStyle(fontSize: 13.5, color: Colors.red),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

@@ -188,7 +188,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           onEdit: _editProfile,
         ),
         const SizedBox(height: 16),
-        _UsageDataCard(enabled: vm.usageDataEnabled, onChanged: vm.setUsageDataEnabled),
+        UsageDataCard(enabled: vm.usageDataEnabled, onChanged: vm.setUsageDataEnabled),
         const SizedBox(height: 24),
         Row(
           children: [
@@ -472,11 +472,11 @@ class _InfoChip extends StatelessWidget {
 
 /// Chave "Enviar dados de uso e erros" (Firebase Analytics + Crashlytics) —
 /// o direito de oposição da LGPD, prometido na Política de privacidade.
-class _UsageDataCard extends StatelessWidget {
+class UsageDataCard extends StatelessWidget {
   final bool enabled;
   final ValueChanged<bool> onChanged;
 
-  const _UsageDataCard({required this.enabled, required this.onChanged});
+  const UsageDataCard({super.key, required this.enabled, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -501,7 +501,7 @@ class _UsageDataCard extends StatelessWidget {
                     style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: kAuthTextDark)),
                 const SizedBox(height: 2),
                 Text(
-                  'Ajuda a melhorar o app. Sem nome nem e-mail.',
+                  'Envia dados de usabilidade, sem seu nome nem e-mail, ajudando a melhorar o app.',
                   style: TextStyle(fontSize: 11.5, color: Colors.grey[500]),
                 ),
               ],

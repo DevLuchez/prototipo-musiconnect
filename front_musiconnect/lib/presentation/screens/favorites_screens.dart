@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/text_utils.dart';
+import '../../core/visitor_mode.dart';
 import '../../data/models/opportunity_model.dart';
 import '../../data/models/place_model.dart';
 import '../../data/services/auth_service.dart';
@@ -9,6 +10,7 @@ import '../widgets/app_loading_indicator.dart';
 import '../widgets/auth/auth_common.dart';
 import '../widgets/favorite_button.dart';
 import '../widgets/opportunity_card.dart';
+import '../widgets/visitor_invite.dart';
 import 'opportunity_detail_screen.dart';
 
 // Estrela de "tem oportunidade aberta" — mesma cor dos pinos do mapa.
@@ -52,7 +54,10 @@ class _SavedOpportunitiesScreenState extends State<SavedOpportunitiesScreen> {
   @override
   void initState() {
     super.initState();
-    _future = _favorites.fetchSavedOpportunities();
+    // Visitante não tem favoritos: a tela mostra o convite para criar conta.
+    _future = VisitorMode.active
+        ? Future.value(const <OpportunityModel>[])
+        : _favorites.fetchSavedOpportunities();
   }
 
   Future<void> _reload() async {
@@ -79,11 +84,17 @@ class _SavedOpportunitiesScreenState extends State<SavedOpportunitiesScreen> {
       title: 'Oportunidades salvas',
       future: _future,
       onRetry: _reload,
-      empty: const _EmptyState(
-        icon: Icons.favorite_border_rounded,
-        message: 'Nenhuma oportunidade salva ainda.\n'
-            'Toque no coração de uma oportunidade para salvá-la aqui.',
-      ),
+      empty: VisitorMode.active
+          ? const AccountInvite(
+              icon: Icons.favorite_border_rounded,
+              message: 'Crie sua conta para salvar oportunidades e '
+                  'acompanhar os prazos delas.',
+            )
+          : const _EmptyState(
+              icon: Icons.favorite_border_rounded,
+              message: 'Nenhuma oportunidade salva ainda.\n'
+                  'Toque no coração de uma oportunidade para salvá-la aqui.',
+            ),
       builder: (List<OpportunityModel> items) => _FavoritesBrowser<OpportunityModel>(
         items: items,
         isSaved: (o) => _favorites.isOpportunitySaved(o.id),
@@ -140,7 +151,9 @@ class _FavoriteInstitutionsScreenState extends State<FavoriteInstitutionsScreen>
   @override
   void initState() {
     super.initState();
-    _future = _favorites.fetchFavoriteInstitutions();
+    _future = VisitorMode.active
+        ? Future.value(const <PlaceModel>[])
+        : _favorites.fetchFavoriteInstitutions();
   }
 
   Future<void> _reload() async {
@@ -157,11 +170,16 @@ class _FavoriteInstitutionsScreenState extends State<FavoriteInstitutionsScreen>
       title: 'Instituições favoritas',
       future: _future,
       onRetry: _reload,
-      empty: const _EmptyState(
-        icon: Icons.favorite_border_rounded,
-        message: 'Nenhuma instituição favorita ainda.\n'
-            'Toque no coração no detalhe de uma instituição do mapa.',
-      ),
+      empty: VisitorMode.active
+          ? const AccountInvite(
+              icon: Icons.favorite_border_rounded,
+              message: 'Crie sua conta para favoritar instituições do mapa.',
+            )
+          : const _EmptyState(
+              icon: Icons.favorite_border_rounded,
+              message: 'Nenhuma instituição favorita ainda.\n'
+                  'Toque no coração no detalhe de uma instituição do mapa.',
+            ),
       builder: (List<PlaceModel> items) => _FavoritesBrowser<PlaceModel>(
         items: items,
         isSaved: (p) => p.osmId != null && _favorites.isInstitutionFavorite(p.osmId!),

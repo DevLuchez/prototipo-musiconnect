@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../core/visitor_mode.dart';
 import '../../data/services/favorites_service.dart';
+import 'visitor_invite.dart';
 
 const _pink = Color(0xFFEC4899);
 
@@ -23,6 +25,14 @@ class FavoriteButton extends StatelessWidget {
         _toggle = ((f) => f.toggleInstitution(osmId));
 
   Future<void> _onTap(BuildContext context) async {
+    if (VisitorMode.active) {
+      await showAccountInvite(
+        context,
+        message: 'Crie sua conta para salvar oportunidades e favoritar '
+            'instituições.',
+      );
+      return;
+    }
     final messenger = ScaffoldMessenger.of(context);
     final ok = await _toggle(FavoritesService.instance);
     if (!ok) {

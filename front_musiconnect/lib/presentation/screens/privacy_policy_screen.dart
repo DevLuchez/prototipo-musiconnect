@@ -35,6 +35,7 @@ const _changesSummary = [
   'Explicamos que, além das oportunidades com prazo encerrado, também saem '
       'dos seus favoritos as oportunidades cujo anúncio foi retirado da fonte '
       'e as instituições que deixaram de existir no mapa.',
+  'Incluímos o que acontece quando você entra sem uma conta cadastrada.',
 ];
 
 const _sections = [
@@ -64,6 +65,10 @@ const _sections = [
     '• Junto com eles, informações do aparelho: modelo, versão do Android, '
         'idioma, país aproximado e um identificador aleatório da instalação '
         'do app.',
+    _Changed(
+        'Se você entrar sem uma conta cadastrada, não coletamos dados de '
+        'cadastro: só os dados técnicos de uso e erros descritos acima, e a '
+        'visita termina quando o app é fechado.'),
     'Não usamos o ID de publicidade do celular, não acessamos a localização '
         'GPS, seus contatos, fotos, câmera ou microfone, e não coletamos dados '
         'de pagamento.',
@@ -111,6 +116,9 @@ const _sections = [
         'sair da conta.',
     '• Preferências de exibição, como a ordenação das listas de favoritos, '
         'e a sua escolha de enviar ou não dados de uso e erros.',
+    _Changed(
+        '• Se você entrou sem conta, a versão desta política que aceitou — para '
+        'não pedir o aceite a cada visita.'),
   ]),
   _PolicySection('Por quanto tempo guardamos', [
     'Seus dados ficam guardados enquanto a sua conta existir. Ao excluir a '

@@ -7,6 +7,7 @@ import '../widgets/auth/auth_common.dart';
 import '../widgets/favorite_button.dart';
 import '../widgets/match_explainer.dart';
 import '../widgets/match_ring.dart';
+import '../widgets/visitor_invite.dart';
 import '../../core/monitoring.dart';
 
 const _pink = Color(0xFFEC4899);
@@ -604,6 +605,16 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen>
   // ── Aba "Matcher" ────────────────────────────────────────────────────────
 
   Widget _buildMatcherTab() {
+    if (user.isVisitor) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: AccountInvite(
+          icon: Icons.auto_awesome_rounded,
+          message: 'Crie sua conta para ver o quanto esta oportunidade '
+              'combina com o seu perfil.',
+        ),
+      );
+    }
     final b = opp.matchBreakdown;
     if (b == null) {
       return Padding(

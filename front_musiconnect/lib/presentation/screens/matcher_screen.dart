@@ -4,9 +4,13 @@ import '../../data/services/auth_service.dart';
 import '../../data/services/opportunities_service.dart';
 import '../widgets/match_explainer.dart';
 import '../widgets/opportunity_browser_view.dart';
+import '../widgets/visitor_invite.dart';
 import 'opportunity_detail_screen.dart';
 
 const _pink = Color(0xFFEC4899);
+
+const _visitorInvite = 'Crie sua conta para acompanhar de perto as '
+    'oportunidades que combinam com você.';
 
 /// Tela Matcher — faixa "o que é match" no topo e duas abas:
 ///   1. Minhas oportunidades (match >= [kHighMatchThreshold])
@@ -99,24 +103,38 @@ class _MatcherScreenState extends State<MatcherScreen>
           child: TabBarView(
             controller: _tabController,
             children: [
-              OpportunityBrowserView(
-                service: _service,
-                user: widget.user,
-                matchScaleMin: kHighMatchThreshold.toDouble(),
-                matchScaleMax: 100,
-                onOpenMap: widget.onSwitchToMap,
-                emptyCategoriesIcon: Icons.auto_awesome_rounded,
-                emptyCategoriesMessage:
-                    'Ainda não encontramos oportunidades com alta '
-                    'compatibilidade com o seu perfil.',
-                emptyCategoriesAction: TextButton(
-                  onPressed: () => _tabController.animateTo(1),
-                  style: TextButton.styleFrom(foregroundColor: _pink),
-                  child: const Text('Ver todas as oportunidades'),
+              if (widget.user.isVisitor)
+                // Sem perfil, não há match: a aba mostra só o convite.
+                OpportunityBrowserView(
+                  service: _service,
+                  user: widget.user,
+                  matchScaleMin: kHighMatchThreshold.toDouble(),
+                  matchScaleMax: 100,
+                  onOpenMap: widget.onSwitchToMap,
+                  emptyCategoriesIcon: Icons.auto_awesome_rounded,
+                  emptyCategoriesMessage: _visitorInvite,
+                  emptyCategoriesAction: const AccountInviteButtons(),
+                  emptySearchMessage: _visitorInvite,
+                )
+              else
+                OpportunityBrowserView(
+                  service: _service,
+                  user: widget.user,
+                  matchScaleMin: kHighMatchThreshold.toDouble(),
+                  matchScaleMax: 100,
+                  onOpenMap: widget.onSwitchToMap,
+                  emptyCategoriesIcon: Icons.auto_awesome_rounded,
+                  emptyCategoriesMessage:
+                      'Ainda não encontramos oportunidades com alta '
+                      'compatibilidade com o seu perfil.',
+                  emptyCategoriesAction: TextButton(
+                    onPressed: () => _tabController.animateTo(1),
+                    style: TextButton.styleFrom(foregroundColor: _pink),
+                    child: const Text('Ver todas as oportunidades'),
+                  ),
+                  emptySearchMessage:
+                      'Nenhuma oportunidade com alta compatibilidade encontrada.',
                 ),
-                emptySearchMessage:
-                    'Nenhuma oportunidade com alta compatibilidade encontrada.',
-              ),
               OpportunityBrowserView(
                 service: _service,
                 user: widget.user,
