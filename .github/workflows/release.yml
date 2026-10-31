@@ -1,0 +1,88 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# MusiConnect — Publicação do app Android
+#
+# A cada tag v* (ex: v1.0.0), gera o APK assinado com a chave de release e
+# publica no GitHub Releases como musiconnect.apk. A página de download
+# (https://musiconnect.app.br) aponta sempre para o APK da versão mais
+# recente:
+#   https://github.com/DevLuchez/prototipo-musiconnect/releases/latest/download/musiconnect.apk
+#
+# Para publicar uma versão:
+#   git tag v1.0.0 && git push origin v1.0.0
+#
+# Secrets do repositório (nunca no Git):
+#   ANDROID_KEYSTORE_BASE64   o .jks de release, em base64
+#   ANDROID_KEY_PROPERTIES    o conteúdo do android/key.properties
+#                             (com storeFile=release.jks)
+#   GOOGLE_SERVICES_JSON      o android/app/google-services.json (Firebase)
+# ─────────────────────────────────────────────────────────────────────────────
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write # criar a release e anexar o APK
+
+jobs:
+  apk:
+    name: APK assinado
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: front_musiconnect
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17" # mesma versão usada no desenvolvimento
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.4"
+          channel: stable
+          cache: true
+
+      - name: Chave de assinatura e Firebase
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_PROPERTIES: ${{ secrets.ANDROID_KEY_PROPERTIES }}
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release.jks
+          echo "$ANDROID_KEY_PROPERTIES" > android/key.properties
+          echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          # Sem a chave certa, o build cairia na de debug (ver build.gradle):
+          # o APK não atualizaria o app já instalado e o Google Maps recusaria.
+          test -s android/app/release.jks && grep -q "^storeFile=release.jks" android/key.properties
+
+      - run: flutter pub get
+
+      # Versão = nome da tag (v1.2.0 → 1.2.0); número do build = contador de
+      # execuções deste workflow (sempre crescente, como o Android exige).
+      - name: Gerar APK
+        run: >-
+          flutter build apk --release
+          --build-name="${GITHUB_REF_NAME#v}"
+          --build-number="${{ github.run_number }}"
+
+      - name: Conferir a assinatura
+        run: |
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)
+          "$APKSIGNER" verify --print-certs build/app/outputs/flutter-apk/app-release.apk \
+            | grep -i "SHA-256 digest" \
+            | grep -qi "1a876af35961671a4447bb45c0caf9a26e4c36947f71bbc7eedd143b2adeb3a6"
+          cp build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/musiconnect.apk
+
+      - name: Publicar no GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          name: MusiConnect ${{ github.ref_name }}
+          generate_release_notes: true
+          files: front_musiconnect/build/app/outputs/flutter-apk/musiconnect.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

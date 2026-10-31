@@ -9,8 +9,11 @@
 #              e segurança), em dois projetos: a API e o app, cada um com a
 #              própria nota. Só roda com o secret SONAR_TOKEN configurado no
 #              repositório.
+#   deploy   → push na main com backend e app aprovados: atualiza o
+#              servidor (deploy/update.sh). Só roda com o secret
+#              DEPLOY_SSH_KEY configurado no repositório.
 #
-# O deploy no servidor entra aqui quando o servidor existir.
+# O APK é publicado por outro workflow (release.yml), a cada tag v*.
 # ─────────────────────────────────────────────────────────────────────────────
 name: CI
 
@@ -148,3 +151,30 @@ jobs:
       - name: SonarCloud não configurado
         if: env.SONAR_TOKEN == ''
         run: echo "Secret SONAR_TOKEN ausente — análise SonarCloud ignorada."
+
+  deploy:
+    name: Deploy no servidor
+    needs: [backend, app]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    # Um deploy por vez; um push novo espera o anterior terminar.
+    concurrency: deploy-producao
+    env:
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+
+    steps:
+      # A chave de deploy só tem permissão para rodar deploy/update.sh no
+      # servidor (restrição no authorized_keys de lá), nada mais.
+      - name: Atualizar o servidor
+        if: env.DEPLOY_SSH_KEY != ''
+        run: |
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # Chave pública do servidor (impede falsificação do endereço).
+          echo "187.41.108.117 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFE8aAQKeQ2j5BJJHG/xeTNpfIZLDNgqgQI3Dlt+mtys" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy_key root@187.41.108.117
+
+      - name: Deploy não configurado
+        if: env.DEPLOY_SSH_KEY == ''
+        run: echo "Secret DEPLOY_SSH_KEY ausente — deploy ignorado."
