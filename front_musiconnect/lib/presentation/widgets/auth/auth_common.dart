@@ -29,36 +29,6 @@ class AuthLogo extends StatelessWidget {
   }
 }
 
-/// Container cinza simbolizando uma imagem/ilustração ainda não definida,
-/// com um ícone de contexto centralizado.
-class AuthImagePlaceholder extends StatelessWidget {
-  final double? height;
-  final IconData icon;
-  final double iconSize;
-  final double borderRadius;
-
-  const AuthImagePlaceholder({
-    super.key,
-    this.height,
-    this.icon = Icons.image_outlined,
-    this.iconSize = 48,
-    this.borderRadius = 18,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: const Color(0xFFDADADA),
-        borderRadius: BorderRadius.circular(borderRadius),
-      ),
-      child: Icon(icon, size: iconSize, color: Colors.grey[500]),
-    );
-  }
-}
-
 /// Campo de texto rotulado, no estilo do protótipo (label acima, campo
 /// arredondado com fundo levemente cinza). Suporta senha (com botão de
 /// mostrar/ocultar) e um visual de "dropdown" (seta), puramente cosmético.
@@ -71,7 +41,6 @@ class AuthTextField extends StatefulWidget {
   final bool required;
   final bool enabled;
   final TextInputType keyboardType;
-  final Widget? labelTrailing;
   // Conteúdo livre abaixo do campo — usado pro medidor de força da senha
   // e pro aviso de "as senhas coincidem/não coincidem".
   final Widget? helper;
@@ -86,7 +55,6 @@ class AuthTextField extends StatefulWidget {
     this.required = false,
     this.enabled = true,
     this.keyboardType = TextInputType.text,
-    this.labelTrailing,
     this.helper,
   });
 
@@ -122,10 +90,6 @@ class _AuthTextFieldState extends State<AuthTextField> {
                   color: kAuthPink,
                 ),
               ),
-            ],
-            if (widget.labelTrailing != null) ...[
-              const Spacer(),
-              widget.labelTrailing!,
             ],
           ],
         ),
@@ -691,7 +655,6 @@ class AuthSingleSelectField<T extends Object> extends StatefulWidget {
   final bool enabled;
   final bool loading;
   final bool required;
-  final Widget? labelTrailing;
 
   const AuthSingleSelectField({
     super.key,
@@ -704,7 +667,6 @@ class AuthSingleSelectField<T extends Object> extends StatefulWidget {
     this.enabled = true,
     this.loading = false,
     this.required = false,
-    this.labelTrailing,
   });
 
   @override
@@ -809,10 +771,6 @@ class _AuthSingleSelectFieldState<T extends Object> extends State<AuthSingleSele
                       color: kAuthPink,
                     ),
                   ),
-                ],
-                if (widget.labelTrailing != null) ...[
-                  const Spacer(),
-                  widget.labelTrailing!,
                 ],
               ],
             ),

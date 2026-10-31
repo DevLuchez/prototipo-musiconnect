@@ -77,62 +77,6 @@ class PlaceModel {
     );
   }
 
-  // ────────────────────────────────────────────────────────────
-
-  /// Cria um PlaceModel a partir de um elemento retornado pela Overpass API.
-  /// Suporta tanto `node` (lat/lon direto) quanto `way`/`relation` (usa center).
-  /// Retorna null se o elemento não tiver coordenadas válidas.
-  static PlaceModel? tryFromOverpass(Map<String, dynamic> json) {
-    try {
-      return PlaceModel.fromOverpass(json);
-    } catch (e) {
-      return null;
-    }
-  }
-
-  factory PlaceModel.fromOverpass(Map<String, dynamic> json) {
-    final tags = (json['tags'] as Map<String, dynamic>?) ?? {};
-
-    double lat;
-    double lng;
-
-    final type = json['type'] as String? ?? '';
-    if (type == 'node') {
-      lat = (json['lat'] as num?)?.toDouble() ?? 0;
-      lng = (json['lon'] as num?)?.toDouble() ?? 0;
-    } else {
-      // way ou relation — usa o campo "center" (requer 'out center' na query)
-      final center = json['center'] as Map<String, dynamic>?;
-      lat = (center?['lat'] as num?)?.toDouble() ?? 0;
-      lng = (center?['lon'] as num?)?.toDouble() ?? 0;
-    }
-
-    if (lat == 0 && lng == 0) throw Exception('Coordenadas inválidas');
-
-    // Resolve a categoria mais descritiva disponível nas tags
-    final category = tags['amenity'] ??
-        tags['leisure'] ??
-        tags['shop'] ??
-        tags['tourism'] ??
-        'music';
-
-    // Monta um endereço a partir das sub-tags de endereço do OSM, se disponíveis
-    final addressParts = <String>[
-      if (tags['addr:street'] != null) tags['addr:street']!,
-      if (tags['addr:city'] != null) tags['addr:city']!,
-      if (tags['addr:country'] != null) tags['addr:country']!,
-    ];
-
-    return PlaceModel(
-      id: '${json['type']}_${json['id']}',
-      name: tags['name'] ?? tags['name:en'] ?? _labelFromCategory(category),
-      address: addressParts.isNotEmpty ? addressParts.join(', ') : null,
-      lat: lat,
-      lng: lng,
-      category: category,
-    );
-  }
-
   static String _labelFromCategory(String category) {
     const labels = {
       'music_school': 'Escola de Música',

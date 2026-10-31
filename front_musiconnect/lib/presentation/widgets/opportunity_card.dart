@@ -9,11 +9,6 @@ class _MatcherTheme {
   static const purple = Color(0xFFDF2881);
   static const cardBg = Colors.white;
 
-  static Color sourceColor(String? source) {
-    // Musical Chairs é a fonte principal — verde distinto
-    return const Color(0xFF059669);
-  }
-
   static Color typeColor(String? type) {
     switch (type?.toLowerCase()) {
       case 'curso':
@@ -456,33 +451,6 @@ class OpportunityCompactCard extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Badge da fonte da oportunidade (DOU, Funarte...).
-class _SourceBadge extends StatelessWidget {
-  final String source;
-  const _SourceBadge({required this.source});
-
-  @override
-  Widget build(BuildContext context) {
-    final color = _MatcherTheme.sourceColor(source);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        source,
-        style: TextStyle(
-          fontSize: 10.5,
-          fontWeight: FontWeight.w700,
-          color: color,
-          letterSpacing: 0.3,
         ),
       ),
     );
