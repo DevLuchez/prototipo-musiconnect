@@ -549,7 +549,10 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
                     20,
                     12,
                     20,
-                    MediaQuery.of(context).viewInsets.bottom + 12,
+                    // Teclado aberto (viewInsets) ou barra do Android (padding).
+                    MediaQuery.of(context).viewInsets.bottom +
+                        MediaQuery.of(context).padding.bottom +
+                        12,
                   ),
                   child: Row(
                     children: [
@@ -1032,7 +1035,7 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => Container(
+      builder: (sheetContext) => Container(
         constraints: BoxConstraints(
           maxHeight: MediaQuery.of(context).size.height * 0.85,
         ),
@@ -1065,7 +1068,8 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
             // ── Itens ────────────────────────────────────────────
             Flexible(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                padding: EdgeInsets.fromLTRB(
+                    20, 12, 20, 20 + MediaQuery.of(sheetContext).padding.bottom),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1234,7 +1238,7 @@ class _CitySheetState extends State<_CitySheet> {
           // ── Oportunidades ──────────────────────────────────────
           Flexible(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+              padding: EdgeInsets.fromLTRB(20, 12, 20, 20 + MediaQuery.of(context).padding.bottom),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1476,7 +1480,7 @@ class _DetailSheetState extends State<_DetailSheet> {
             // ── Detalhes ─────────────────────────────────────────
             Flexible(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                padding: EdgeInsets.fromLTRB(20, 12, 20, 20 + MediaQuery.of(context).padding.bottom),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

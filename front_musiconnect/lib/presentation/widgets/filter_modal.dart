@@ -485,7 +485,10 @@ class _FilterModalState extends State<FilterModal> {
               20,
               12,
               20,
-              MediaQuery.of(context).viewInsets.bottom + 12,
+              // Teclado aberto (viewInsets) ou barra do Android (padding).
+              MediaQuery.of(context).viewInsets.bottom +
+                  MediaQuery.of(context).padding.bottom +
+                  12,
             ),
             child: Row(
               children: [
