@@ -18,7 +18,7 @@ const String kSupportEmail = 'laura.luchez@gmail.com';
 /// (app/routers/auth.py) — atualizar os dois juntos quando o texto mudar.
 /// Quem aceitou uma versão anterior é convidado a aceitar de novo ao abrir
 /// o app (ver MainNavigation).
-const String kPrivacyPolicyVersion = '2026-10-29';
+const String kPrivacyPolicyVersion = '2026-10-30';
 
 /// Lista curada de instrumentos oferecida no cadastro (e reaproveitável em
 /// outras telas, como edição de perfil).

@@ -53,7 +53,7 @@ PASSWORD_RESET_EXPIRY = timedelta(minutes=30)
 # Versão do texto da Política de privacidade aceita no cadastro (data da
 # última alteração). O app tem o mesmo valor em kPrivacyPolicyVersion
 # (core/constants.dart) — atualizar os dois juntos quando o texto mudar.
-PRIVACY_POLICY_VERSION = "2026-10-29"
+PRIVACY_POLICY_VERSION = "2026-10-30"
 
 logger = logging.getLogger("routers.auth")
 

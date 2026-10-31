@@ -28,14 +28,11 @@ class _Changed {
 
 /// Resumo do que mudou na versão atual em relação à anterior.
 const _changesSummary = [
-  'Passamos a coletar dados de uso do app e relatórios de erro, pelo Google '
-      'Firebase (Analytics e Crashlytics) — sem o seu nome nem o seu e-mail.',
-  'Você pode desligar esse envio quando quiser: Perfil → Enviar dados de uso '
-      'e erros.',
-  'Não usamos o ID de publicidade do celular.',
-  'Incluímos por quanto tempo o Firebase guarda esses dados e a base legal '
-      '(legítimo interesse).',
-  'Quando a política mudar, o app pede que você aceite a nova versão.',
+  'Passamos a citar a Hostinger, empresa que hospeda o servidor do '
+      'MusiConnect, no Brasil — é lá que ficam guardados os dados da sua conta '
+      'e os seus favoritos.',
+  'Incluímos que a comunicação entre o app e o servidor é criptografada '
+      '(HTTPS).',
 ];
 
 const _sections = [
@@ -47,8 +44,7 @@ const _sections = [
     'Contato para qualquer assunto sobre privacidade: $kSupportEmail.',
   ]),
   _PolicySection('Quais dados coletamos', [
-    _Changed(
-        'Coletamos o que você informa no cadastro e o que você salva no app:'),
+    'Coletamos o que você informa no cadastro e o que você salva no app:',
     '• Nome, e-mail e senha. A senha nunca é guardada como você digitou: '
         'guardamos apenas uma versão embaralhada (hash), que não permite '
         'recuperá-la.',
@@ -56,23 +52,19 @@ const _sections = [
         'localização (país, estado e cidade), escolhidos por você em listas.',
     '• Oportunidades e instituições que você salva como favoritas.',
     '• A data e a versão desta política quando você a aceitou.',
-    _Changed(
-        'E, enquanto você usa o app, dados técnicos que não identificam você '
-        'pelo nome ou e-mail:'),
-    _Changed(
-        '• Dados de uso: telas abertas e ações como entrar, cadastrar-se, salvar '
+    'E, enquanto você usa o app, dados técnicos que não identificam você '
+        'pelo nome ou e-mail:',
+    '• Dados de uso: telas abertas e ações como entrar, cadastrar-se, salvar '
         'ou abrir uma oportunidade e aplicar um filtro — sem o conteúdo do '
-        'que você digita ou busca.'),
-    _Changed('• Relatórios de erro: quando o app trava ou falha, o que estava '
-        'acontecendo no código naquele momento.'),
-    _Changed(
-        '• Junto com eles, informações do aparelho: modelo, versão do Android, '
+        'que você digita ou busca.',
+    '• Relatórios de erro: quando o app trava ou falha, o que estava '
+        'acontecendo no código naquele momento.',
+    '• Junto com eles, informações do aparelho: modelo, versão do Android, '
         'idioma, país aproximado e um identificador aleatório da instalação '
-        'do app.'),
-    _Changed(
-        'Não usamos o ID de publicidade do celular, não acessamos a localização '
+        'do app.',
+    'Não usamos o ID de publicidade do celular, não acessamos a localização '
         'GPS, seus contatos, fotos, câmera ou microfone, e não coletamos dados '
-        'de pagamento.'),
+        'de pagamento.',
   ]),
   _PolicySection('Para que usamos', [
     '• Criar e manter a sua conta e permitir o login.',
@@ -81,20 +73,22 @@ const _sections = [
     '• Calcular o percentual de compatibilidade (match) entre o seu perfil '
         'e cada oportunidade.',
     '• Mostrar e guardar os seus favoritos.',
-    _Changed('• Entender como o app é usado e corrigir erros (dados de uso e '
-        'relatórios de erro).'),
-    _Changed(
-        'Usamos os dados da conta com base no seu consentimento e para prestar o '
+    '• Entender como o app é usado e corrigir erros (dados de uso e '
+        'relatórios de erro).',
+    'Usamos os dados da conta com base no seu consentimento e para prestar o '
         'serviço que você pediu ao se cadastrar (art. 7º, incisos I e V, da '
         'Lei Geral de Proteção de Dados — Lei nº 13.709/2018). Os dados de uso '
         'e os relatórios de erro são tratados com base no legítimo interesse '
         'de manter o app funcionando e melhorá-lo (art. 7º, inciso IX) — e '
         'você pode desligar esse envio quando quiser: Perfil → Enviar dados '
-        'de uso e erros.'),
+        'de uso e erros.',
   ]),
   _PolicySection('Com quem compartilhamos', [
     'Não vendemos nem alugamos seus dados. Para funcionar, o app usa alguns '
         'serviços de terceiros:',
+    _Changed(
+        '• Hostinger: hospeda o servidor do MusiConnect, no Brasil. É lá que '
+        'ficam guardados os dados da sua conta e os seus favoritos.'),
     '• Resend: envia os e-mails de confirmação e de redefinição de senha. '
         'Recebe o seu endereço de e-mail.',
     '• Google Maps: exibe o mapa de instituições. Ao carregar o mapa, o '
@@ -104,20 +98,18 @@ const _sections = [
         'Recebe apenas a consulta da lista, sem nenhum dado seu.',
     '• Google Gemini: lê os textos públicos dos anúncios de oportunidades '
         'para organizá-los. Nenhum dado de usuário é enviado a ele.',
-    _Changed(
-        '• Google Firebase (Analytics e Crashlytics): recebe os dados de uso e '
+    '• Google Firebase (Analytics e Crashlytics): recebe os dados de uso e '
         'os relatórios de erro descritos acima, sem o seu nome nem o seu '
         'e-mail. Os servidores do Google podem ficar fora do Brasil; o Google '
         'trata esses dados conforme os termos de proteção de dados do '
-        'Firebase.'),
+        'Firebase.',
   ]),
   _PolicySection('O que fica guardado no seu celular', [
     '• O código da sua sessão, para você não precisar fazer login toda vez. '
         'Ele fica em armazenamento criptografado do aparelho e é apagado ao '
         'sair da conta.',
-    _Changed(
-        '• Preferências de exibição, como a ordenação das listas de favoritos, '
-        'e a sua escolha de enviar ou não dados de uso e erros.'),
+    '• Preferências de exibição, como a ordenação das listas de favoritos, '
+        'e a sua escolha de enviar ou não dados de uso e erros.',
   ]),
   _PolicySection('Por quanto tempo guardamos', [
     'Seus dados ficam guardados enquanto a sua conta existir. Ao excluir a '
@@ -125,38 +117,37 @@ const _sections = [
         'definitiva.',
     'Oportunidades salvas cujo prazo de inscrição terminou são removidas '
         'automaticamente dos seus favoritos.',
-    _Changed(
-        'No Firebase, os dados de uso ligados ao identificador da instalação '
+    'No Firebase, os dados de uso ligados ao identificador da instalação '
         'ficam guardados por até 2 meses, e os relatórios de erro por até 90 '
         'dias; depois disso, só restam números agregados (ex: quantas pessoas '
-        'abriram o mapa).'),
+        'abriram o mapa).',
   ]),
   _PolicySection('Seus direitos', [
     'A LGPD garante a você, entre outros, os direitos de:',
     '• Saber quais dados temos sobre você e pedir uma cópia.',
     '• Corrigir seus dados: Perfil → Editar.',
     '• Excluir seus dados e revogar o consentimento: Perfil → Excluir conta.',
-    _Changed(
-        '• Se opor ao envio de dados de uso e erros: Perfil → Enviar dados de uso '
-        'e erros.'),
+    '• Se opor ao envio de dados de uso e erros: Perfil → Enviar dados de uso '
+        'e erros.',
     '• Tirar dúvidas ou fazer qualquer outro pedido pelo e-mail '
         '$kSupportEmail.',
   ]),
   _PolicySection('Segurança', [
-    'Adotamos medidas para proteger seus dados: senhas guardadas apenas em '
-        'forma de hash, sessão guardada em armazenamento criptografado no '
-        'celular e exclusão de conta protegida por senha. Nenhum sistema é '
-        'totalmente imune a falhas; se algo acontecer, avisaremos você.',
+    _Changed(
+        'Adotamos medidas para proteger seus dados: comunicação criptografada '
+        '(HTTPS) entre o app e o servidor, senhas guardadas apenas em forma de '
+        'hash, sessão guardada em armazenamento criptografado no celular e '
+        'exclusão de conta protegida por senha. Nenhum sistema é totalmente '
+        'imune a falhas; se algo acontecer, avisaremos você.'),
   ]),
   _PolicySection('Menores de idade', [
     'Se você tem menos de 18 anos, use o MusiConnect com o conhecimento dos '
         'seus pais ou responsáveis.',
   ]),
   _PolicySection('Mudanças nesta política', [
-    _Changed(
-        'Se esta política mudar, a nova versão será publicada no app com a data '
+    'Se esta política mudar, a nova versão será publicada no app com a data '
         'de atualização. Quando a mudança envolver os seus dados, o app pede '
-        'que você leia e aceite a nova versão para continuar usando a conta.'),
+        'que você leia e aceite a nova versão para continuar usando a conta.',
   ]),
 ];
 
