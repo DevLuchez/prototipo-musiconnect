@@ -24,6 +24,7 @@ qualquer via.
 import logging
 import secrets
 from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 import bcrypt
 from fastapi import APIRouter, Depends, HTTPException
@@ -39,6 +40,7 @@ from app.schemas import (
     DeleteAccountIn,
     ForgotPasswordIn,
     LoginIn,
+    PrivacyAcceptIn,
     ProfileUpdateIn,
     ResendIn,
     ResetPasswordIn,
@@ -50,10 +52,13 @@ from app.services.email_service import send_confirmation_email, send_password_re
 # Tempo de validade do link de redefinição de senha.
 PASSWORD_RESET_EXPIRY = timedelta(minutes=30)
 
-# Versão do texto da Política de privacidade aceita no cadastro (data da
-# última alteração). O app tem o mesmo valor em kPrivacyPolicyVersion
-# (core/constants.dart) — atualizar os dois juntos quando o texto mudar.
-PRIVACY_POLICY_VERSION = "2026-10-30"
+# Versão da Política de privacidade registrada quando o app não informa qual
+# a pessoa leu: o app v1.0.0, que mostra o texto de 2026-10-30. Os apps
+# seguintes enviam a versão que exibiram (kPrivacyPolicyVersion) — é ela que
+# fica registrada. Por isso este valor NÃO muda quando a política muda: se
+# mudasse, quem usa um app antigo aceitaria uma versão e o app esperaria
+# outra, pedindo o aceite sem parar.
+LEGACY_PRIVACY_POLICY_VERSION = "2026-10-30"
 
 logger = logging.getLogger("routers.auth")
 
@@ -74,11 +79,11 @@ def _generate_token() -> str:
     return secrets.token_urlsafe(32)
 
 
-def _record_privacy_consent(user: User, now: datetime) -> None:
+def _record_privacy_consent(user: User, now: datetime, version: Optional[str] = None) -> None:
     """Guarda a prova do consentimento (LGPD): quando e qual versão da
-    Política de privacidade o usuário aceitou."""
+    Política de privacidade o usuário aceitou — a que o app exibiu."""
     user.privacy_accepted_at = now
-    user.privacy_policy_version = PRIVACY_POLICY_VERSION
+    user.privacy_policy_version = version or LEGACY_PRIVACY_POLICY_VERSION
 
 
 def get_current_user(
@@ -143,7 +148,7 @@ async def signup(data: SignupIn, db: Session = Depends(get_db)):
     user.confirmation_token = token
     user.confirmation_sent_at = now
     user.email_confirmed = False
-    _record_privacy_consent(user, now)
+    _record_privacy_consent(user, now, data.privacy_policy_version)
 
     db.commit()
 
@@ -370,10 +375,16 @@ def change_password(
 
 
 @router.post("/accept-privacy", response_model=UserOut)
-def accept_privacy(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def accept_privacy(
+    data: Optional[PrivacyAcceptIn] = None,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Novo aceite da Política de privacidade por quem já tem conta — o app
-    pede ao abrir quando a versão aceita é anterior à atual."""
-    _record_privacy_consent(user, datetime.now(timezone.utc))
+    pede ao abrir quando a versão aceita é anterior à dele."""
+    _record_privacy_consent(
+        user, datetime.now(timezone.utc), data.privacy_policy_version if data else None
+    )
     db.commit()
     return user
 

@@ -125,6 +125,8 @@ class AuthService {
               // Só chega aqui com a caixa da Política de privacidade marcada
               // (o botão "Cadastrar" fica desabilitado sem ela).
               'privacy_accepted': true,
+              // A versão que a pessoa leu — é a que o backend registra.
+              'privacy_policy_version': kPrivacyPolicyVersion,
             }),
           )
           .timeout(_timeout);
@@ -357,7 +359,11 @@ class AuthService {
   Future<AuthUser> acceptPrivacyPolicy() async {
     try {
       final response = await http
-          .post(Uri.parse(ApiConfig.authAcceptPrivacy), headers: await _authHeaders())
+          .post(
+            Uri.parse(ApiConfig.authAcceptPrivacy),
+            headers: await _authHeaders(),
+            body: json.encode({'privacy_policy_version': kPrivacyPolicyVersion}),
+          )
           .timeout(_timeout);
       if (response.statusCode >= 400) {
         throw AuthException(

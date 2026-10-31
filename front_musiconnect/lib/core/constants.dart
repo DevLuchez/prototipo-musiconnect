@@ -14,8 +14,8 @@ const int kUrgentDeadlineDays = 7;
 const String kSupportEmail = 'laura.luchez@gmail.com';
 
 /// Versão do texto da Política de privacidade (data da última alteração).
-/// O backend tem o mesmo valor em PRIVACY_POLICY_VERSION
-/// (app/routers/auth.py) — atualizar os dois juntos quando o texto mudar.
+/// O app envia este valor no cadastro e no novo aceite, e o backend registra
+/// a versão que a pessoa leu — só ela muda quando o texto mudar.
 /// Quem aceitou uma versão anterior é convidado a aceitar de novo ao abrir
 /// o app (ver MainNavigation).
 const String kPrivacyPolicyVersion = '2026-10-30';

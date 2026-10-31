@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional, List
 from datetime import date, datetime
 
@@ -134,12 +134,22 @@ class SignupIn(BaseModel):
     # obrigatório e precisa ser True; sem ele o cadastro é recusado.
     privacy_accepted: bool
 
+    # Versão da Política de privacidade que a pessoa leu no app (data, ex:
+    # "2026-10-31"). O app v1.0.0 não envia — vale LEGACY_PRIVACY_POLICY_VERSION.
+    privacy_policy_version: Optional[str] = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+
     @field_validator("privacy_accepted")
     @classmethod
     def _must_accept_privacy(cls, value: bool) -> bool:
         if not value:
             raise ValueError("É preciso aceitar a Política de privacidade.")
         return value
+
+
+class PrivacyAcceptIn(BaseModel):
+    """Novo aceite da Política de privacidade: a versão que a pessoa leu."""
+
+    privacy_policy_version: Optional[str] = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
 
 
 class ResendIn(BaseModel):

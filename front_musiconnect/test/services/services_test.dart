@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:prototipo_musiconnect/core/constants.dart';
 import 'package:prototipo_musiconnect/data/services/auth_service.dart';
 import 'package:prototipo_musiconnect/data/services/dashboard_service.dart';
 import 'package:prototipo_musiconnect/data/services/favorites_service.dart';
@@ -320,6 +321,7 @@ void main() {
 
       final body = jsonDecode(api.last.body) as Map<String, dynamic>;
       expect(body['privacy_accepted'], isTrue);
+      expect(body['privacy_policy_version'], kPrivacyPolicyVersion);
       expect(body['instruments'], ['Piano']);
     });
 
@@ -390,6 +392,7 @@ void main() {
         expect(await service.getStoredToken(), 'sessao-2');
 
         expect((await service.acceptPrivacyPolicy()).privacyPolicyVersion, '2026-10-29');
+        expect(jsonDecode(api.last.body), {'privacy_policy_version': kPrivacyPolicyVersion});
       });
     });
 
