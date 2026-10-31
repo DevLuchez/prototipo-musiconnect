@@ -1,9 +1,11 @@
 """
 ETL do OpenStreetMap via QLever (services/osm_etl.py): consultas por tipo,
-paginação com retry, junção de pinos + tags e as regras do _parse_element
-(correções manuais, nome, categoria, endereço).
+paginação com retry, junção de pinos + tags, as regras do _parse_element
+(correções manuais, nome, categoria, endereço) e a remoção das que saíram
+do OSM.
 
-O QLever é simulado (httpx.MockTransport) — nenhum teste acessa a rede.
+O QLever e a API do OSM são simulados (httpx.MockTransport) — nenhum teste
+acessa a rede.
 """
 
 import asyncio
@@ -202,3 +204,103 @@ def test_coleta_todos_os_tipos_sem_repetir_objeto(monkeypatch):
     assert records["node_1"]["category"] == "theatre"  # fica o primeiro tipo
     assert records["way_2"]["category"] == "arts_centre"
     json.dumps(list(records.values()))  # registros serializáveis, sem objetos
+
+
+# ── Instituições que saíram do OSM ───────────────────────────────────────
+
+def _osm_api(responses: dict):
+    """API do OSM simulada: caminho → (status, tags). Registra os pedidos."""
+    requested = []
+
+    def handler(request):
+        path = request.url.path.removeprefix("/api/0.6/").removesuffix(".json")
+        requested.append(path)
+        status, tags = responses[path]
+        if status != 200:
+            return httpx.Response(status)
+        return httpx.Response(200, json={"elements": [{"tags": tags}]})
+
+    return handler, requested
+
+
+@pytest.fixture
+def osm_api(monkeypatch):
+    def install(responses):
+        handler, requested = _osm_api(responses)
+        real_client = httpx.AsyncClient
+        monkeypatch.setattr(
+            etl.httpx, "AsyncClient",
+            lambda **kw: real_client(transport=httpx.MockTransport(handler), **kw),
+        )
+        return requested
+    return install
+
+
+def test_remove_so_as_que_sairam_ou_deixaram_de_ser_musicais(osm_api, db_session, monkeypatch):
+    from app.models import FavoriteInstitution, Institution, Opportunity
+    from tests.helpers import make_institution, make_opportunity, make_user
+
+    for osm_id in ("node_1", "node_2", "node_3", "node_4", "node_5", "way_6", "node_7"):
+        make_institution(db_session, osm_id=osm_id, name=osm_id)
+    organizadora = make_institution(db_session, osm_id="org_1", name="Orquestra")
+    organizadora.source = "pipeline"
+    user = make_user(db_session)
+    db_session.add(FavoriteInstitution(user_id=user.id, institution_id="node_2"))
+    opp = make_opportunity(db_session, institution_id="node_2")
+    db_session.commit()
+    monkeypatch.setattr(etl, "OSM_IGNORED_IDS", {"node_7"})
+
+    requested = osm_api({
+        "node/2": (410, None),                                # apagada do OSM
+        "node/3": (200, {"amenity": "cinema"}),               # virou cinema
+        "node/4": (200, {"amenity": "theatre"}),              # QLever atrasado: fica
+        "node/5": (503, None),                                # API fora: fica
+        "way/6": (200, {"disused:amenity": "theatre"}),       # desativada
+    })
+
+    removed = asyncio.run(etl.remove_closed_institutions(db_session, {"node_1"}))
+
+    assert removed == 4
+    db_session.expire_all()
+    remaining = {i.osm_id for i in db_session.query(Institution)}
+    assert remaining == {"node_1", "node_4", "node_5", "org_1"}
+    # Sai dos favoritos e a oportunidade perde só o pino.
+    assert db_session.query(FavoriteInstitution).count() == 0
+    assert db_session.get(Opportunity, opp.id).institution_id is None
+    # Só confere quem é do OSM e ficou fora da coleta (o ignorado sai direto).
+    assert sorted(requested) == ["node/2", "node/3", "node/4", "node/5", "way/6"]
+
+
+def test_nada_fora_da_coleta_nao_consulta_a_api(osm_api, db_session):
+    from tests.helpers import make_institution
+
+    make_institution(db_session, osm_id="node_1")
+    requested = osm_api({})
+
+    assert asyncio.run(etl.remove_closed_institutions(db_session, {"node_1"})) == 0
+    assert requested == []
+
+
+def test_muitas_de_uma_vez_indica_problema_e_nao_remove(osm_api, db_session, monkeypatch):
+    from app.models import Institution
+    from tests.helpers import make_institution
+
+    monkeypatch.setattr(etl, "MAX_REMOVAL_CHECKS", 2)
+    for osm_id in ("node_1", "node_2", "node_3"):
+        make_institution(db_session, osm_id=osm_id)
+    requested = osm_api({})
+
+    assert asyncio.run(etl.remove_closed_institutions(db_session, set())) == 0
+    assert requested == []
+    assert db_session.query(Institution).count() == 3
+
+
+def test_resposta_estranha_da_api_mantem_a_instituicao():
+    def handler(request):
+        return httpx.Response(200, text="não é json")
+
+    async def run():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            return await etl._still_musical(client, "node_1")
+
+    assert asyncio.run(run()) is None

@@ -241,7 +241,8 @@ def test_run_etl_grava_pinos_e_contatos(monkeypatch, db_session):
 
     stats = asyncio.run(etl.run_etl())
 
-    assert stats == {"types_processed": len(etl.OSM_TAGS), "records_upserted": 2}
+    assert stats == {"types_processed": len(etl.OSM_TAGS), "records_upserted": 2,
+                     "records_removed": 0}
     assert db_session.get(Institution, "way_7").name == "Teatro Novo"
     assert saved == {"way_7": ("https://teatro.org", None)}  # só quem tem contato
 

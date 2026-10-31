@@ -17,6 +17,10 @@ Estratégia:
 - Paginada (ORDER BY + LIMIT/OFFSET): respostas longas demais são cortadas
   pelo servidor; o QLever guarda o resultado em cache entre as páginas
 - Faz upsert pelo osm_id (nunca duplica)
+- Instituições que saíram do OSM (apagadas, ou que deixaram de ser musicais
+  — ex: teatro que virou cinema) são removidas, depois de conferidas uma a
+  uma na API oficial do OSM: a cópia do QLever pode estar alguns dias
+  atrás do OSM, então não ter vindo na coleta não basta
 - Roda em ~3 minutos para os pinos do mundo todo; os contatos (que testam
   se cada site responde) levam mais, mas só para quem ainda não tem site
 """
@@ -50,6 +54,15 @@ OSM_KEY_IRI = f"{OSM_IRI}wiki/Key:"
 PAGE_SIZE = 10000
 UPSERT_BATCH_SIZE = 2000
 CONTACTS_BATCH_SIZE = 500
+
+# API oficial do OSM — confere, uma a uma, as instituições que não vieram na
+# coleta. Política de uso: identificar o app e não passar de ~1 pedido/s.
+OSM_API = "https://api.openstreetmap.org/api/0.6"
+OSM_API_HEADERS = {"User-Agent": "MusiConnect/1.0 (+https://musiconnect.app.br)"}
+OSM_API_PAUSE = 1  # segundos entre pedidos
+# Mais que isso de uma vez indica problema na fonte (ex: coleta incompleta),
+# não instituições fechando — a remoção é pulada nessa noite.
+MAX_REMOVAL_CHECKS = 500
 
 # Espera entre tentativas de uma mesma página
 RETRY_WAITS = [10, 30, 60, 120]
@@ -336,8 +349,82 @@ async def run_etl() -> dict:
             s, e, d = await save_contacts(db, chunk)
             sites, emails, dead = sites + s, emails + e, dead + d
         logger.info(f"  Contatos: +{sites} sites, +{emails} e-mails, {dead} sites fora do ar")
+
+        removed = await remove_closed_institutions(db, set(records))
     finally:
         db.close()
 
-    logger.info(f"=== ETL concluído: {total_upserted} registros inseridos/atualizados ===")
-    return {"types_processed": len(OSM_TAGS), "records_upserted": total_upserted}
+    logger.info(
+        f"=== ETL concluído: {total_upserted} registros inseridos/atualizados, "
+        f"{removed} removidos ==="
+    )
+    return {
+        "types_processed": len(OSM_TAGS),
+        "records_upserted": total_upserted,
+        "records_removed": removed,
+    }
+
+
+async def _still_musical(client: httpx.AsyncClient, osm_id: str) -> Optional[bool]:
+    """Pergunta à API do OSM se o objeto ainda existe e ainda é musical.
+
+    False: apagado (HTTP 410) ou sem nenhuma das OSM_TAGS (ex: virou cinema).
+    True: continua musical. None: não deu para saber (erro, resposta
+    inesperada) — na dúvida, a instituição fica.
+    """
+    kind, _, number = osm_id.partition("_")
+    try:
+        resp = await client.get(f"{OSM_API}/{kind}/{number}.json", timeout=20)
+        if resp.status_code == 410:
+            return False
+        if resp.status_code != 200:
+            return None
+        tags = resp.json()["elements"][0].get("tags", {})
+    except (httpx.HTTPError, ValueError, KeyError, IndexError):
+        return None
+    return any(tags.get(key) == value for key, value in OSM_TAGS)
+
+
+async def remove_closed_institutions(db: Session, seen_ids: set[str]) -> int:
+    """Remove as instituições do OSM que saíram do mapa desde a última coleta.
+
+    Candidatas: vindas do OSM (source="osm") e fora da coleta desta noite.
+    As criadas pelo próprio sistema (source="pipeline", organizadoras das
+    oportunidades) nunca entram. Cada candidata é conferida na API do OSM e
+    só sai se foi apagada ou deixou de ser musical. Ao sair, ela some também
+    dos favoritos (ON DELETE CASCADE) e as oportunidades ligadas a ela perdem
+    o pino (ON DELETE SET NULL).
+
+    Retorna quantas foram removidas.
+    """
+    candidates = [
+        osm_id
+        for (osm_id,) in db.query(Institution.osm_id).filter(Institution.source == "osm")
+        if osm_id not in seen_ids
+    ]
+    if not candidates:
+        return 0
+    if len(candidates) > MAX_REMOVAL_CHECKS:
+        logger.warning(
+            f"  {len(candidates)} instituições fora da coleta — muitas de uma vez; "
+            f"remoção pulada nesta execução"
+        )
+        return 0
+
+    logger.info(f"  Conferindo na API do OSM {len(candidates)} instituições fora da coleta...")
+    gone = [osm_id for osm_id in candidates if osm_id in OSM_IGNORED_IDS]
+    async with httpx.AsyncClient(headers=OSM_API_HEADERS) as client:
+        for osm_id in candidates:
+            if osm_id in OSM_IGNORED_IDS:
+                continue
+            if await _still_musical(client, osm_id) is False:
+                gone.append(osm_id)
+            await asyncio.sleep(OSM_API_PAUSE)
+
+    if gone:
+        db.query(Institution).filter(Institution.osm_id.in_(gone)).delete(
+            synchronize_session=False
+        )
+        db.commit()
+        logger.info(f"  Removidas do mapa (apagadas ou não mais musicais no OSM): {', '.join(gone)}")
+    return len(gone)

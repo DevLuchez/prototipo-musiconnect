@@ -33,7 +33,8 @@ async def run_full_etl() -> None:
         stats = await run_etl()
         logger.info(
             f"[ETL] OSM concluído: {stats['records_upserted']} registros "
-            f"em {stats['types_processed']} tipos de instituição"
+            f"em {stats['types_processed']} tipos de instituição, "
+            f"{stats.get('records_removed', 0)} removidos do mapa"
         )
     except Exception as exc:
         logger.error(f"[ETL] Erro na Etapa 1 (OSM): {exc}", exc_info=True)
