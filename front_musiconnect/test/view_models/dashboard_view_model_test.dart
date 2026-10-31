@@ -4,25 +4,6 @@ import 'package:prototipo_musiconnect/presentation/view_models/dashboard_view_mo
 
 import '../helpers/fakes.dart';
 
-/// Responde [data] (ou lança [error]) e conta quantas vezes foi chamado.
-class _FakeDashboardService implements DashboardService {
-  _FakeDashboardService({this.data});
-
-  DashboardData? data;
-  Object? error;
-  int calls = 0;
-
-  @override
-  Future<DashboardData> fetch() async {
-    calls++;
-    if (error != null) throw error!;
-    return data!;
-  }
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
-
 DashboardData _data({
   List<int> top = const [],
   List<int> urgent = const [],
@@ -37,7 +18,7 @@ DashboardData _data({
     );
 
 void main() {
-  late _FakeDashboardService service;
+  late FakeDashboardService service;
   late FakeFavoritesService favorites;
 
   DashboardViewModel build({String name = 'Laura Heloísa'}) => DashboardViewModel(
@@ -47,7 +28,7 @@ void main() {
       );
 
   setUp(() {
-    service = _FakeDashboardService(data: _data());
+    service = FakeDashboardService(data: _data());
     favorites = FakeFavoritesService();
   });
 

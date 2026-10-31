@@ -7,8 +7,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:prototipo_musiconnect/data/models/opportunity_model.dart';
 import 'package:prototipo_musiconnect/data/services/auth_service.dart';
+import 'package:prototipo_musiconnect/data/services/dashboard_service.dart';
 import 'package:prototipo_musiconnect/data/services/favorites_service.dart';
 import 'package:prototipo_musiconnect/data/services/match_count_service.dart';
+import 'package:prototipo_musiconnect/data/services/opportunities_service.dart';
 
 AuthUser fakeUser({
   int id = 1,
@@ -111,6 +113,80 @@ class FakeAuthService implements AuthService {
     if (deleteError != null) throw AuthException(deleteError!);
     deletedWith = password;
   }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// Resumo da Início: responde [data] (ou lança [error]) e conta as chamadas.
+class FakeDashboardService implements DashboardService {
+  FakeDashboardService({this.data});
+
+  DashboardData? data;
+  Object? error;
+  int calls = 0;
+
+  @override
+  Future<DashboardData> fetch() async {
+    calls++;
+    if (error != null) throw error!;
+    return data!;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// Uma chamada a fetchOpportunities, para os testes conferirem o pedido.
+class OpportunitiesCall {
+  final String? q;
+  final List<String>? types;
+  final List<String>? instruments;
+  final List<String>? countries;
+  final int limit;
+  OpportunitiesCall(this.q, this.types, this.instruments, this.countries, this.limit);
+}
+
+/// Oportunidades: responde [byType] (ou [all] quando o pedido não tem tipo),
+/// [filterOptions] para o modal de filtros, e registra os pedidos em
+/// [calls]. [fail] faz a próxima busca lançar erro.
+class FakeOpportunitiesService implements OpportunitiesService {
+  Map<String, List<OpportunityModel>> byType = {};
+  List<OpportunityModel> all = [];
+  FilterOptions filterOptions = const FilterOptions();
+  bool fail = false;
+  final calls = <OpportunitiesCall>[];
+
+  @override
+  Future<OpportunitiesResult> fetchOpportunities({
+    String? q,
+    List<String>? types,
+    List<String>? instruments,
+    List<String>? countries,
+    List<String>? states,
+    List<String>? cities,
+    int? cityLocationId,
+    bool onlyActive = true,
+    int limit = 100,
+    int offset = 0,
+  }) async {
+    calls.add(OpportunitiesCall(q, types, instruments, countries, limit));
+    if (fail) throw Exception('sem rede');
+    final items = types == null || types.isEmpty
+        ? all
+        : [for (final t in types) ...?byType[t]];
+    return OpportunitiesResult(items: items.take(limit).toList(), total: items.length);
+  }
+
+  @override
+  Future<FilterOptions> fetchFilterOptions({
+    String? q,
+    List<String>? instruments,
+    List<String>? countries,
+    List<String>? states,
+    List<String>? cities,
+  }) async =>
+      filterOptions;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

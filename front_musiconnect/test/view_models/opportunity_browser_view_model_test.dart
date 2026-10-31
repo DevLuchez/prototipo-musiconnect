@@ -1,54 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:prototipo_musiconnect/data/models/opportunity_model.dart';
-import 'package:prototipo_musiconnect/data/services/opportunities_service.dart';
 import 'package:prototipo_musiconnect/presentation/view_models/opportunity_browser_view_model.dart';
 
 import '../helpers/fakes.dart';
 
-/// Uma chamada a fetchOpportunities, para os testes conferirem o pedido.
-class _Call {
-  final String? q;
-  final List<String>? types;
-  final List<String>? instruments;
-  final int limit;
-  _Call(this.q, this.types, this.instruments, this.limit);
-}
-
-/// Responde [byType] (ou [all] quando o pedido não tem tipo) e registra os
-/// pedidos. [fail] faz a próxima busca lançar erro.
-class _FakeOpportunitiesService implements OpportunitiesService {
-  Map<String, List<OpportunityModel>> byType = {};
-  List<OpportunityModel> all = [];
-  bool fail = false;
-  final calls = <_Call>[];
-
-  @override
-  Future<OpportunitiesResult> fetchOpportunities({
-    String? q,
-    List<String>? types,
-    List<String>? instruments,
-    List<String>? countries,
-    List<String>? states,
-    List<String>? cities,
-    int? cityLocationId,
-    bool onlyActive = true,
-    int limit = 100,
-    int offset = 0,
-  }) async {
-    calls.add(_Call(q, types, instruments, limit));
-    if (fail) throw Exception('sem rede');
-    final items = types == null || types.isEmpty
-        ? all
-        : [for (final t in types) ...?byType[t]];
-    return OpportunitiesResult(items: items.take(limit).toList(), total: items.length);
-  }
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
-
 void main() {
-  late _FakeOpportunitiesService service;
+  late FakeOpportunitiesService service;
   late List<String> events;
 
   OpportunityBrowserViewModel build({
@@ -67,7 +23,7 @@ void main() {
       );
 
   setUp(() {
-    service = _FakeOpportunitiesService();
+    service = FakeOpportunitiesService();
     events = [];
   });
 
