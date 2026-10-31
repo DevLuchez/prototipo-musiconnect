@@ -57,7 +57,9 @@ class _SavedOpportunitiesScreenState extends State<SavedOpportunitiesScreen> {
 
   Future<void> _reload() async {
     final future = _favorites.fetchSavedOpportunities();
-    setState(() => _future = future);
+    setState(() {
+      _future = future;
+    });
     await future.catchError((_) => <OpportunityModel>[]);
   }
 
@@ -143,7 +145,9 @@ class _FavoriteInstitutionsScreenState extends State<FavoriteInstitutionsScreen>
 
   Future<void> _reload() async {
     final future = _favorites.fetchFavoriteInstitutions();
-    setState(() => _future = future);
+    setState(() {
+      _future = future;
+    });
     await future.catchError((_) => <PlaceModel>[]);
   }
 
