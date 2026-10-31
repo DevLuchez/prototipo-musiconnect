@@ -18,7 +18,7 @@ const String kSupportEmail = 'laura.luchez@gmail.com';
 /// a versão que a pessoa leu — só ela muda quando o texto mudar.
 /// Quem aceitou uma versão anterior é convidado a aceitar de novo ao abrir
 /// o app (ver MainNavigation).
-const String kPrivacyPolicyVersion = '2026-10-30';
+const String kPrivacyPolicyVersion = '2026-10-31';
 
 /// Lista curada de instrumentos oferecida no cadastro (e reaproveitável em
 /// outras telas, como edição de perfil).

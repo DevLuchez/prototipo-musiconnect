@@ -32,11 +32,9 @@ class _Changed {
 
 /// Resumo do que mudou na versão atual em relação à anterior.
 const _changesSummary = [
-  'Passamos a citar a Hostinger, empresa que hospeda o servidor do '
-      'MusiConnect, no Brasil — é lá que ficam guardados os dados da sua conta '
-      'e os seus favoritos.',
-  'Incluímos que a comunicação entre o app e o servidor é criptografada '
-      '(HTTPS).',
+  'Explicamos que, além das oportunidades com prazo encerrado, também saem '
+      'dos seus favoritos as oportunidades cujo anúncio foi retirado da fonte '
+      'e as instituições que deixaram de existir no mapa.',
 ];
 
 const _sections = [
@@ -90,9 +88,8 @@ const _sections = [
   _PolicySection('Com quem compartilhamos', [
     'Não vendemos nem alugamos seus dados. Para funcionar, o app usa alguns '
         'serviços de terceiros:',
-    _Changed(
-        '• Hostinger: hospeda o servidor do MusiConnect, no Brasil. É lá que '
-        'ficam guardados os dados da sua conta e os seus favoritos.'),
+    '• Hostinger: hospeda o servidor do MusiConnect, no Brasil. É lá que '
+        'ficam guardados os dados da sua conta e os seus favoritos.',
     '• Resend: envia os e-mails de confirmação e de redefinição de senha. '
         'Recebe o seu endereço de e-mail.',
     '• Google Maps: exibe o mapa de instituições. Ao carregar o mapa, o '
@@ -119,8 +116,10 @@ const _sections = [
     'Seus dados ficam guardados enquanto a sua conta existir. Ao excluir a '
         'conta, a conta e os seus favoritos são apagados na hora, de forma '
         'definitiva.',
-    'Oportunidades salvas cujo prazo de inscrição terminou são removidas '
-        'automaticamente dos seus favoritos.',
+    _Changed(
+        'Oportunidades salvas cujo prazo de inscrição terminou ou cujo anúncio '
+        'foi retirado da fonte, e instituições favoritas que deixaram de existir '
+        'no mapa, são removidas automaticamente dos seus favoritos.'),
     'No Firebase, os dados de uso ligados ao identificador da instalação '
         'ficam guardados por até 2 meses, e os relatórios de erro por até 90 '
         'dias; depois disso, só restam números agregados (ex: quantas pessoas '
@@ -137,12 +136,11 @@ const _sections = [
         '$kSupportEmail.',
   ]),
   _PolicySection('Segurança', [
-    _Changed(
-        'Adotamos medidas para proteger seus dados: comunicação criptografada '
+    'Adotamos medidas para proteger seus dados: comunicação criptografada '
         '(HTTPS) entre o app e o servidor, senhas guardadas apenas em forma de '
         'hash, sessão guardada em armazenamento criptografado no celular e '
         'exclusão de conta protegida por senha. Nenhum sistema é totalmente '
-        'imune a falhas; se algo acontecer, avisaremos você.'),
+        'imune a falhas; se algo acontecer, avisaremos você.',
   ]),
   _PolicySection('Menores de idade', [
     'Se você tem menos de 18 anos, use o MusiConnect com o conhecimento dos '
