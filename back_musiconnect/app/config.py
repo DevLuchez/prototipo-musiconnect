@@ -34,10 +34,10 @@ class Settings(BaseSettings):
     # assinado com a chave de android/key.properties) e debug (flutter run).
     android_package_name: str = "musiconnect.com.prototipo_musiconnect"
     android_cert_fingerprints: str = (
-        "5C:00:89:89:49:A8:99:90:18:9B:7A:FC:93:FB:00:25:"
-        "09:A2:AA:86:5D:5D:23:D1:A6:AD:C3:11:B6:22:F4:40,"
-        "66:57:2B:37:AF:36:19:1E:42:FE:20:62:29:D8:80:7F:"
-        "AE:98:FF:54:41:5B:20:66:71:E0:E1:54:F7:0C:E9:EC"
+        "1A:87:6A:F3:59:61:67:1A:44:47:BB:45:C0:CA:F9:A2:"
+        "6E:4C:36:94:7F:71:BB:C7:EE:DD:14:3B:2A:DE:B3:A6,"
+        "1D:7F:4B:21:35:69:65:83:6E:D3:88:CD:49:41:75:27:"
+        "7D:66:4B:EE:55:82:27:8B:1D:9F:A0:46:42:51:59:77"
     )
 
     class Config:
