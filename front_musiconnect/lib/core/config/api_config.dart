@@ -1,26 +1,19 @@
 /// Configuração central da URL do backend MusiConnect.
 ///
-/// Em desenvolvimento local:
-///   - Emulador Android → use _androidEmulatorUrl
-///   - Simulador iOS / Web / Desktop → use _localhostBaseUrl
-///   - Dispositivo físico na mesma rede → use _deviceBaseUrl (IP da máquina)
+/// Por padrão o app usa a API pública (servidor de produção). Para testar
+/// com a API rodando no próprio computador, passe o endereço no build:
 ///
-/// Para produção, troque por uma URL pública (ex: https://api.musiconnect.app).
+///   flutter run --dart-define=API_URL=http://192.168.1.15:8000
+///
+/// (IP da máquina na rede Wi-Fi — `Get-NetIPAddress -AddressFamily IPv4`;
+/// no emulador Android, http://10.0.2.2:8000.)
 class ApiConfig {
   ApiConfig._();
 
-  // ── URLs por ambiente ────────────────────────────────────────
-  // As alternativas ficam aqui para trocar o baseUrl conforme o aparelho.
-  // ignore: unused_field
-  static const String _localhostBaseUrl   = 'http://localhost:8000';
-  // ignore: unused_field
-  static const String _androidEmulatorUrl = 'http://10.0.2.2:8000';
-  // IP atual da máquina na rede Wi-Fi (rodar: Get-NetIPAddress -AddressFamily IPv4)
-  // Atenção: esse IP muda se a rede Wi-Fi mudar ou o DHCP renovar o lease —
-  // se o app voltar a acusar timeout, confira esse valor de novo.
-  static const String _deviceBaseUrl      = 'http://10.197.73.156:8000';
-
-  static const String baseUrl = _deviceBaseUrl; // celular físico na mesma Wi-Fi
+  static const String baseUrl = String.fromEnvironment(
+    'API_URL',
+    defaultValue: 'https://api.musiconnect.app.br',
+  );
 
   // ── Endpoints ────────────────────────────────────────────────
   static const String nearby               = '$baseUrl/api/institutions/nearby';
@@ -55,5 +48,5 @@ class ApiConfig {
   // troque o valor abaixo pelo seu username. A conta de demonstração
   // ("demo") fica sempre esgotada — não funciona pra uso real.
   static const String geoNamesUsername = 'laura.luchez';
-  static const String geoNamesBaseUrl = 'http://api.geonames.org';
+  static const String geoNamesBaseUrl = 'https://secure.geonames.org';
 }
