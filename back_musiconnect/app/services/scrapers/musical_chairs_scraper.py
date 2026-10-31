@@ -45,6 +45,13 @@ logger = logging.getLogger("scrapers.musical_chairs")
 # Máximo de páginas de detalhe buscadas simultaneamente — cortesia com o site.
 _DETAIL_CONCURRENCY = 5
 
+# Sem "Mozilla": o anti-robô do site (Anubis) desafia quem se apresenta como
+# navegador e devolve HTML no lugar do RSS.
+_HEADERS = {"User-Agent": "MusiConnectBot/1.0 (+https://musiconnect.app)"}
+
+# Endereço das páginas de anúncio do site (source_url das oportunidades).
+_SITE_URL = "https://www.musicalchairs.info/"
+
 # ── Instrumentos a consultar ──────────────────────────────────────────────────
 # Padrão: https://www.musicalchairs.info/rss/en/{slug}
 INSTRUMENTS = [
@@ -357,13 +364,7 @@ async def scrape_musical_chairs() -> list[dict]:
     """
     logger.info("[MC] Iniciando scraping do Musical Chairs...")
 
-    async with httpx.AsyncClient(
-        headers={
-            # Sem "Mozilla": o anti-robô do site (Anubis) desafia quem se
-            # apresenta como navegador e devolve HTML no lugar do RSS
-            "User-Agent": "MusiConnectBot/1.0 (+https://musiconnect.app)"
-        }
-    ) as client:
+    async with httpx.AsyncClient(headers=_HEADERS) as client:
         tasks = [_fetch_feed(client, instr) for instr in INSTRUMENTS]
         results = await asyncio.gather(*tasks)
 
@@ -380,3 +381,75 @@ async def scrape_musical_chairs() -> list[dict]:
         all_records = [r for r in all_records if r["source_url"] not in dead_urls]
 
     return all_records
+
+
+def _listings_to_check(seen_urls: set[str]) -> list[str]:
+    """
+    Oportunidades do Musical Chairs que o app ainda mostra (ativas, sem
+    prazo ou com prazo futuro) e que não vieram no RSS desta execução.
+    As de prazo vencido já não aparecem no app — não precisam de conferência.
+    """
+    from app.database import SessionLocal
+    from app.models import Opportunity
+
+    db = SessionLocal()
+    try:
+        rows = (
+            db.query(Opportunity.source_url)
+            .filter(
+                Opportunity.is_active.is_(True),
+                Opportunity.source_url.like(f"{_SITE_URL}%"),
+                (Opportunity.deadline.is_(None)) | (Opportunity.deadline >= date.today()),
+            )
+            .all()
+        )
+        return [url for (url,) in rows if url not in seen_urls]
+    finally:
+        db.close()
+
+
+def _deactivate(urls: list[str]) -> None:
+    from app.database import SessionLocal
+    from app.models import Opportunity
+
+    db = SessionLocal()
+    try:
+        (
+            db.query(Opportunity)
+            .filter(Opportunity.source_url.in_(urls))
+            .update({Opportunity.is_active: False}, synchronize_session=False)
+        )
+        db.commit()
+    finally:
+        db.close()
+
+
+async def deactivate_removed_listings(seen_urls: set[str]) -> int:
+    """
+    Desativa as oportunidades cujo anúncio saiu do Musical Chairs.
+
+    O RSS não lista todos os anúncios abertos (conferido em 31/10/2026: de
+    24 ativos fora do RSS, 19 continuavam no ar) — não estar nele não quer
+    dizer ter saído do site. Por isso, cada oportunidade que ficou de fora
+    tem a página conferida: só um 404 (anúncio removido) desativa. Falha de
+    rede ou página no ar mantém a oportunidade.
+
+    Retorna quantas foram desativadas.
+    """
+    candidates = _listings_to_check(seen_urls)
+    if not candidates:
+        return 0
+
+    logger.info(f"[MC] Conferindo {len(candidates)} anúncios que não vieram no RSS...")
+    sem = asyncio.Semaphore(_DETAIL_CONCURRENCY)
+    async with httpx.AsyncClient(headers=_HEADERS) as client:
+        details = await asyncio.gather(
+            *(_fetch_detail(client, url, sem) for url in candidates)
+        )
+
+    removed = [url for url, d in zip(candidates, details) if d and d.get("not_found")]
+    if removed:
+        _deactivate(removed)
+        for url in removed:
+            logger.info(f"[MC] Anúncio removido da fonte, desativando: {url}")
+    return len(removed)

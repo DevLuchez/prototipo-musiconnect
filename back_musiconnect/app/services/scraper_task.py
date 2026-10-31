@@ -5,7 +5,8 @@ Este módulo é a ponte entre o scheduler e os scrapers/enricher,
 seguindo o mesmo padrão do etl_task.py.
 
 Pipeline:
-  Etapa 1 — Scrapers: coleta oportunidades brutas das fontes externas
+  Etapa 1 — Scrapers: coleta oportunidades brutas das fontes externas e
+            desativa as que saíram da fonte
   Etapa 2 — Enrichment: LLM (Gemini) transforma os dados brutos em campos estruturados
   Etapa 3 — Resolução: vincula cada oportunidade ao pino da sua instituição no mapa
   Etapa 4 — Limpeza: apaga oportunidades salvas que venceram/foram desativadas
@@ -17,7 +18,10 @@ Fluxo diário:
 import logging
 from datetime import datetime, timezone
 
-from app.services.scrapers.musical_chairs_scraper import scrape_musical_chairs
+from app.services.scrapers.musical_chairs_scraper import (
+    deactivate_removed_listings,
+    scrape_musical_chairs,
+)
 from app.services.llm_enricher import enrich_opportunities
 from app.services.institution_resolver import resolve_opportunity_institutions
 from app.services.favorites_cleanup import cleanup_favorite_opportunities
@@ -38,7 +42,8 @@ async def run_all_scrapers() -> None:
     """
     Executa o pipeline completo de coleta e enriquecimento de oportunidades.
 
-    Etapa 1: Scrapers — coleta das fontes configuradas
+    Etapa 1: Scrapers — coleta das fontes configuradas e desativa os
+             anúncios que saíram delas
     Etapa 2: LLM Enrichment — processa registros pendentes (enriched_at IS NULL)
     Etapa 3: Resolução — preenche institution_id (pino do mapa) das pendentes
     Etapa 4: Limpeza — apaga oportunidades salvas que não estão mais visíveis
@@ -65,6 +70,10 @@ async def run_all_scrapers() -> None:
             f"[Scrapers] Musical Chairs: {len(mc_records)} encontradas, "
             f"{saved} salvas/atualizadas"
         )
+        removed = await deactivate_removed_listings(
+            {r["source_url"] for r in mc_records if r.get("source_url")}
+        )
+        logger.info(f"[Scrapers] Musical Chairs: {removed} removidas da fonte, desativadas")
     except Exception as exc:
         logger.error(f"[Scrapers] Erro no Musical Chairs: {exc}", exc_info=True)
 

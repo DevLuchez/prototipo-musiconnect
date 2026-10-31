@@ -7,7 +7,7 @@ O site é simulado (httpx.MockTransport) — nenhum teste acessa a rede.
 """
 
 import asyncio
-from datetime import date
+from datetime import date, timedelta
 
 import httpx
 import pytest
@@ -205,3 +205,69 @@ def test_consulta_os_links_ja_gravados_no_banco(monkeypatch, db_session):
 
     assert known == {f"{BASE}/jobs/1"}
     assert mc._fetch_known_source_urls([]) == set()
+
+
+# ── Anúncios que saíram do site ───────────────────────────────────────────
+
+@pytest.fixture
+def site_pages(monkeypatch, db_session):
+    """Banco de teste + site simulado: /jobs/2 foi removida (404), /jobs/5 dá erro de rede."""
+    import app.database as database
+
+    monkeypatch.setattr(database, "SessionLocal", lambda: db_session)
+    requested = []
+
+    def handler(request):
+        path = request.url.path
+        requested.append(path)
+        if path == "/jobs/2":
+            return httpx.Response(404)
+        if path == "/jobs/5":
+            raise httpx.ConnectError("sem rede")
+        return httpx.Response(200, text=DETAIL_111)
+
+    real_client = httpx.AsyncClient
+    monkeypatch.setattr(
+        mc.httpx, "AsyncClient",
+        lambda **kw: real_client(transport=httpx.MockTransport(handler), **kw),
+    )
+    return requested
+
+
+def test_desativa_so_o_anuncio_que_saiu_do_site(site_pages, db_session):
+    from app.models import Opportunity
+    from tests.helpers import make_opportunity
+
+    no_ar = make_opportunity(db_session, title="Fora do RSS, ainda no ar", source_url=f"{BASE}/jobs/1")
+    removida = make_opportunity(db_session, title="Removida", source_url=f"{BASE}/jobs/2", deadline=None)
+    no_rss = make_opportunity(db_session, title="Veio no RSS", source_url=f"{BASE}/jobs/3")
+    vencida = make_opportunity(db_session, title="Prazo vencido", source_url=f"{BASE}/jobs/4",
+                               deadline=date.today() - timedelta(days=1))
+    sem_rede = make_opportunity(db_session, title="Erro de rede", source_url=f"{BASE}/jobs/5")
+    outra_fonte = make_opportunity(db_session, title="Outra fonte", source_url="https://example.com/1")
+
+    ids = {opp.title: opp.id for opp in (no_ar, removida, no_rss, vencida, sem_rede, outra_fonte)}
+
+    removed = asyncio.run(mc.deactivate_removed_listings({f"{BASE}/jobs/3"}))
+
+    assert removed == 1
+    active = {title: db_session.get(Opportunity, id_).is_active for title, id_ in ids.items()}
+    assert active == {
+        "Fora do RSS, ainda no ar": True,
+        "Removida": False,
+        "Veio no RSS": True,
+        "Prazo vencido": True,
+        "Erro de rede": True,
+        "Outra fonte": True,
+    }
+    # Só confere quem o app ainda mostra e não veio no RSS.
+    assert sorted(site_pages) == ["/jobs/1", "/jobs/2", "/jobs/5"]
+
+
+def test_tudo_no_rss_nao_visita_nenhuma_pagina(site_pages, db_session):
+    from tests.helpers import make_opportunity
+
+    make_opportunity(db_session, title="No RSS", source_url=f"{BASE}/jobs/3")
+
+    assert asyncio.run(mc.deactivate_removed_listings({f"{BASE}/jobs/3"})) == 0
+    assert site_pages == []
