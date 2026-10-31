@@ -15,11 +15,14 @@ confiança >= 0.80, prazo vigente):
     `created_at` (gravado uma vez), não pelo `scraped_at`, que é
     atualizado toda vez que o RSS relista uma oportunidade antiga.
   - type_counts: quantas abertas há de cada tipo (bloco "Explorar").
+
+Sem login (modo visitante do app), só type_counts vem preenchido: o resto
+depende do perfil e dos favoritos.
 """
 
 from collections import Counter
 from datetime import date, datetime, timedelta, timezone
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -27,7 +30,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import FavoriteOpportunity, Opportunity, User
-from app.routers.auth import get_current_user
+from app.routers.auth import get_current_user_optional
 from app.routers.opportunities import _apply_filters, _only_open
 from app.schemas import OpportunityOut
 from app.services.matching import (
@@ -55,10 +58,17 @@ class DashboardOut(BaseModel):
 
 @router.get("", response_model=DashboardOut)
 def get_dashboard(
-    user: User = Depends(get_current_user),
+    user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ):
     visible = _only_open(_apply_filters(db.query(Opportunity))).all()
+    type_counts = dict(Counter(o.type for o in visible if o.type))
+    if user is None:
+        return DashboardOut(
+            match_count=0, urgent_saved=[], top_matches=[], new_matches=[],
+            type_counts=type_counts,
+        )
+
     for opp in visible:
         breakdown = compute_match_breakdown(user, opp)
         opp.match_percentage = breakdown.total
@@ -95,5 +105,5 @@ def get_dashboard(
         urgent_saved=urgent_saved,
         top_matches=matches[:_CAROUSEL_LIMIT],
         new_matches=new_matches[:_CAROUSEL_LIMIT],
-        type_counts=dict(Counter(o.type for o in visible if o.type)),
+        type_counts=type_counts,
     )

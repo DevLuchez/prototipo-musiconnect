@@ -147,8 +147,15 @@ def test_marcadores_por_cidade_contam_so_as_sem_pino_presenciais_e_abertas(api, 
 
 # ── Aba Início (/api/dashboard) ──────────────────────────────────────────
 
-def test_inicio_exige_login(api):
-    assert api.get("/api/dashboard").status_code == 401
+def test_inicio_sem_login_traz_so_o_explorar(api, db_session):
+    make_opportunity(db_session, title="Audição", type="audicao")
+    make_opportunity(db_session, title="Curso", type="curso")
+
+    body = api.get("/api/dashboard").json()
+
+    assert body["type_counts"] == {"audicao": 1, "curso": 1}
+    assert body["match_count"] == 0
+    assert body["top_matches"] == body["urgent_saved"] == body["new_matches"] == []
 
 
 def test_inicio_monta_as_secoes(api, db_session):
