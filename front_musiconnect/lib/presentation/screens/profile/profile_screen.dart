@@ -31,6 +31,10 @@ class ProfileScreen extends StatefulWidget {
   // menu lateral mostra o nome atualizado).
   final ValueChanged<AuthUser>? onUserChanged;
 
+  /// Para testes: um ViewModel com serviços simulados. Sem ele, a tela cria
+  /// o seu.
+  final ProfileViewModel? viewModel;
+
   const ProfileScreen({
     super.key,
     required this.user,
@@ -38,6 +42,7 @@ class ProfileScreen extends StatefulWidget {
     this.onOpenSavedOpportunities,
     this.onOpenFavoriteInstitutions,
     this.onUserChanged,
+    this.viewModel,
   });
 
   @override
@@ -45,7 +50,7 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  late final _viewModel = ProfileViewModel(user: widget.user);
+  late final _viewModel = widget.viewModel ?? ProfileViewModel(user: widget.user);
 
   @override
   void didUpdateWidget(ProfileScreen oldWidget) {

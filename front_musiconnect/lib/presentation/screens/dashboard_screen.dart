@@ -31,12 +31,17 @@ class DashboardScreen extends StatefulWidget {
   final void Function(int tab) onOpenMatcher;
   final OpenOpportunityOnMap? onOpenMap;
 
+  /// Para testes: um ViewModel com serviços simulados. Sem ele, a tela cria
+  /// o seu.
+  final DashboardViewModel? viewModel;
+
   const DashboardScreen({
     super.key,
     required this.user,
     required this.onOpenMatcher,
     this.refreshRequest,
     this.onOpenMap,
+    this.viewModel,
   });
 
   @override
@@ -44,7 +49,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  late final _viewModel = DashboardViewModel(user: widget.user)..load();
+  late final _viewModel = (widget.viewModel ?? DashboardViewModel(user: widget.user))..load();
 
   @override
   void initState() {
