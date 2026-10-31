@@ -1,0 +1,30 @@
+# Caddy — porta de entrada do servidor, com HTTPS automático.
+#
+#   api.musiconnect.app.br → API (o app fala com ela)
+#   musiconnect.app.br     → página de download do app + links dos e-mails
+#                            (confirmar cadastro, redefinir senha), que são
+#                            páginas da API
+
+api.musiconnect.app.br {
+	encode gzip
+	reverse_proxy api:8000
+}
+
+musiconnect.app.br {
+	encode gzip
+
+	@api path /confirmar /redefinir-senha /.well-known/assetlinks.json
+	handle @api {
+		reverse_proxy api:8000
+	}
+
+	handle {
+		root * /srv/site
+		try_files {path} {path}.html {path}/index.html
+		file_server
+	}
+}
+
+www.musiconnect.app.br {
+	redir https://musiconnect.app.br{uri} permanent
+}

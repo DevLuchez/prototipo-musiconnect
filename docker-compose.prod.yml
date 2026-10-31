@@ -1,0 +1,44 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# MusicConnect — ajustes de produção (servidor)
+#
+# Complementa o docker-compose.yml:
+#   - banco e API deixam de ficar abertos para a internet;
+#   - o Caddy (portas 80/443) recebe tudo, com HTTPS automático (Let's
+#     Encrypt), e repassa para a API.
+#
+# No servidor:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  db:
+    # Só a API (rede interna do Docker) acessa o banco.
+    ports: !reset []
+
+  api:
+    # Só o Caddy acessa a API; de fora, apenas por HTTPS.
+    ports: !reset []
+    environment:
+      SCHEDULER_ENABLED: "true"   # ETL às 00h e scrapers às 06h
+
+  caddy:
+    image: caddy:2
+    container_name: musiconnect_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./deploy/site:/srv/site:ro
+      # Certificados HTTPS (não podem se perder a cada atualização)
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+
+volumes:
+  caddy_data:
+  caddy_config:

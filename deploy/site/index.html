@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MusiConnect</title>
+  <meta name="description" content="Oportunidades para musicistas — audições, cursos, competições e empregos — e instituições musicais no mapa.">
+  <link rel="icon" href="/favicon.png">
+  <style>
+    :root {
+      --pink: #DF2881;
+      --purple: #7C3AED;
+      --text: #111827;
+      --muted: #6B7280;
+      --bg: #FFFFFF;
+      --soft: #FDF2F8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.5;
+    }
+    main { max-width: 560px; margin: 0 auto; padding: 48px 20px 32px; }
+    header { text-align: center; }
+    header img { width: 96px; height: 96px; border-radius: 24px; }
+    h1 { font-size: 32px; margin: 16px 0 4px; font-weight: 800; }
+    h1 span { color: var(--pink); }
+    .tagline { color: var(--muted); margin: 0 0 32px; font-size: 17px; }
+    .download {
+      display: block; text-align: center; text-decoration: none;
+      background: linear-gradient(90deg, var(--pink), #EC4899);
+      color: #fff; font-weight: 700; font-size: 18px;
+      padding: 16px; border-radius: 28px;
+    }
+    .note { text-align: center; color: var(--muted); font-size: 14px; margin: 8px 0 36px; }
+    section { background: var(--soft); border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+    h2 { font-size: 17px; margin: 0 0 8px; }
+    ol, ul { margin: 0; padding-left: 20px; }
+    li + li { margin-top: 6px; }
+    footer { text-align: center; color: var(--muted); font-size: 13px; padding: 24px 20px 40px; }
+    footer a { color: var(--pink); }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <img src="/logo.png" alt="Logo do MusiConnect">
+      <h1>Musi<span>Connect</span></h1>
+      <p class="tagline">Audições, cursos, competições e empregos para musicistas — e as instituições musicais perto de você, no mapa.</p>
+    </header>
+
+    <a class="download" href="https://github.com/DevLuchez/prototipo-musiconnect/releases/latest/download/musiconnect.apk">Baixar para Android</a>
+    <p class="note">Por enquanto, disponível só para Android.</p>
+
+    <section>
+      <h2>Como instalar</h2>
+      <ol>
+        <li>Toque em <strong>Baixar para Android</strong> e abra o arquivo baixado.</li>
+        <li>Se o celular pedir, permita instalar apps desta fonte (o navegador ou o app de arquivos). Isso acontece com apps baixados fora da loja.</li>
+        <li>Toque em <strong>Instalar</strong> e abra o MusiConnect.</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>O que o app faz</h2>
+      <ul>
+        <li>Mostra oportunidades abertas e o quanto cada uma combina com o seu perfil (match).</li>
+        <li>Mapa com escolas de música, teatros, salas de concerto e outras instituições.</li>
+        <li>Salve oportunidades e instituições favoritas e acompanhe os prazos.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    Trabalho de Conclusão de Curso de Engenharia de Software — Católica SC.<br>
+    <a href="https://github.com/DevLuchez/prototipo-musiconnect">Código no GitHub</a>
+  </footer>
+</body>
+</html>
