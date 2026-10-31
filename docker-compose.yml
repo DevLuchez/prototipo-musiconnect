@@ -57,6 +57,10 @@ services:
       # Chave das rotas de administração (header X-Admin-Key) — sem ela,
       # essas rotas ficam sempre bloqueadas
       ADMIN_API_KEY: ${ADMIN_API_KEY}
+      # ETL (00h) e scrapers (06h) só rodam no servidor
+      # (docker-compose.prod.yml) — no computador, gastariam a cota do
+      # Gemini em dobro.
+      SCHEDULER_ENABLED: "false"
     ports:
       - "8000:8000"
     depends_on:
