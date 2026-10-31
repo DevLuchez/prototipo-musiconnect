@@ -20,7 +20,8 @@ Estratégia:
 - Instituições que saíram do OSM (apagadas, ou que deixaram de ser musicais
   — ex: teatro que virou cinema) são removidas, depois de conferidas uma a
   uma na API oficial do OSM: a cópia do QLever pode estar alguns dias
-  atrás do OSM, então não ter vindo na coleta não basta
+  atrás do OSM, então não ter vindo na coleta não basta. As organizadoras
+  achadas pelo sistema no OSM só saem se foram apagadas
 - Roda em ~3 minutos para os pinos do mundo todo; os contatos (que testam
   se cada site responde) levam mais, mas só para quem ainda não tem site
 """
@@ -365,59 +366,82 @@ async def run_etl() -> dict:
     }
 
 
-async def _still_musical(client: httpx.AsyncClient, osm_id: str) -> Optional[bool]:
-    """Pergunta à API do OSM se o objeto ainda existe e ainda é musical.
+# Resposta de _osm_tags para objeto apagado do OSM (HTTP 410).
+_GONE = "apagado"
 
-    False: apagado (HTTP 410) ou sem nenhuma das OSM_TAGS (ex: virou cinema).
-    True: continua musical. None: não deu para saber (erro, resposta
-    inesperada) — na dúvida, a instituição fica.
+
+async def _osm_tags(client: httpx.AsyncClient, osm_id: str) -> Optional[dict | str]:
+    """Tags atuais do objeto na API do OSM.
+
+    Devolve _GONE se ele foi apagado (HTTP 410) e None se não deu para saber
+    (erro, resposta inesperada) — na dúvida, a instituição fica.
     """
     kind, _, number = osm_id.partition("_")
     try:
         resp = await client.get(f"{OSM_API}/{kind}/{number}.json", timeout=20)
         if resp.status_code == 410:
-            return False
+            return _GONE
         if resp.status_code != 200:
             return None
-        tags = resp.json()["elements"][0].get("tags", {})
+        return resp.json()["elements"][0].get("tags", {})
     except (httpx.HTTPError, ValueError, KeyError, IndexError):
         return None
+
+
+def _is_musical(tags: dict) -> bool:
     return any(tags.get(key) == value for key, value in OSM_TAGS)
 
 
 async def remove_closed_institutions(db: Session, seen_ids: set[str]) -> int:
-    """Remove as instituições do OSM que saíram do mapa desde a última coleta.
+    """Remove as instituições que saíram do OpenStreetMap.
 
-    Candidatas: vindas do OSM (source="osm") e fora da coleta desta noite.
-    As criadas pelo próprio sistema (source="pipeline", organizadoras das
-    oportunidades) nunca entram. Cada candidata é conferida na API do OSM e
-    só sai se foi apagada ou deixou de ser musical. Ao sair, ela some também
-    dos favoritos (ON DELETE CASCADE) e as oportunidades ligadas a ela perdem
-    o pino (ON DELETE SET NULL).
+    Cada candidata é conferida na API do OSM:
+      - as do ETL (source="osm") que não vieram na coleta desta noite saem se
+        foram apagadas ou deixaram de ser musicais (ex: virou cinema);
+      - as organizadoras de oportunidades achadas pelo sistema no OSM
+        (source="pipeline") nunca vêm na coleta — não têm a marcação musical
+        (ex: orquestra cujo lugar é um centro de convenções) —, então só se
+        confere se ainda existem. As sem objeto do OSM (id "pl_...") ficam.
+
+    Ao sair, a instituição some também dos favoritos (ON DELETE CASCADE) e
+    as oportunidades ligadas a ela perdem só o pino (ON DELETE SET NULL) — o
+    resolvedor as liga de novo ao lugar novo, ou à cidade, na mesma noite.
 
     Retorna quantas foram removidas.
     """
-    candidates = [
-        osm_id
-        for (osm_id,) in db.query(Institution.osm_id).filter(Institution.source == "osm")
-        if osm_id not in seen_ids
+    rows = (
+        db.query(Institution.osm_id, Institution.source)
+        .filter(Institution.source.in_(("osm", "pipeline")))
+        .all()
+    )
+    from_etl = [i for i, source in rows if source == "osm" and i not in seen_ids]
+    organizers = [
+        i for i, source in rows
+        if source == "pipeline" and i not in seen_ids and not i.startswith("pl_")
     ]
-    if not candidates:
-        return 0
-    if len(candidates) > MAX_REMOVAL_CHECKS:
+    if len(from_etl) > MAX_REMOVAL_CHECKS:
         logger.warning(
-            f"  {len(candidates)} instituições fora da coleta — muitas de uma vez; "
-            f"remoção pulada nesta execução"
+            f"  {len(from_etl)} instituições fora da coleta — muitas de uma vez; "
+            f"remoção delas pulada nesta execução"
         )
+        from_etl = []
+    if not from_etl and not organizers:
         return 0
 
-    logger.info(f"  Conferindo na API do OSM {len(candidates)} instituições fora da coleta...")
-    gone = [osm_id for osm_id in candidates if osm_id in OSM_IGNORED_IDS]
+    logger.info(
+        f"  Conferindo na API do OSM {len(from_etl)} instituições fora da coleta "
+        f"e {len(organizers)} organizadoras..."
+    )
+    must_be_musical = set(from_etl)
+    gone = [osm_id for osm_id in from_etl if osm_id in OSM_IGNORED_IDS]
     async with httpx.AsyncClient(headers=OSM_API_HEADERS) as client:
-        for osm_id in candidates:
+        for osm_id in from_etl + organizers:
             if osm_id in OSM_IGNORED_IDS:
                 continue
-            if await _still_musical(client, osm_id) is False:
+            tags = await _osm_tags(client, osm_id)
+            if tags == _GONE or (
+                osm_id in must_be_musical and isinstance(tags, dict) and not _is_musical(tags)
+            ):
                 gone.append(osm_id)
             await asyncio.sleep(OSM_API_PAUSE)
 

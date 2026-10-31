@@ -242,8 +242,9 @@ def test_remove_so_as_que_sairam_ou_deixaram_de_ser_musicais(osm_api, db_session
 
     for osm_id in ("node_1", "node_2", "node_3", "node_4", "node_5", "way_6", "node_7"):
         make_institution(db_session, osm_id=osm_id, name=osm_id)
-    organizadora = make_institution(db_session, osm_id="org_1", name="Orquestra")
-    organizadora.source = "pipeline"
+    # Organizadoras achadas pelo sistema: só se confere se ainda existem.
+    for osm_id in ("way_20", "relation_21", "pl_abc"):
+        make_institution(db_session, osm_id=osm_id, name=osm_id).source = "pipeline"
     user = make_user(db_session)
     db_session.add(FavoriteInstitution(user_id=user.id, institution_id="node_2"))
     opp = make_opportunity(db_session, institution_id="node_2")
@@ -256,19 +257,23 @@ def test_remove_so_as_que_sairam_ou_deixaram_de_ser_musicais(osm_api, db_session
         "node/4": (200, {"amenity": "theatre"}),              # QLever atrasado: fica
         "node/5": (503, None),                                # API fora: fica
         "way/6": (200, {"disused:amenity": "theatre"}),       # desativada
+        "way/20": (200, {"building": "yes"}),                 # organizadora existe: fica
+        "relation/21": (410, None),                           # organizadora apagada
     })
 
     removed = asyncio.run(etl.remove_closed_institutions(db_session, {"node_1"}))
 
-    assert removed == 4
+    assert removed == 5
     db_session.expire_all()
     remaining = {i.osm_id for i in db_session.query(Institution)}
-    assert remaining == {"node_1", "node_4", "node_5", "org_1"}
+    assert remaining == {"node_1", "node_4", "node_5", "way_20", "pl_abc"}
     # Sai dos favoritos e a oportunidade perde só o pino.
     assert db_session.query(FavoriteInstitution).count() == 0
     assert db_session.get(Opportunity, opp.id).institution_id is None
-    # Só confere quem é do OSM e ficou fora da coleta (o ignorado sai direto).
-    assert sorted(requested) == ["node/2", "node/3", "node/4", "node/5", "way/6"]
+    # Confere quem ficou fora da coleta e as organizadoras com objeto do OSM
+    # (o ignorado sai direto; "pl_" não tem objeto no OSM).
+    assert sorted(requested) == ["node/2", "node/3", "node/4", "node/5",
+                                 "relation/21", "way/20", "way/6"]
 
 
 def test_nada_fora_da_coleta_nao_consulta_a_api(osm_api, db_session):
@@ -288,10 +293,14 @@ def test_muitas_de_uma_vez_indica_problema_e_nao_remove(osm_api, db_session, mon
     monkeypatch.setattr(etl, "MAX_REMOVAL_CHECKS", 2)
     for osm_id in ("node_1", "node_2", "node_3"):
         make_institution(db_session, osm_id=osm_id)
-    requested = osm_api({})
+    make_institution(db_session, osm_id="node_9").source = "pipeline"
+    db_session.commit()
+    requested = osm_api({"node/9": (410, None)})
 
-    assert asyncio.run(etl.remove_closed_institutions(db_session, set())) == 0
-    assert requested == []
+    # As do ETL ficam (sinal de problema na fonte); as organizadoras seguem
+    # sendo conferidas.
+    assert asyncio.run(etl.remove_closed_institutions(db_session, set())) == 1
+    assert requested == ["node/9"]
     assert db_session.query(Institution).count() == 3
 
 
@@ -301,6 +310,6 @@ def test_resposta_estranha_da_api_mantem_a_instituicao():
 
     async def run():
         async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
-            return await etl._still_musical(client, "node_1")
+            return await etl._osm_tags(client, "node_1")
 
     assert asyncio.run(run()) is None
