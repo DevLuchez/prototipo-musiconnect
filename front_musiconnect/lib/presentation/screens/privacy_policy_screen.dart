@@ -25,6 +25,10 @@ class _Changed {
 // terceiros ou forma de armazenamento. A cada nova versão: reescrever
 // _changesSummary e marcar com _Changed só o que mudou NELA (tirando a
 // marcação da versão anterior).
+//
+// A mesma política fica pública em https://musiconnect.app.br/privacidade:
+// depois de mudar o texto, rode `python deploy/gerar_privacidade.py` e
+// commite a página junto (o CI confere se as duas estão iguais).
 
 /// Resumo do que mudou na versão atual em relação à anterior.
 const _changesSummary = [

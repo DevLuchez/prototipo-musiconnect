@@ -94,6 +94,11 @@ jobs:
 
       - run: flutter pub get
 
+      # A página https://musiconnect.app.br/privacidade é gerada do texto da
+      # política no app — falha se alguém mudou um e esqueceu do outro.
+      - name: Página de privacidade em dia com o app
+        run: python3 ../deploy/gerar_privacidade.py --check
+
       # Falha só com erros/avisos; avisos informativos não quebram o CI.
       - name: Análise estática
         run: flutter analyze --no-fatal-infos
