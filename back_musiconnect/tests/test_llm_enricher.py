@@ -30,6 +30,14 @@ def test_resposta_json_simples_e_com_markdown():
     assert enricher._parse_llm_response('```json\n{"title": "B"}\n```') == {"title": "B"}
 
 
+def test_barra_invertida_invalida_e_consertada():
+    """O lite às vezes solta um "\\u" sem os 4 dígitos ou "\\(" no texto."""
+    bad = r'{"title": "Canto \uLírico", "d": "a \(b\)"}'
+    assert enricher._parse_llm_response(bad) == {"title": r"Canto \uLírico", "d": r"a \(b\)"}
+    # Escapes válidos continuam valendo.
+    assert enricher._parse_llm_response(r'{"t": "é \n ok"}') == {"t": "é \n ok"}
+
+
 def test_resposta_que_nao_e_json_vira_none():
     assert enricher._parse_llm_response("desculpe, não consegui") is None
 
@@ -116,6 +124,19 @@ def test_categoria_invalida_e_descartada_e_nao_musical_e_desativada():
     assert opp.institution_category is None
     assert opp.is_active is False
     assert opp.llm_confidence == 0.5  # padrão quando o LLM não informa
+
+
+def test_noticia_que_nao_e_chamada_e_desativada():
+    """Sites de instituição (SCAR, FEMUSC) publicam mais notícia que chamada."""
+    noticia = _opp()
+    enricher._apply_enrichment(noticia, {"is_music_related": True, "is_open_call": False})
+    chamada = _opp()
+    enricher._apply_enrichment(chamada, {"is_music_related": True, "is_open_call": True})
+    sem_campo = _opp()  # resposta sem o campo (ex: Musical Chairs): continua ativa
+    enricher._apply_enrichment(sem_campo, {"is_music_related": True})
+
+    assert (noticia.is_active, chamada.is_active, sem_campo.is_active) == (False, True, True)
+    assert '"is_open_call"' in enricher._build_prompt("x")
 
 
 # ── Laço de enriquecimento (Gemini simulado) ─────────────────────────────

@@ -22,6 +22,11 @@ from app.services.scrapers.musical_chairs_scraper import (
     deactivate_removed_listings,
     scrape_musical_chairs,
 )
+from app.services.scrapers.wordpress_scraper import (
+    deactivate_stale_posts,
+    scrape_wordpress_sources,
+    sync_scar_courses,
+)
 from app.services.llm_enricher import enrich_opportunities
 from app.services.institution_resolver import resolve_opportunity_institutions
 from app.services.favorites_cleanup import cleanup_favorite_opportunities
@@ -77,15 +82,22 @@ async def run_all_scrapers() -> None:
     except Exception as exc:
         logger.error(f"[Scrapers] Erro no Musical Chairs: {exc}", exc_info=True)
 
-    # Próximos scrapers — adicionar aqui seguindo o mesmo padrão:
-    # try:
-    #     logger.info("[Scrapers] Etapa 1/4 — Resartis...")
-    #     resartis_records = await scrape_resartis()
-    #     saved = await _upsert_raw(resartis_records)
-    #     total_found += len(resartis_records)
-    #     total_saved += saved
-    # except Exception as exc:
-    #     logger.error(f"[Scrapers] Erro no Resartis: {exc}", exc_info=True)
+    # SCAR + FEMUSC (sites em WordPress da região da SCAR)
+    try:
+        logger.info("[Scrapers] Etapa 1/4 — SCAR e FEMUSC...")
+        wp_records = await scrape_wordpress_sources()
+        saved = await _upsert_raw(wp_records)
+        total_found += len(wp_records)
+        total_saved += saved
+        removed = await deactivate_stale_posts()
+        logger.info(
+            f"[Scrapers] SCAR/FEMUSC: {len(wp_records)} chamadas candidatas, "
+            f"{removed} desativadas (apagadas ou sem prazo há muito tempo)"
+        )
+        # Cursos de música da SCAR (conferidos uma vez por mês).
+        await sync_scar_courses()
+    except Exception as exc:
+        logger.error(f"[Scrapers] Erro no SCAR/FEMUSC: {exc}", exc_info=True)
 
     logger.info(
         f"[Scrapers] Coleta concluída: {total_found} encontradas, "

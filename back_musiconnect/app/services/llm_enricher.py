@@ -50,7 +50,7 @@ RATE_LIMIT_SLEEP = 7  # segundos → ~8 req/min (com margem de segurança)
 # lista seja completada.
 CANONICAL_INSTRUMENTS = [
     "Violino", "Viola", "Violoncelo", "Contrabaixo", "Harpa",
-    "Flauta", "Flautim", "Oboé", "Corne Inglês", "Clarinete", "Clarone",
+    "Flauta", "Flauta Doce", "Flautim", "Oboé", "Corne Inglês", "Clarinete", "Clarone",
     "Fagote", "Contrafagote", "Saxofone",
     "Trompa", "Trompete", "Trombone", "Trombone Baixo", "Tuba",
     "Percussão", "Tímpanos", "Bateria",
@@ -85,6 +85,7 @@ A data de hoje é {today}.
   "is_remote": true se online/remoto, false se presencial ou não especificado,
   "is_active": true se prazo ainda não venceu ou não especificado, false se claramente vencido,
   "is_music_related": true ou false,
+  "is_open_call": true se o texto anuncia algo em que músicos podem se inscrever ou se candidatar (vaga, audição, curso, oficina, masterclass, concurso, bolsa, festival com inscrição); false se é notícia, relato, fotos, programação de concertos ou balanço de algo que já aconteceu,
   "llm_confidence": 0.0 a 1.0 (confiança na extração e relevância para músicos)
 }}
 
@@ -140,6 +141,13 @@ def _parse_llm_response(text: str) -> Optional[dict]:
 
     try:
         return json.loads(cleaned)
+    except json.JSONDecodeError:
+        pass
+    # O modelo lite às vezes solta uma barra invertida que não é escape
+    # válido de JSON (ex: "\u" sem os 4 dígitos, "\(" ) — vira barra literal.
+    repaired = re.sub(r'\\(?!["\\/bfnrt]|u[0-9a-fA-F]{4})', r"\\\\", cleaned)
+    try:
+        return json.loads(repaired)
     except json.JSONDecodeError as e:
         logger.warning(f"[Enricher] Falha ao parsear JSON do Gemini: {e}")
         logger.debug(f"[Enricher] Resposta bruta: {text[:500]}")
@@ -272,8 +280,10 @@ def _apply_enrichment(opp: Opportunity, data: dict) -> None:
     opp.is_remote    = data.get("is_remote", opp.is_remote)
     opp.is_active    = data.get("is_active", opp.is_active)
 
-    # Se LLM diz que não é musical, desativa para não exibir
-    if not data.get("is_music_related", True):
+    # Se LLM diz que não é musical — ou que não é uma chamada (notícia de
+    # site de instituição, ver scrapers/wordpress_scraper.py) —, desativa
+    # para não exibir
+    if not data.get("is_music_related", True) or not data.get("is_open_call", True):
         opp.is_active = False
 
     opp.llm_confidence = float(data.get("llm_confidence", 0.5))
