@@ -275,11 +275,12 @@ class MainNavigationState extends State<MainNavigation>
     _showTutorialMessage(completed ? kTutorialDoneMessage : kTutorialSkipMessage);
   }
 
-  /// Aba pedida pelo passo do tutorial. No Matcher, sempre "Minhas
-  /// oportunidades", onde está a busca destacada.
+  /// Aba pedida pelo passo do tutorial. No Matcher, a aba onde está a busca
+  /// destacada: "Minhas oportunidades" ou, para o visitante (que tem a busca
+  /// de "Minhas" bloqueada), "Todas as oportunidades".
   void _showTutorialTab(int tab) {
     setState(() => _selectedIndex = tab);
-    if (tab == _matcherTab) _matcherTabRequest.value = 0;
+    if (tab == _matcherTab) _matcherTabRequest.value = _isVisitor ? 1 : 0;
   }
 
   /// Aviso do tutorial; "Ajuda e suporte" é um link para a tela de ajuda.

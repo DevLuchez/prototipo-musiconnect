@@ -58,6 +58,9 @@ class FilterModal extends StatefulWidget {
   // Visitante: "Meu instrumento", "Perto de Mim" e a Escala de Match
   // aparecem, mas bloqueados — os três dependem do perfil.
   final bool profileFiltersLocked;
+  // Visitante em "Minhas oportunidades": todos os filtros aparecem, mas
+  // bloqueados — sem perfil não há match, nada filtraria.
+  final bool allFiltersLocked;
 
   final void Function({
     required List<String> types,
@@ -92,6 +95,7 @@ class FilterModal extends StatefulWidget {
     this.initialInstrumentToggle = false,
     this.initialLocationToggle = false,
     this.profileFiltersLocked = false,
+    this.allFiltersLocked = false,
     required this.onApply,
   });
 
@@ -169,6 +173,10 @@ class _FilterModalState extends State<FilterModal> {
   }
 
   String _stateLabel(String code) => _stateLabels[code] ?? code;
+
+  bool get _profileLocked =>
+      widget.profileFiltersLocked || widget.allFiltersLocked;
+  bool get _locked => widget.allFiltersLocked;
 
   void _toggleType(String key) {
     setState(() {
@@ -254,7 +262,7 @@ class _FilterModalState extends State<FilterModal> {
                     subtitle: 'Filtra pelo(s) instrumento(s) do seu perfil',
                     value: _instrumentToggle,
                     onChanged: _setInstrumentToggle,
-                    locked: widget.profileFiltersLocked,
+                    locked: _profileLocked,
                   ),
                   const Divider(height: 1),
                   _ToggleRow(
@@ -262,7 +270,7 @@ class _FilterModalState extends State<FilterModal> {
                     subtitle: 'Filtra pela localização do seu perfil',
                     value: _locationToggle,
                     onChanged: _setLocationToggle,
-                    locked: widget.profileFiltersLocked,
+                    locked: _profileLocked,
                   ),
 
                   const Divider(height: 1),
@@ -271,32 +279,7 @@ class _FilterModalState extends State<FilterModal> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                'Escala de Match',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: widget.profileFiltersLocked
-                                      ? Colors.grey[400]
-                                      : const Color(0xFF111827),
-                                ),
-                              ),
-                            ),
-                            if (widget.profileFiltersLocked)
-                              Icon(Icons.lock_outline_rounded,
-                                  size: 20, color: Colors.grey[400]),
-                          ],
-                        ),
-                        if (widget.profileFiltersLocked) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            'Disponível com uma conta cadastrada',
-                            style: TextStyle(fontSize: 11.5, color: Colors.grey[500]),
-                          ),
-                        ],
+                        _SectionTitle('Escala de Match', locked: _profileLocked),
                         RangeSlider(
                           values: _matchScale,
                           min: widget.matchScaleMin,
@@ -308,7 +291,7 @@ class _FilterModalState extends State<FilterModal> {
                             '${_matchScale.end.round()}%',
                           ),
                           // Bloqueada: o slider fica desabilitado (cinza).
-                          onChanged: widget.profileFiltersLocked
+                          onChanged: _profileLocked
                               ? null
                               : (v) => setState(() => _matchScale = v),
                         ),
@@ -342,16 +325,11 @@ class _FilterModalState extends State<FilterModal> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Tipo de oportunidade',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF111827),
-                            ),
-                          ),
+                          _SectionTitle('Tipo de oportunidade', locked: _locked),
                           const SizedBox(height: 10),
-                          Wrap(
+                          _LockedContent(
+                            locked: _locked,
+                            child: Wrap(
                             spacing: 8,
                             runSpacing: 8,
                             children: kOpportunityTypeLabels.entries.map((e) {
@@ -385,6 +363,7 @@ class _FilterModalState extends State<FilterModal> {
                                 ),
                               );
                             }).toList(),
+                            ),
                           ),
                         ],
                       ),
@@ -396,6 +375,7 @@ class _FilterModalState extends State<FilterModal> {
                     title: 'Instrumento',
                     subtitle: _instrumentToggle ? 'Usando seu perfil' : null,
                     expanded: _instrumentExpanded,
+                    locked: _locked,
                     onTap: () => setState(
                         () => _instrumentExpanded = !_instrumentExpanded),
                   ),
@@ -403,9 +383,9 @@ class _FilterModalState extends State<FilterModal> {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: IgnorePointer(
-                        ignoring: _instrumentToggle,
+                        ignoring: _instrumentToggle || _locked,
                         child: Opacity(
-                          opacity: _instrumentToggle ? 0.5 : 1,
+                          opacity: _instrumentToggle || _locked ? 0.5 : 1,
                           child: _PickerField(
                             options: _options.instruments
                                 .map((i) => FilterOption(value: i, label: i))
@@ -427,14 +407,15 @@ class _FilterModalState extends State<FilterModal> {
                     subtitle:
                         _locationToggle ? 'Usando seu perfil' : _locationSummary,
                     expanded: _locationExpanded,
+                    locked: _locked,
                     onTap: () => setState(
                         () => _locationExpanded = !_locationExpanded),
                   ),
                   if (_locationExpanded) ...[
                     IgnorePointer(
-                      ignoring: _locationToggle,
+                      ignoring: _locationToggle || _locked,
                       child: Opacity(
-                        opacity: _locationToggle ? 0.5 : 1,
+                        opacity: _locationToggle || _locked ? 0.5 : 1,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -521,7 +502,7 @@ class _FilterModalState extends State<FilterModal> {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () {
+                    onPressed: _locked ? null : () {
                       setState(() {
                         _matchScale =
                             RangeValues(widget.matchScaleMin, widget.matchScaleMax);
@@ -550,7 +531,7 @@ class _FilterModalState extends State<FilterModal> {
                 Expanded(
                   flex: 2,
                   child: ElevatedButton(
-                    onPressed: () {
+                    onPressed: _locked ? null : () {
                       widget.onApply(
                         types: _types,
                         instruments: _instruments,
@@ -586,6 +567,64 @@ class _FilterModalState extends State<FilterModal> {
       ),
     );
   }
+}
+
+const kLockedFilterHint = 'Disponível com uma conta cadastrada';
+
+/// Título de seção (Escala de Match, Tipo de oportunidade). [locked]
+/// (visitante): cinza, com cadeado e o aviso de que depende de conta.
+class _SectionTitle extends StatelessWidget {
+  final String title;
+  final bool locked;
+
+  const _SectionTitle(this.title, {this.locked = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: locked ? Colors.grey[400] : const Color(0xFF111827),
+                ),
+              ),
+            ),
+            if (locked)
+              Icon(Icons.lock_outline_rounded, size: 20, color: Colors.grey[400]),
+          ],
+        ),
+        if (locked) ...[
+          const SizedBox(height: 2),
+          Text(
+            kLockedFilterHint,
+            style: TextStyle(fontSize: 11.5, color: Colors.grey[500]),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Conteúdo de um filtro bloqueado: aparece esmaecido e não responde ao
+/// toque.
+class _LockedContent extends StatelessWidget {
+  final bool locked;
+  final Widget child;
+
+  const _LockedContent({required this.locked, required this.child});
+
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+        ignoring: locked,
+        child: Opacity(opacity: locked ? 0.5 : 1, child: child),
+      );
 }
 
 /// Linha "Meu instrumento" / "Perto de Mim" — checkbox que liga/desliga o
@@ -626,7 +665,7 @@ class _ToggleRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  locked ? 'Disponível com uma conta cadastrada' : subtitle,
+                  locked ? kLockedFilterHint : subtitle,
                   style: TextStyle(fontSize: 11.5, color: Colors.grey[500]),
                 ),
               ],
@@ -656,18 +695,22 @@ class _CollapsibleHeader extends StatelessWidget {
   final String? subtitle;
   final bool expanded;
   final VoidCallback onTap;
+  // Visitante: cadeado no lugar da seta, sem abrir/fechar.
+  final bool locked;
 
   const _CollapsibleHeader({
     required this.title,
     this.subtitle,
     required this.expanded,
     required this.onTap,
+    this.locked = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final subtitle = locked ? kLockedFilterHint : this.subtitle;
     return GestureDetector(
-      onTap: onTap,
+      onTap: locked ? null : onTap,
       behavior: HitTestBehavior.opaque,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 10),
@@ -679,25 +722,27 @@ class _CollapsibleHeader extends StatelessWidget {
                 Expanded(
                   child: Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF111827),
+                      color: locked ? Colors.grey[400] : const Color(0xFF111827),
                     ),
                   ),
                 ),
                 Icon(
-                  expanded
-                      ? Icons.keyboard_arrow_up_rounded
-                      : Icons.keyboard_arrow_down_rounded,
+                  locked
+                      ? Icons.lock_outline_rounded
+                      : expanded
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.keyboard_arrow_down_rounded,
                   size: 20,
-                  color: Colors.grey[500],
+                  color: locked ? Colors.grey[400] : Colors.grey[500],
                 ),
               ],
             ),
             if (subtitle != null) ...[
               const SizedBox(height: 2),
-              Text(subtitle!,
+              Text(subtitle,
                   style: TextStyle(fontSize: 12, color: Colors.grey[500])),
             ],
           ],

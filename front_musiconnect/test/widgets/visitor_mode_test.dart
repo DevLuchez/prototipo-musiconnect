@@ -266,13 +266,59 @@ void main() {
       });
     });
 
-    testWidgets('Matcher: "Minhas" mostra só o convite', (tester) async {
+    testWidgets('em "Minhas", todos os filtros aparecem bloqueados', (tester) async {
+      useTallScreen(tester);
+      var applied = false;
+      await FakeApi(_publicApi).run(() async {
+        await tester.pumpWidget(MaterialApp(
+          home: Scaffold(
+            body: FilterModal(
+              service: FakeOpportunitiesService(),
+              profileFiltersLocked: true,
+              allFiltersLocked: true,
+              onApply: ({
+                required types,
+                required instruments,
+                required countries,
+                required states,
+                required cities,
+                required stateLabels,
+                required matchScale,
+                required instrumentToggle,
+                required locationToggle,
+              }) => applied = true,
+            ),
+          ),
+        ));
+        await tester.pumpAndSettle();
+
+        // Meu instrumento, Perto de Mim, Escala, Tipo, Instrumento, Localização.
+        expect(find.text('Disponível com uma conta cadastrada'), findsNWidgets(6));
+        expect(find.byIcon(Icons.lock_outline_rounded), findsNWidgets(6));
+        // Tocar não faz nada: as seções não recolhem e os botões não agem.
+        await tester.tap(find.text('Instrumento'));
+        await tester.pump();
+        expect(find.text('Filtre instrumentos...'), findsOneWidget);
+        await tester.tap(find.text('Aplicar'));
+        await tester.pump();
+        expect(applied, isFalse);
+        expect(find.text('Filtrar por'), findsOneWidget);
+      });
+    });
+
+    testWidgets('Matcher: "Minhas" mostra só o convite, com a busca bloqueada', (tester) async {
       await FakeApi(_publicApi).run(() async {
         useTallScreen(tester);
         await tester.pumpWidget(const MaterialApp(home: Scaffold(body: MatcherScreen(user: _visitor))));
         await tester.pumpAndSettle();
         expect(find.textContaining('Crie sua conta para acompanhar de perto'), findsOneWidget);
         expect(find.text('Criar conta'), findsOneWidget);
+        expect(tester.widget<TextField>(find.byType(TextField)).enabled, isFalse);
+
+        // Em "Todas", a busca funciona.
+        await tester.tap(find.text('Todas as oportunidades'));
+        await tester.pumpAndSettle();
+        expect(tester.widget<TextField>(find.byType(TextField)).enabled, isNot(false));
       });
     });
 

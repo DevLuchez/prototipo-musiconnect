@@ -52,14 +52,20 @@ class OpportunityBrowserView extends StatefulWidget {
   final String? lockedTitle;
   final VoidCallback? onBack;
 
-  // Marca a barra de busca + filtros para o tutorial (aba "Minhas").
+  // Marca a barra de busca + filtros para o tutorial.
   final Key? searchBarKey;
+
+  // Visitante em "Minhas oportunidades": a busca e todos os filtros
+  // aparecem, mas bloqueados (não fazem nada) — mostram o que a conta
+  // libera.
+  final bool locked;
 
   const OpportunityBrowserView({
     super.key,
     required this.service,
     required this.user,
     this.searchBarKey,
+    this.locked = false,
     this.onOpenMap,
     this.matchScaleMin = 0,
     this.matchScaleMax = 100,
@@ -123,6 +129,7 @@ class _OpportunityBrowserViewState extends State<OpportunityBrowserView> {
         initialInstrumentToggle: vm.myInstrumentToggle,
         initialLocationToggle: vm.myLocationToggle,
         profileFiltersLocked: widget.user.isVisitor,
+        allFiltersLocked: widget.locked,
         onApply: ({
           required types,
           required instruments,
@@ -180,6 +187,7 @@ class _OpportunityBrowserViewState extends State<OpportunityBrowserView> {
         key: ValueKey(vm.drillType),
         service: widget.service,
         user: widget.user,
+        locked: widget.locked,
         onOpenMap: widget.onOpenMap,
         matchScaleMin: widget.matchScaleMin,
         matchScaleMax: widget.matchScaleMax,
@@ -242,6 +250,7 @@ class _OpportunityBrowserViewState extends State<OpportunityBrowserView> {
                   ),
                   child: TextField(
                     controller: _searchController,
+                    enabled: !widget.locked,
                     onChanged: (text) => vm.query = text,
                     onSubmitted: vm.search,
                     textAlignVertical: TextAlignVertical.center,
@@ -253,7 +262,10 @@ class _OpportunityBrowserViewState extends State<OpportunityBrowserView> {
                           size: 18, color: Colors.grey[400]),
                       prefixIconConstraints:
                           const BoxConstraints(minWidth: 40, minHeight: 0),
-                      suffixIcon: _searchController.text.isNotEmpty
+                      suffixIcon: widget.locked
+                          ? Icon(Icons.lock_outline_rounded,
+                              size: 16, color: Colors.grey[400])
+                          : _searchController.text.isNotEmpty
                           ? GestureDetector(
                               onTap: () {
                                 _searchController.clear();

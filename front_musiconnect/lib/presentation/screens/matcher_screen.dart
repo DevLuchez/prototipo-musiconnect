@@ -109,11 +109,12 @@ class _MatcherScreenState extends State<MatcherScreen>
             controller: _tabController,
             children: [
               if (widget.user.isVisitor)
-                // Sem perfil, não há match: a aba mostra só o convite.
+                // Sem perfil, não há match: a aba mostra só o convite, com a
+                // busca e os filtros bloqueados.
                 OpportunityBrowserView(
                   service: _service,
                   user: widget.user,
-                  searchBarKey: TutorialTargets.maybeOf(context)?.matcherSearch,
+                  locked: true,
                   matchScaleMin: kHighMatchThreshold.toDouble(),
                   matchScaleMax: 100,
                   onOpenMap: widget.onSwitchToMap,
@@ -145,6 +146,10 @@ class _MatcherScreenState extends State<MatcherScreen>
               OpportunityBrowserView(
                 service: _service,
                 user: widget.user,
+                // Visitante: o tutorial destaca a busca daqui, que funciona.
+                searchBarKey: widget.user.isVisitor
+                    ? TutorialTargets.maybeOf(context)?.matcherSearch
+                    : null,
                 onOpenMap: widget.onSwitchToMap,
                 emptyCategoriesMessage:
                     'Nenhuma oportunidade aberta no momento.\n'
