@@ -56,6 +56,7 @@ def scraper_steps(monkeypatch):
         "scrape_wordpress_sources": _fake_step(steps, "scrape_wp", [{"c": 3}]),
         "deactivate_stale_posts": _fake_step(steps, "deactivate_wp", 0),
         "sync_scar_courses": _fake_step(steps, "courses", None),
+        "sync_concerto": _fake_step(steps, "concerto", None),
         "enrich_opportunities": _fake_step(steps, "enrich", {"success": 2, "processed": 2}),
         "resolve_opportunity_institutions": _fake_step(
             steps, "resolve", {"linked": 1, "unresolved": 1, "linked_to_city": 1}),
@@ -70,10 +71,10 @@ def test_pipeline_de_oportunidades_roda_as_etapas_em_ordem(scraper_steps):
     asyncio.run(scraper_task.run_all_scrapers())
     assert scraper_steps["calls"] == [
         "scrape", "upsert", "deactivate", "scrape_wp", "upsert", "deactivate_wp",
-        "courses", "enrich", "resolve", "cleanup"]
+        "courses", "concerto", "enrich", "resolve", "cleanup"]
 
 
-@pytest.mark.parametrize("failing", ["scrape", "scrape_wp", "enrich", "resolve", "cleanup"])
+@pytest.mark.parametrize("failing", ["scrape", "scrape_wp", "concerto", "enrich", "resolve", "cleanup"])
 def test_falha_numa_etapa_nao_impede_as_seguintes(scraper_steps, failing):
     scraper_steps["fail"].add(failing)
 

@@ -55,7 +55,7 @@ CANONICAL_INSTRUMENTS = [
     "Trompa", "Trompete", "Trombone", "Trombone Baixo", "Tuba",
     "Percussão", "Tímpanos", "Bateria",
     "Piano", "Órgão", "Cravo", "Teclado", "Acordeão",
-    "Violão", "Guitarra", "Baixo", "Bandolim", "Alaúde", "Sitar", "Gaita de Fole",
+    "Violão", "Guitarra", "Baixo", "Cavaquinho", "Bandolim", "Alaúde", "Sitar", "Gaita de Fole",
     "Vocal", "Soprano", "Mezzo-Soprano", "Contralto", "Tenor", "Barítono",
     "Baixo-Barítono", "Regência", "Composição",
 ]

@@ -22,6 +22,7 @@ from app.services.scrapers.musical_chairs_scraper import (
     deactivate_removed_listings,
     scrape_musical_chairs,
 )
+from app.services.scrapers.concerto_scraper import sync_concerto
 from app.services.scrapers.wordpress_scraper import (
     deactivate_stale_posts,
     scrape_wordpress_sources,
@@ -98,6 +99,13 @@ async def run_all_scrapers() -> None:
         await sync_scar_courses()
     except Exception as exc:
         logger.error(f"[Scrapers] Erro no SCAR/FEMUSC: {exc}", exc_info=True)
+
+    # Revista CONCERTO (página "Cursos e outros eventos")
+    try:
+        logger.info("[Scrapers] Etapa 1/4 — Revista CONCERTO...")
+        await sync_concerto()
+    except Exception as exc:
+        logger.error(f"[Scrapers] Erro na Revista CONCERTO: {exc}", exc_info=True)
 
     logger.info(
         f"[Scrapers] Coleta concluída: {total_found} encontradas, "
