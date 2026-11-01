@@ -52,10 +52,14 @@ class OpportunityBrowserView extends StatefulWidget {
   final String? lockedTitle;
   final VoidCallback? onBack;
 
+  // Marca a barra de busca + filtros para o tutorial (aba "Minhas").
+  final Key? searchBarKey;
+
   const OpportunityBrowserView({
     super.key,
     required this.service,
     required this.user,
+    this.searchBarKey,
     this.onOpenMap,
     this.matchScaleMin = 0,
     this.matchScaleMax = 100,
@@ -216,6 +220,7 @@ class _OpportunityBrowserViewState extends State<OpportunityBrowserView> {
 
         // Barra de busca + filtros
         Container(
+          key: widget.searchBarKey,
           color: Colors.white,
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
           child: Row(

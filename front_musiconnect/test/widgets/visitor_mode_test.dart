@@ -51,6 +51,8 @@ Future<void> settle(WidgetTester tester) async {
 }
 
 Future<void> pumpVisitorApp(WidgetTester tester) async {
+  // Convite do tutorial já respondido (ele tem testes próprios).
+  SharedPreferences.setMockInitialValues({'tutorial_offered': true});
   useTallScreen(tester);
   await tester.pumpWidget(const MaterialApp(home: MainNavigation(user: _visitor)));
   await tester.pump(const Duration(seconds: 1));

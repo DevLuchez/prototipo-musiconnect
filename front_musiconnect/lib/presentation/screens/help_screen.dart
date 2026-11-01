@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants.dart';
+import '../tutorial/tutorial.dart';
 import '../widgets/auth/auth_common.dart';
 
 /// Pergunta frequente da tela de ajuda.
@@ -110,6 +111,9 @@ class HelpScreen extends StatelessWidget {
                 ),
               ),
             ),
+            const SizedBox(height: 12),
+            const _TutorialCard(),
+            const SizedBox(height: 20),
             Padding(
               padding: const EdgeInsets.fromLTRB(4, 0, 4, 16),
               child: Text(
@@ -204,6 +208,57 @@ class _FaqCard extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// "Ver o tutorial": volta à navegação principal e começa o passeio pelas
+/// telas (o mesmo oferecido na primeira entrada).
+class _TutorialCard extends StatelessWidget {
+  const _TutorialCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: kAuthPink.withOpacity(0.08),
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+          tutorialRequest.value++;
+        },
+        child: const Padding(
+          padding: EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Icon(Icons.school_outlined, color: kAuthPink),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Ver o tutorial',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: kAuthTextDark,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Um passeio rápido pelas telas principais do app.',
+                      style: TextStyle(fontSize: 12.5, color: Color(0xFF6B7280)),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: kAuthPink),
+            ],
+          ),
         ),
       ),
     );

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'core/deep_links.dart';
 import 'core/monitoring.dart';
 import 'core/visitor_mode.dart';
@@ -21,6 +22,7 @@ import 'presentation/screens/privacy_policy_screen.dart';
 import 'presentation/screens/profile/profile_screen.dart';
 import 'presentation/screens/profile/visitor_profile_screen.dart';
 import 'presentation/widgets/auth/auth_common.dart';
+import 'presentation/tutorial/tutorial.dart';
 import 'presentation/widgets/auth/logout_flow.dart';
 
 /// Chave global do Navigator — o deep link de confirmação de e-mail pode
@@ -127,6 +129,14 @@ class _MusicConnectAppState extends State<MusicConnectApp> {
         ),
         useMaterial3: true,
         fontFamily: 'Roboto',
+        // Avisos rápidos (SnackBar) do app inteiro: rosa com letra branca.
+        snackBarTheme: SnackBarThemeData(
+          backgroundColor: kAuthPink,
+          contentTextStyle: const TextStyle(color: Colors.white, fontSize: 14),
+          actionTextColor: Colors.white,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       ),
       home: _AuthGate(authService: _authService),
     );
@@ -164,10 +174,10 @@ class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key, required this.user});
 
   @override
-  State<MainNavigation> createState() => _MainNavigationState();
+  State<MainNavigation> createState() => MainNavigationState();
 }
 
-class _MainNavigationState extends State<MainNavigation>
+class MainNavigationState extends State<MainNavigation>
     with SingleTickerProviderStateMixin {
   int _selectedIndex = _homeTab; // começa na aba Início
 
@@ -191,6 +201,15 @@ class _MainNavigationState extends State<MainNavigation>
 
   // Incrementado ao tocar na aba Início — a tela recarrega o resumo.
   final ValueNotifier<int> _homeRefresh = ValueNotifier(0);
+
+  // Tutorial (holofote): as marcações dos elementos e o passeio em curso.
+  final _tutorialKeys = TutorialKeys();
+  final _tutorialOverlay = GlobalKey<TutorialOverlayState>();
+  bool _tutorialActive = false;
+
+  /// O convite "Quer aprender a usar o MusiConnect?" já apareceu neste
+  /// aparelho (respondido com "Quero" ou "Agora não").
+  static const tutorialOfferedKey = 'tutorial_offered';
 
   late final AnimationController _iconPulse;
   late final Animation<double> _iconScale;
@@ -216,15 +235,70 @@ class _MainNavigationState extends State<MainNavigation>
     _iconScale = Tween<double>(begin: 1.0, end: 1.15).animate(
       CurvedAnimation(parent: _iconPulse, curve: Curves.easeInOut),
     );
+    tutorialRequest.addListener(_startTutorial);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _onFirstFrame());
+  }
+
+  Future<void> _onFirstFrame() async {
     // A política mudou desde o último aceite: pede o novo aceite antes de
     // seguir (vale tanto para a sessão salva quanto para o login).
-    if (_user.needsPrivacyAcceptance) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _askPrivacyAcceptance());
+    if (_user.needsPrivacyAcceptance) await _askPrivacyAcceptance();
+    if (mounted) await _offerTutorial();
+  }
+
+  /// Primeira entrada neste aparelho (com conta ou como visitante): oferece
+  /// o tutorial uma única vez — ele fica também na Ajuda.
+  Future<void> _offerTutorial() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(tutorialOfferedKey) ?? false) return;
+    await prefs.setBool(tutorialOfferedKey, true);
+    if (!mounted) return;
+    if (await askToStartTutorial(context)) {
+      _startTutorial();
+    } else if (mounted) {
+      _showTutorialMessage(kTutorialLaterMessage);
     }
   }
 
-  void _askPrivacyAcceptance() {
-    Navigator.of(context).push(MaterialPageRoute(
+  void _startTutorial() {
+    if (_tutorialActive || !mounted) return;
+    Monitoring.logEvent('tutorial_start');
+    setState(() => _tutorialActive = true);
+  }
+
+  void _finishTutorial({required bool completed, required int step}) {
+    Monitoring.logEvent(completed ? 'tutorial_complete' : 'tutorial_skip', {'step': step});
+    setState(() {
+      _tutorialActive = false;
+      _selectedIndex = _homeTab;
+    });
+    _showTutorialMessage(completed ? kTutorialDoneMessage : kTutorialSkipMessage);
+  }
+
+  /// Aba pedida pelo passo do tutorial. No Matcher, sempre "Minhas
+  /// oportunidades", onde está a busca destacada.
+  void _showTutorialTab(int tab) {
+    setState(() => _selectedIndex = tab);
+    if (tab == _matcherTab) _matcherTabRequest.value = 0;
+  }
+
+  /// Aviso do tutorial; "Ajuda e suporte" é um link para a tela de ajuda.
+  void _showTutorialMessage(String text) {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(SnackBar(
+      content: TutorialMessage(
+        text: text,
+        onOpenHelp: () {
+          messenger.hideCurrentSnackBar();
+          _openHelp();
+        },
+      ),
+      duration: const Duration(seconds: 6),
+    ));
+  }
+
+  Future<void> _askPrivacyAcceptance() {
+    return Navigator.of(context).push(MaterialPageRoute(
       fullscreenDialog: true,
       builder: (routeContext) => PrivacyPolicyScreen(
         onAccept: () async {
@@ -239,6 +313,7 @@ class _MainNavigationState extends State<MainNavigation>
 
   @override
   void dispose() {
+    tutorialRequest.removeListener(_startTutorial);
     _iconPulse.dispose();
     _mapFocusRequest.dispose();
     _matcherTabRequest.dispose();
@@ -441,7 +516,7 @@ class _MainNavigationState extends State<MainNavigation>
         ),
     ];
 
-    return Scaffold(
+    final scaffold = Scaffold(
       backgroundColor: Colors.white,
       drawer: _buildDrawer(),
       // ── Header global ──────────────────────────────────────────
@@ -468,6 +543,7 @@ class _MainNavigationState extends State<MainNavigation>
             // achar o drawer.
             leading: Builder(
               builder: (context) => IconButton(
+                key: _tutorialKeys.menu,
                 icon: const Icon(Icons.menu_rounded, color: Colors.black87),
                 tooltip: 'Menu',
                 onPressed: () => Scaffold.of(context).openDrawer(),
@@ -503,13 +579,17 @@ class _MainNavigationState extends State<MainNavigation>
       ),
 
       // ── Conteúdo das abas ──────────────────────────────────────
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: screens,
+      body: KeyedSubtree(
+        key: _tutorialKeys.home,
+        child: IndexedStack(
+          index: _selectedIndex,
+          children: screens,
+        ),
       ),
 
       // ── Barra de navegação inferior ────────────────────────────
       bottomNavigationBar: Container(
+        key: _tutorialKeys.bottomNav,
         decoration: BoxDecoration(
           color: Colors.white,
           boxShadow: [
@@ -550,6 +630,39 @@ class _MainNavigationState extends State<MainNavigation>
               icon: Icon(Icons.person_rounded),
               label: 'Perfil',
             ),
+          ],
+        ),
+      ),
+    );
+
+    return TutorialTargets(
+      keys: _tutorialKeys,
+      child: PopScope(
+        // Durante o tutorial, o voltar do Android volta um passo (no
+        // primeiro, encerra o tutorial).
+        canPop: !_tutorialActive,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) _tutorialOverlay.currentState?.back();
+        },
+        child: Stack(
+          children: [
+            scaffold,
+            if (_tutorialActive)
+              Positioned.fill(
+                child: TutorialOverlay(
+                  key: _tutorialOverlay,
+                  steps: tutorialSteps(
+                    homeTab: _homeTab,
+                    mapTab: _mapTab,
+                    matcherTab: _matcherTab,
+                    profileTab: _profileTab,
+                  ),
+                  targets: _tutorialKeys,
+                  visitor: _isVisitor,
+                  onShowTab: _showTutorialTab,
+                  onFinish: _finishTutorial,
+                ),
+              ),
           ],
         ),
       ),

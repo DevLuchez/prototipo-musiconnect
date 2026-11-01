@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../data/services/auth_service.dart';
 import '../../view_models/profile_view_model.dart';
 import '../../widgets/auth/auth_common.dart';
+import '../../tutorial/tutorial.dart';
 import '../../widgets/auth/logout_flow.dart';
 import '../auth/welcome_screen.dart';
 import 'change_password_screen.dart';
@@ -395,6 +396,7 @@ class _InfoCard extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           SizedBox(
+            key: TutorialTargets.maybeOf(context)?.profileAction,
             width: double.infinity,
             child: AuthOutlineButton(
               label: 'Editar perfil',

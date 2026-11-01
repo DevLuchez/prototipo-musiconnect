@@ -10,6 +10,7 @@ import '../../data/models/place_model.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/services/opportunities_service.dart';
 import '../view_models/map_explorer_view_model.dart';
+import '../tutorial/tutorial.dart';
 import '../widgets/app_loading_indicator.dart';
 import '../widgets/favorite_button.dart';
 import '../widgets/opportunity_card.dart';
@@ -755,6 +756,7 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
                   children: [
                     Expanded(
                       child: Container(
+                        key: TutorialTargets.maybeOf(context)?.mapSearch,
                         height: 42,
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -803,6 +805,7 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
                     const SizedBox(width: 10),
                     // Botão de filtro por tipo
                     GestureDetector(
+                      key: TutorialTargets.maybeOf(context)?.mapFilter,
                       onTap: _openCategoryFilter,
                       child: Container(
                         height: 42,
@@ -987,6 +990,7 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
             bottom: 16,
             left: 16,
             child: GestureDetector(
+              key: TutorialTargets.maybeOf(context)?.mapLegend,
               onTap: _showLegend,
               child: Container(
                 height: 42,

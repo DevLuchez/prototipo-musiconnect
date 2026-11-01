@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/monitoring.dart';
+import '../../tutorial/tutorial.dart';
 import '../../widgets/auth/auth_common.dart';
 import '../../widgets/visitor_invite.dart';
 import 'profile_screen.dart';
@@ -77,6 +78,7 @@ class VisitorProfileScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               SizedBox(
+                key: TutorialTargets.maybeOf(context)?.profileAction,
                 width: double.infinity,
                 child: AuthPrimaryButton(
                   label: 'Criar conta',

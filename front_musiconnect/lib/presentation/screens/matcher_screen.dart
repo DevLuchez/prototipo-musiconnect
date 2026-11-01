@@ -5,6 +5,7 @@ import '../../data/services/opportunities_service.dart';
 import '../widgets/match_explainer.dart';
 import '../widgets/opportunity_browser_view.dart';
 import '../widgets/visitor_invite.dart';
+import '../tutorial/tutorial.dart';
 import 'opportunity_detail_screen.dart';
 
 const _pink = Color(0xFFEC4899);
@@ -72,10 +73,14 @@ class _MatcherScreenState extends State<MatcherScreen>
     return Column(
       children: [
         // ── O que é match (sempre visível, acima das abas) ───────
-        const MatchExplainerBanner(),
+        KeyedSubtree(
+          key: TutorialTargets.maybeOf(context)?.matcherExplainer,
+          child: const MatchExplainerBanner(),
+        ),
 
         // ── TabBar ───────────────────────────────────────────────
         Container(
+          key: TutorialTargets.maybeOf(context)?.matcherTabs,
           color: Colors.white,
           child: TabBar(
             controller: _tabController,
@@ -108,6 +113,7 @@ class _MatcherScreenState extends State<MatcherScreen>
                 OpportunityBrowserView(
                   service: _service,
                   user: widget.user,
+                  searchBarKey: TutorialTargets.maybeOf(context)?.matcherSearch,
                   matchScaleMin: kHighMatchThreshold.toDouble(),
                   matchScaleMax: 100,
                   onOpenMap: widget.onSwitchToMap,
@@ -120,6 +126,7 @@ class _MatcherScreenState extends State<MatcherScreen>
                 OpportunityBrowserView(
                   service: _service,
                   user: widget.user,
+                  searchBarKey: TutorialTargets.maybeOf(context)?.matcherSearch,
                   matchScaleMin: kHighMatchThreshold.toDouble(),
                   matchScaleMax: 100,
                   onOpenMap: widget.onSwitchToMap,
