@@ -23,6 +23,7 @@ from app.services.scrapers.musical_chairs_scraper import (
     scrape_musical_chairs,
 )
 from app.services.scrapers.concerto_scraper import sync_concerto
+from app.services.scrapers.wfimc_scraper import sync_wfimc
 from app.services.scrapers.wordpress_scraper import (
     deactivate_stale_posts,
     scrape_wordpress_sources,
@@ -31,6 +32,8 @@ from app.services.scrapers.wordpress_scraper import (
 from app.services.llm_enricher import enrich_opportunities
 from app.services.institution_resolver import resolve_opportunity_institutions
 from app.services.favorites_cleanup import cleanup_favorite_opportunities
+from app.services.deduplication import report_cross_source_duplicates
+from app.database import SessionLocal
 
 logger = logging.getLogger("scheduler.scrapers")
 
@@ -107,6 +110,13 @@ async def run_all_scrapers() -> None:
     except Exception as exc:
         logger.error(f"[Scrapers] Erro na Revista CONCERTO: {exc}", exc_info=True)
 
+    # WFIMC (concursos internacionais)
+    try:
+        logger.info("[Scrapers] Etapa 1/4 — WFIMC...")
+        await sync_wfimc()
+    except Exception as exc:
+        logger.error(f"[Scrapers] Erro na WFIMC: {exc}", exc_info=True)
+
     logger.info(
         f"[Scrapers] Coleta concluída: {total_found} encontradas, "
         f"{total_saved} salvas"
@@ -137,6 +147,16 @@ async def run_all_scrapers() -> None:
         )
     except Exception as exc:
         logger.error(f"[Scrapers] Erro na resolução de instituições: {exc}", exc_info=True)
+
+    # ── Observação de repetidas entre fontes (só log, até a decisão de 07/11) ─
+    try:
+        db = SessionLocal()
+        try:
+            report_cross_source_duplicates(db)
+        finally:
+            db.close()
+    except Exception as exc:
+        logger.error(f"[Scrapers] Erro na observação de repetidas: {exc}", exc_info=True)
 
     # ── Etapa 4: Limpeza dos salvos ───────────────────────────────────────────
     try:
