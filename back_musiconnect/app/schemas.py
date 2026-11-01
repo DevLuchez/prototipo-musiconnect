@@ -207,6 +207,9 @@ class UserOut(BaseModel):
     # Versão da Política de privacidade que o usuário aceitou — o app
     # compara com a atual e pede um novo aceite quando a política muda.
     privacy_policy_version: Optional[str] = None
+    # Chaves de notificação do Perfil.
+    notify_new_matches: bool = True
+    notify_deadlines: bool = True
     # Só vem preenchido nas respostas de login/troca de senha — o cliente
     # usa esse valor pra atualizar o token guardado localmente.
     token: Optional[str] = None
@@ -220,3 +223,16 @@ class ConfirmIn(BaseModel):
 
 class ConfirmStatusOut(BaseModel):
     confirmed: bool
+
+
+class DeviceTokenIn(BaseModel):
+    """Identificador do aparelho no Firebase Cloud Messaging."""
+
+    token: str = Field(min_length=1, max_length=4096)
+
+
+class NotificationPreferencesIn(BaseModel):
+    """Chaves de notificação do Perfil."""
+
+    notify_new_matches: bool
+    notify_deadlines: bool

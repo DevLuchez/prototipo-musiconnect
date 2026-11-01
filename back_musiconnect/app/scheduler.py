@@ -7,6 +7,7 @@ Roda dentro do processo FastAPI — não requer infraestrutura extra.
 Jobs ativos:
   - ETL diário     (hora configurável): atualiza mapa de instituições (OSM/MusicBrainz/Wikidata)
   - Scrapers diário (hora configurável): coleta oportunidades do Musical Chairs e enriquece com LLM
+  - Notificações diário (hora configurável): novas para você + prazos dos favoritos (FCM)
 """
 
 import logging
@@ -15,6 +16,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 from app.config import settings
 from app.services.etl_task import run_full_etl
+from app.services.notifications import run_daily_notifications
 from app.services.scraper_task import run_all_scrapers
 
 logger = logging.getLogger("scheduler")
@@ -59,6 +61,20 @@ def setup_scheduler() -> AsyncIOScheduler:
         ),
         id="scrapers_daily",
         name=f"Scrapers + LLM Enrichment (Musical Chairs...) — {settings.scheduler_scrapers_hour:02d}:00",
+        replace_existing=True,
+        misfire_grace_time=3600,
+    )
+
+    # ── Job 3: Notificações (depois da coleta) ───────────────────────
+    scheduler.add_job(
+        run_daily_notifications,
+        trigger=CronTrigger(
+            hour=settings.scheduler_notifications_hour,
+            minute=0,
+            timezone="America/Sao_Paulo",
+        ),
+        id="notifications_daily",
+        name=f"Notificações (novas para você + prazos) — {settings.scheduler_notifications_hour:02d}:00",
         replace_existing=True,
         misfire_grace_time=3600,
     )

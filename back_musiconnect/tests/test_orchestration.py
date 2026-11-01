@@ -138,9 +138,10 @@ def test_agendador_cria_etl_e_scrapers_nos_horarios_configurados(monkeypatch, cl
 
     jobs = {job.id: job for job in scheduler_module.setup_scheduler().get_jobs()}
 
-    assert set(jobs) == {"etl_full_daily", "scrapers_daily"}
+    assert set(jobs) == {"etl_full_daily", "scrapers_daily", "notifications_daily"}
     assert "00:00" in jobs["etl_full_daily"].name
     assert "06:00" in jobs["scrapers_daily"].name
+    assert "09:00" in jobs["notifications_daily"].name
 
 
 class _FakeJob:

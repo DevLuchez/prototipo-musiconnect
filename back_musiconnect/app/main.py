@@ -18,6 +18,7 @@ from app.routers import auth
 from app.routers import dashboard
 from app.routers import favorites
 from app.routers import institutions
+from app.routers import notifications
 from app.routers import opportunities
 from app.routers import scheduler as scheduler_router
 from app.routers import web_links
@@ -84,6 +85,7 @@ app.include_router(auth.router)
 app.include_router(dashboard.router)
 app.include_router(favorites.router)
 app.include_router(institutions.router)
+app.include_router(notifications.router)
 app.include_router(opportunities.router)
 app.include_router(scheduler_router.router)
 app.include_router(web_links.router)

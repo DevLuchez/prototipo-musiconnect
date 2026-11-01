@@ -32,7 +32,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import User
+from app.models import DeviceToken, User
 from app.schemas import (
     ChangePasswordIn,
     ConfirmIn,
@@ -391,8 +391,11 @@ def accept_privacy(
 
 @router.post("/logout")
 def logout(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Invalida o token de sessão no servidor."""
+    """Invalida o token de sessão no servidor e para as notificações do
+    aparelho — quem saiu não recebe mais (num celular compartilhado, a
+    próxima pessoa não vê as oportunidades de quem saiu)."""
     user.session_token = None
+    db.query(DeviceToken).filter(DeviceToken.user_id == user.id).delete()
     db.commit()
     return {"status": "logged_out"}
 

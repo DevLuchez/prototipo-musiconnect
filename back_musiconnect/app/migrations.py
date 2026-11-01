@@ -66,6 +66,9 @@ _STATEMENTS = [
     # ── Consentimento com a Política de privacidade (LGPD) ────────────────
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS privacy_accepted_at TIMESTAMP",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS privacy_policy_version VARCHAR(20)",
+    # ── Notificações (chaves do Perfil, ligadas por padrão) ───────────────
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS notify_new_matches BOOLEAN NOT NULL DEFAULT TRUE",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS notify_deadlines BOOLEAN NOT NULL DEFAULT TRUE",
 ]
 
 

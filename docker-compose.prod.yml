@@ -20,7 +20,11 @@ services:
     # Só o Caddy acessa a API; de fora, apenas por HTTPS.
     ports: !reset []
     environment:
-      SCHEDULER_ENABLED: "true"   # ETL às 00h e scrapers às 06h
+      SCHEDULER_ENABLED: "true"   # ETL às 00h, scrapers às 06h e notificações às 09h
+    volumes:
+      # Chave de serviço do Firebase (envio das notificações) — fica só no
+      # servidor, em /opt/musiconnect/secrets/, fora do Git e da imagem.
+      - ./secrets:/app/secrets:ro
 
   caddy:
     image: caddy:2

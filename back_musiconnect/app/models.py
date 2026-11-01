@@ -239,6 +239,11 @@ class User(Base):
     privacy_accepted_at = Column(DateTime, nullable=True)
     privacy_policy_version = Column(String(20), nullable=True)
 
+    # Notificações (chaves do Perfil) — ligadas por padrão; só chegam se o
+    # app registrou o aparelho (DeviceToken), o que pede a permissão antes.
+    notify_new_matches = Column(Boolean, nullable=False, default=True, server_default="true")
+    notify_deadlines = Column(Boolean, nullable=False, default=True, server_default="true")
+
     created_at = Column(DateTime, server_default=func.now())
 
 
@@ -283,3 +288,42 @@ class FavoriteInstitution(Base):
         index=True,
     )
     created_at = Column(DateTime, server_default=func.now())
+
+
+class DeviceToken(Base):
+    """
+    Identificador do aparelho no Firebase Cloud Messaging — o endereço para
+    onde vão as notificações. Registrado pelo app depois que a pessoa
+    permite as notificações; apagado no "Sair", ao excluir a conta
+    (ON DELETE CASCADE) e quando o Firebase avisa que deixou de valer (app
+    desinstalado). Como a sessão é uma só por conta, a conta tem no máximo
+    o aparelho em que está conectada.
+    """
+
+    __tablename__ = "device_tokens"
+
+    token = Column(String, primary_key=True)
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class NotificationLog(Base):
+    """
+    Notificações já enviadas, por pessoa e oportunidade — impede que o
+    mesmo aviso chegue duas vezes. `kind`: "new_match" (oportunidade nova
+    com match alto), "deadline_soon" (favorita a até 7 dias do prazo) ou
+    "deadline_last" (último dia).
+    """
+
+    __tablename__ = "notification_log"
+
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    opportunity_id = Column(
+        Integer, ForeignKey("opportunities.id", ondelete="CASCADE"), primary_key=True
+    )
+    kind = Column(String(20), primary_key=True)
+    sent_at = Column(DateTime, server_default=func.now())

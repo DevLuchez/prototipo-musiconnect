@@ -10,6 +10,13 @@ class Settings(BaseSettings):
     scheduler_enabled: bool = True
     scheduler_etl_hour: int = 0      # ETL às 00:00 (America/Sao_Paulo)
     scheduler_scrapers_hour: int = 6  # Scrapers às 06:00 (ativo após Etapa 4)
+    scheduler_notifications_hour: int = 9  # Notificações às 09:00 (depois da coleta)
+
+    # Chave de serviço do Firebase (JSON baixado do console) — permite enviar
+    # as notificações. No servidor, a pasta secrets/ da raiz é montada em
+    # /app/secrets (docker-compose.prod.yml) e nunca vai para o Git. Sem o
+    # arquivo, as notificações são montadas mas não enviadas (só log).
+    firebase_credentials_file: str = "/app/secrets/firebase-service-account.json"
 
     # LLM — Google Gemini para enriquecimento de oportunidades
     gemini_api_key: Optional[str] = None
