@@ -270,7 +270,7 @@ class _StatsCard extends StatelessWidget {
           Expanded(
             child: _StatItem(
               value: '$savedOpportunities',
-              label: 'Oport. salvas',
+              label: 'Oport. favoritas',
               onTap: onOpenSavedOpportunities,
             ),
           ),

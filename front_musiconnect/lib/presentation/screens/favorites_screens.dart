@@ -81,19 +81,19 @@ class _SavedOpportunitiesScreenState extends State<SavedOpportunitiesScreen> {
   @override
   Widget build(BuildContext context) {
     return _FavoritesScaffold(
-      title: 'Oportunidades salvas',
+      title: 'Oportunidades favoritas',
       future: _future,
       onRetry: _reload,
       empty: VisitorMode.active
           ? const AccountInvite(
               icon: Icons.favorite_border_rounded,
-              message: 'Crie sua conta para salvar oportunidades e '
+              message: 'Crie sua conta para favoritar oportunidades e '
                   'acompanhar os prazos delas.',
             )
           : const _EmptyState(
               icon: Icons.favorite_border_rounded,
-              message: 'Nenhuma oportunidade salva ainda.\n'
-                  'Toque no coração de uma oportunidade para salvá-la aqui.',
+              message: 'Nenhuma oportunidade favorita ainda.\n'
+                  'Toque no coração de uma oportunidade para favoritá-la aqui.',
             ),
       builder: (List<OpportunityModel> items) => _FavoritesBrowser<OpportunityModel>(
         items: items,
@@ -114,11 +114,11 @@ class _SavedOpportunitiesScreenState extends State<SavedOpportunitiesScreen> {
         savedAt: (o) => o.savedAt,
         deadline: (o) => o.deadline,
         countLabel: (n) =>
-            n == 1 ? '1 oportunidade salva' : '$n oportunidades salvas',
+            n == 1 ? '1 oportunidade favorita' : '$n oportunidades favoritas',
         onRefresh: _reload,
         empty: const _EmptyState(
           icon: Icons.favorite_border_rounded,
-          message: 'Nenhuma oportunidade salva.',
+          message: 'Nenhuma oportunidade favorita.',
         ),
         itemBuilder: (opp) => OpportunityCard(
           key: ValueKey(opp.id),

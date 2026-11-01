@@ -362,7 +362,7 @@ class _MainNavigationState extends State<MainNavigation>
                     ),
                     _DrawerItem(
                       icon: Icons.favorite_rounded,
-                      label: 'Oportunidades salvas',
+                      label: 'Oportunidades favoritas',
                       onTap: () => _fromDrawer(_openSavedOpportunities),
                     ),
                     _DrawerItem(

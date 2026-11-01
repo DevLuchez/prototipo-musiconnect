@@ -82,7 +82,7 @@ void main() {
     await pumpProfile(tester);
 
     await tester.tap(find.text('Matches'));
-    await tester.tap(find.text('Oport. salvas'));
+    await tester.tap(find.text('Oport. favoritas'));
     await tester.tap(find.text('Inst. favoritas'));
 
     expect(opened, ['matches', 'salvas', 'favoritas']);

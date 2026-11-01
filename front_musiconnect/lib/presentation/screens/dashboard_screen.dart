@@ -147,7 +147,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           OpportunityCarouselSection(
             title: 'Última chance para seus favoritos',
             subtitle:
-                'Oportunidades salvas que fecham nos próximos $kUrgentDeadlineDays dias',
+                'Oportunidades favoritas que fecham nos próximos $kUrgentDeadlineDays dias',
             total: urgent.length,
             items: urgent,
             onCardTap: _open,

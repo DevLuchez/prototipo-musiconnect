@@ -55,7 +55,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  group('Oportunidades salvas', () {
+  group('Oportunidades favoritas', () {
     final saved = [
       _saved(1, 'Bolsa em Viena', deadline: '2026-12-20', savedAt: '2026-10-01T00:00:00', city: 'Viena'),
       _saved(2, 'Audição em Berlim', deadline: '2026-11-10', savedAt: '2026-10-20T00:00:00'),
@@ -70,7 +70,7 @@ void main() {
       await api().run(() async {
         await pumpScreen(tester, screen());
 
-        expect(find.text('3 oportunidades salvas'), findsOneWidget);
+        expect(find.text('3 oportunidades favoritas'), findsOneWidget);
         expect(titlesOnScreen(tester, titles), ['Audição em Berlim', 'Bolsa em Viena', 'Curso sem prazo']);
       });
     });
@@ -115,7 +115,7 @@ void main() {
 
         await tester.tap(find.byIcon(Icons.close_rounded));
         await tester.pumpAndSettle();
-        expect(find.text('3 oportunidades salvas'), findsOneWidget);
+        expect(find.text('3 oportunidades favoritas'), findsOneWidget);
       });
     });
 
@@ -126,7 +126,7 @@ void main() {
         await tester.tap(find.byIcon(Icons.favorite_rounded).first);
         await tester.pumpAndSettle();
 
-        expect(find.text('2 oportunidades salvas'), findsOneWidget);
+        expect(find.text('2 oportunidades favoritas'), findsOneWidget);
       });
     });
 
@@ -144,7 +144,7 @@ void main() {
     testWidgets('lista vazia e erro com nova tentativa', (tester) async {
       await FakeApi((_) => jsonResponse([])).run(() async {
         await pumpScreen(tester, screen());
-        expect(find.textContaining('Nenhuma oportunidade salva ainda.'), findsOneWidget);
+        expect(find.textContaining('Nenhuma oportunidade favorita ainda.'), findsOneWidget);
       });
       await tester.pumpWidget(const SizedBox()); // descarta a tela anterior
 
@@ -156,7 +156,7 @@ void main() {
         fail = false;
         await tester.tap(find.text('Tentar novamente'));
         await tester.pumpAndSettle();
-        expect(find.text('3 oportunidades salvas'), findsOneWidget);
+        expect(find.text('3 oportunidades favoritas'), findsOneWidget);
       });
     });
   });

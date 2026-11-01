@@ -190,7 +190,7 @@ void main() {
           home: SavedOpportunitiesScreen(user: _visitor, onOpenMap: (_) {}),
         ));
         await settle(tester);
-        expect(find.textContaining('Crie sua conta para salvar oportunidades'), findsOneWidget);
+        expect(find.textContaining('Crie sua conta para favoritar oportunidades'), findsOneWidget);
 
         await tester.pumpWidget(MaterialApp(home: FavoriteInstitutionsScreen(onOpenMap: (_) {})));
         await settle(tester);

@@ -37,9 +37,11 @@ const _faqs = [
         'inscrição é feita.',
   ),
   _Faq(
-    'Por que uma oportunidade sumiu dos meus salvos?',
-    'Quando o prazo de inscrição termina, a oportunidade sai das listas do '
-        'app, inclusive dos salvos — não há mais como se inscrever nela.',
+    'Por que uma oportunidade sumiu dos meus favoritos?',
+    'Quando o prazo de inscrição termina ou o anúncio é retirado da fonte, a '
+        'oportunidade sai das listas do app, inclusive dos favoritos — não há '
+        'mais como se inscrever nela. O mesmo vale para uma instituição que '
+        'deixa de existir no mapa.',
   ),
   _Faq(
     'O que significa a estrela no mapa?',
@@ -48,9 +50,9 @@ const _faqs = [
         'instituição organizadora não tem endereço exato no mapa.',
   ),
   _Faq(
-    'Como salvar oportunidades e instituições?',
+    'Como favoritar oportunidades e instituições?',
     'Toque no coração — no card ou no detalhe de uma oportunidade, ou no '
-        'detalhe de uma instituição do mapa. Os salvos ficam no menu lateral '
+        'detalhe de uma instituição do mapa. Os favoritos ficam no menu lateral '
         'e também podem ser abertos pelos números do Perfil.',
   ),
   _Faq(

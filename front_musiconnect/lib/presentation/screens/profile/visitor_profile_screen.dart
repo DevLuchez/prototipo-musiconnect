@@ -67,12 +67,12 @@ class VisitorProfileScreen extends StatelessWidget {
               const _Benefit(
                 icon: Icons.favorite_rounded,
                 title: 'Favoritos',
-                text: 'Salve oportunidades e instituições para acompanhar mais de perto.',
+                text: 'Favorite oportunidades e instituições para acompanhar mais de perto.',
               ),
               const _Benefit(
                 icon: Icons.access_time_rounded,
                 title: 'Prazos',
-                text: 'O Início avisa quando uma oportunidade salva está para '
+                text: 'O Início avisa quando uma oportunidade favorita está para '
                     'fechar.',
               ),
               const SizedBox(height: 8),

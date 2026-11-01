@@ -28,7 +28,7 @@ class FavoriteButton extends StatelessWidget {
     if (VisitorMode.active) {
       await showAccountInvite(
         context,
-        message: 'Crie sua conta para salvar oportunidades e favoritar '
+        message: 'Crie sua conta para favoritar oportunidades e '
             'instituições.',
       );
       return;
@@ -54,7 +54,7 @@ class FavoriteButton extends StatelessWidget {
           color: saved || circle ? _pink : Colors.grey[400],
           size: circle ? 22 : 20,
         );
-        final tooltip = saved ? 'Remover dos favoritos' : 'Salvar nos favoritos';
+        final tooltip = saved ? 'Remover dos favoritos' : 'Adicionar aos favoritos';
 
         if (circle) {
           return Tooltip(

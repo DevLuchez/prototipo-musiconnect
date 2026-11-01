@@ -47,17 +47,17 @@ const _sections = [
     'Contato para qualquer assunto sobre privacidade: $kSupportEmail.',
   ]),
   _PolicySection('Quais dados coletamos', [
-    'Coletamos o que você informa no cadastro e o que você salva no app:',
+    'Coletamos o que você informa no cadastro e o que você favorita no app:',
     '• Nome, e-mail e senha. A senha nunca é guardada como você digitou: '
         'guardamos apenas uma versão embaralhada (hash), que não permite '
         'recuperá-la.',
     '• Instrumentos, ramo de atuação (estudante e/ou profissional) e '
         'localização (país, estado e cidade), escolhidos por você em listas.',
-    '• Oportunidades e instituições que você salva como favoritas.',
+    '• Oportunidades e instituições que você marca como favoritas.',
     '• A data e a versão desta política quando você a aceitou.',
     'E, enquanto você usa o app, dados técnicos que não identificam você '
         'pelo nome ou e-mail:',
-    '• Dados de uso: telas abertas e ações como entrar, cadastrar-se, salvar '
+    '• Dados de uso: telas abertas e ações como entrar, cadastrar-se, favoritar '
         'ou abrir uma oportunidade e aplicar um filtro — sem o conteúdo do '
         'que você digita ou busca.',
     '• Relatórios de erro: quando o app trava ou falha, o que estava '
@@ -125,7 +125,7 @@ const _sections = [
         'conta, a conta e os seus favoritos são apagados na hora, de forma '
         'definitiva.',
     _Changed(
-        'Oportunidades salvas cujo prazo de inscrição terminou ou cujo anúncio '
+        'Oportunidades favoritas cujo prazo de inscrição terminou ou cujo anúncio '
         'foi retirado da fonte, e instituições favoritas que deixaram de existir '
         'no mapa, são removidas automaticamente dos seus favoritos.'),
     'No Firebase, os dados de uso ligados ao identificador da instalação '
