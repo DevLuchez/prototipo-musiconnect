@@ -36,6 +36,8 @@ const _changesSummary = [
       'dos seus favoritos as oportunidades cujo anúncio foi retirado da fonte '
       'e as instituições que deixaram de existir no mapa.',
   'Incluímos o que acontece quando você entra sem uma conta cadastrada.',
+  'Explicamos que as cópias de segurança do banco de dados guardam os dados '
+      'por até 14 dias depois da exclusão da conta.',
 ];
 
 const _sections = [
@@ -122,8 +124,12 @@ const _sections = [
   ]),
   _PolicySection('Por quanto tempo guardamos', [
     'Seus dados ficam guardados enquanto a sua conta existir. Ao excluir a '
-        'conta, a conta e os seus favoritos são apagados na hora, de forma '
-        'definitiva.',
+        'conta, a conta e os seus favoritos são apagados na hora do app, de '
+        'forma definitiva.',
+    _Changed(
+        'As cópias de segurança do banco de dados, feitas diariamente e '
+        'guardadas por até 14 dias, são apagadas automaticamente depois desse '
+        'prazo.'),
     _Changed(
         'Oportunidades favoritas cujo prazo de inscrição terminou ou cujo anúncio '
         'foi retirado da fonte, e instituições favoritas que deixaram de existir '
