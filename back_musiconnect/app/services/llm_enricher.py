@@ -32,12 +32,12 @@ from app.services.institution_factory import VALID_CATEGORIES
 logger = logging.getLogger("services.llm_enricher")
 
 # Modelo Gemini Flash — atualizar conforme modelos forem disponibilizados
-# gemini-3.5-flash (não o "lite"): o lite deixava termos em inglês no título,
-# trocava cargo por nome de instituição e às vezes soltava caracteres de
-# outros alfabetos no meio do texto. A cota gratuita do flash é menor, mas
-# chegam poucas oportunidades novas por dia; se acabar, o 429 abaixo espera
-# e o que sobrar fica para o dia seguinte.
-GEMINI_MODEL = "gemini-3.5-flash"
+# Modelos em ordem de preferência. O flash escreve melhor (o lite deixava
+# termos em inglês no título, trocava cargo por nome de instituição e às
+# vezes soltava caracteres de outros alfabetos), mas a cota gratuita dele é
+# de só 20 pedidos/dia. Esgotada a cota diária de um, segue com o próximo
+# (o lite tem cota bem maior; a checagem de inglês abaixo protege o texto).
+GEMINI_MODELS = ["gemini-3.5-flash", "gemini-3.5-flash-lite"]
 
 # Aguarda entre chamadas para respeitar o limite por minuto do free tier
 RATE_LIMIT_SLEEP = 7  # segundos → ~8 req/min (com margem de segurança)
@@ -115,6 +115,14 @@ def _looks_english(text: Optional[str]) -> bool:
 
 def _in_english(data: dict) -> bool:
     return _looks_english(data.get("title")) or _looks_english(data.get("description"))
+
+
+class _DailyQuotaExhausted(Exception):
+    """Cota diária de todos os modelos esgotada: o resto fica para amanhã."""
+
+
+def _is_daily_quota(err: str) -> bool:
+    return ("429" in err or "RESOURCE_EXHAUSTED" in err) and "PerDay" in err
 
 
 def _utc_now() -> datetime:
@@ -305,53 +313,57 @@ async def enrich_opportunities() -> dict:
 
         logger.info(f"[Enricher] {len(pending)} oportunidades para enriquecer")
 
+        model_index = 0
+
+        async def generate(contents: str):
+            """Chama o modelo atual; cota diária esgotada → próximo modelo."""
+            nonlocal model_index
+            retried_503 = False
+            while True:
+                model = GEMINI_MODELS[model_index]
+                try:
+                    return client.models.generate_content(model=model, contents=contents)
+                except Exception as api_err:
+                    err_str = str(api_err)
+                    if _is_daily_quota(err_str):
+                        if model_index + 1 < len(GEMINI_MODELS):
+                            model_index += 1
+                            logger.warning(
+                                f"[Enricher] Cota diária do {model} esgotada; "
+                                f"seguindo com o {GEMINI_MODELS[model_index]}"
+                            )
+                            continue
+                        raise _DailyQuotaExhausted() from api_err
+                    # 429 por minuto: lê o retryDelay da resposta da API
+                    if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
+                        delay_match = re.search(r'retryDelay.*?\"(\d+)s', err_str)
+                        wait_s = int(delay_match.group(1)) + 5 if delay_match else 60
+                        logger.warning(
+                            f"[Enricher] Cota esgotada (429). "
+                            f"Aguardando {wait_s}s antes de retomar..."
+                        )
+                        await asyncio.sleep(wait_s)
+                        # Não retenta no mesmo registro; marca como falha e continua
+                        raise
+                    # 503: sobrecarga momentânea — um retry rápido
+                    if ("503" in err_str or "UNAVAILABLE" in err_str) and not retried_503:
+                        retried_503 = True
+                        logger.warning("[Enricher] 503 transitório, retry em 10s...")
+                        await asyncio.sleep(10)
+                        continue
+                    raise
+
         for i, opp in enumerate(pending):
             try:
                 prompt = _build_prompt(opp.raw_text or opp.description or opp.title)
-
-                # Tenta com até 2 retries para lidar com 503 transient
-                response = None
-                for attempt in range(2):
-                    try:
-                        response = client.models.generate_content(
-                            model=GEMINI_MODEL,
-                            contents=prompt,
-                        )
-                        break  # sucesso, sai do retry loop
-                    except Exception as api_err:
-                        err_str = str(api_err)
-                        # 429: cota esgotada — lê o retryDelay da resposta da API
-                        if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
-                            delay_match = re.search(r'retryDelay.*?\"(\d+)s', err_str)
-                            wait_s = int(delay_match.group(1)) + 5 if delay_match else 60
-                            logger.warning(
-                                f"[Enricher] Cota esgotada (429). "
-                                f"Aguardando {wait_s}s antes de retomar..."
-                            )
-                            await asyncio.sleep(wait_s)
-                            # Não retenta no mesmo registro; marca como falha e continua
-                            raise  # propaga para o bloco except externo
-                        # 503: sobrecarga momentânea — retry rápido
-                        elif "503" in err_str or "UNAVAILABLE" in err_str:
-                            if attempt == 0:
-                                logger.warning(f"[Enricher] 503 transitório, retry em 10s...")
-                                await asyncio.sleep(10)
-                                continue
-                            raise
-                        else:
-                            raise
-
-                if response is None:
-                    raise RuntimeError("Sem resposta após retries")
+                response = await generate(prompt)
 
                 data = _parse_llm_response(response.text)
 
                 if data and _in_english(data):
                     logger.info(f"[Enricher] Resposta em inglês, pedindo de novo: '{opp.title[:60]}'")
                     await asyncio.sleep(RATE_LIMIT_SLEEP)
-                    retry = client.models.generate_content(
-                        model=GEMINI_MODEL, contents=prompt + _PORTUGUESE_REMINDER,
-                    )
+                    retry = await generate(prompt + _PORTUGUESE_REMINDER)
                     retry_data = _parse_llm_response(retry.text)
                     if retry_data and not _in_english(retry_data):
                         data = retry_data
@@ -378,6 +390,13 @@ async def enrich_opportunities() -> dict:
                     )
 
                 await asyncio.sleep(RATE_LIMIT_SLEEP)
+
+            except _DailyQuotaExhausted:
+                logger.warning(
+                    f"[Enricher] Cota diária de todos os modelos esgotada; "
+                    f"{len(pending) - i} oportunidades ficam para a próxima execução"
+                )
+                break
 
             except Exception as e:
                 logger.error(

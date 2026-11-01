@@ -131,10 +131,12 @@ class _FakeGemini:
     def __init__(self, replies):
         self.replies = list(replies)
         self.calls = 0
+        self.used_models = []
         self.models = self
 
     def generate_content(self, model, contents):
         self.calls += 1
+        self.used_models.append(model)
         reply = self.replies.pop(0)
         if isinstance(reply, Exception):
             raise reply
@@ -299,6 +301,34 @@ def test_429_sem_tempo_informado_espera_um_minuto(db_session, gemini):
     _run()
 
     assert 60 in gemini.sleeps
+
+
+_DAILY_429 = RuntimeError(
+    "429 RESOURCE_EXHAUSTED quotaId: GenerateRequestsPerDayPerProjectPerModel-FreeTier")
+
+
+def test_cota_diaria_do_flash_segue_com_o_lite_sem_esperar(db_session, gemini):
+    make_opportunity(db_session, title="A", raw_text="texto")
+    make_opportunity(db_session, title="B", raw_text="texto")
+    client = gemini([_ok(), _DAILY_429, _ok()])
+
+    stats = _run()
+
+    assert stats["success"] == 2
+    assert client.used_models == [
+        "gemini-3.5-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"]
+    assert 60 not in gemini.sleeps
+
+
+def test_cota_diaria_de_todos_esgotada_deixa_o_resto_para_depois(db_session, gemini):
+    ids = [make_opportunity(db_session, title=t, raw_text="texto").id for t in "ABC"]
+    client = gemini([_DAILY_429, _DAILY_429])
+
+    stats = _run()
+
+    assert client.calls == 2  # não tenta as outras: a cota só volta amanhã
+    assert stats["success"] == 0
+    assert all(db_session.get(Opportunity, i).enriched_at is None for i in ids)
 
 
 def test_outro_erro_conta_como_falha(db_session, gemini):
