@@ -46,10 +46,31 @@ def test_prazo_dd_mm_aaaa(raw, expected):
 @pytest.mark.parametrize(
     "raw,expected",
     [("violin", "Violino"), ("  Double Bass ", "Contrabaixo"), ("singer", "Vocal"),
-     ("theremin", "Theremin")],
+     ("theremin", "Theremin"), ("Clarineta", "Clarinete"), ("Fagot", "Fagote"),
+     ("Tpa", "Trompa"), ("Tímpani", "Tímpanos"), ("CLARINETE", "Clarinete"),
+     ("Gaita De Fole", "Gaita de Fole"), ("viola da gamba", "Viola da Gamba"),
+     ("Jazz", None), ("Câmara", None), ("", None)],
 )
 def test_instrumentos_em_portugues(raw, expected):
     assert enricher._normalize_instrument(raw) == expected
+
+
+def test_instrumento_fora_da_lista_vai_para_o_log(caplog):
+    enricher._normalize_instrument("theremin")
+    assert "Instrumento fora da lista: 'theremin'" in caplog.text
+
+
+def test_lista_normalizada_sem_repetidos_nem_generos():
+    assert enricher.normalize_instruments(
+        ["Clarinete", "Clarineta", "clarinet", "Jazz", None, "Oboe"]
+    ) == ["Clarinete", "Oboé"]
+
+
+def test_prompt_pede_os_nomes_oficiais_e_o_titulo_em_portugues():
+    prompt = enricher._build_prompt("Audition: Tutti Cello")
+    assert "Clarinete, Clarone" in prompt
+    assert "Só o NOME da organização" in prompt
+    assert "Audition, Fellowship" in prompt
 
 
 def _opp(**fields):
@@ -171,6 +192,59 @@ def test_processa_so_as_pendentes_com_texto(db_session, gemini):
     opp = db_session.get(Opportunity, pendente_id)
     assert opp.title == "Audição traduzida"
     assert opp.enriched_at is not None
+
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [("Audition for a Tutti Cello position in the Netherlands.", True),
+     ("Audição para Tutti Violoncelo na Phion, em Arnhem.", False),
+     ("Verbier Festival Junior Orchestra 2027 - Clarinete", False),
+     ("Global Young Musicians Competition", False), (None, False)],
+)
+def test_detecta_texto_em_ingles(text, expected):
+    assert enricher._looks_english(text) is expected
+
+
+def test_resposta_em_ingles_pede_de_novo_em_portugues(db_session, gemini):
+    opp_id = make_opportunity(db_session, raw_text="Audition: Tutti Cello").id
+    client = gemini([
+        _ok(title="Audição para Tutti Violoncelo",
+            description="Audition for a Tutti Cello position in the Netherlands."),
+        _ok(title="Audição para Tutti Violoncelo",
+            description="Audição para Tutti Violoncelo nos Países Baixos."),
+    ])
+
+    _run()
+
+    assert client.calls == 2
+    assert db_session.get(Opportunity, opp_id).description == (
+        "Audição para Tutti Violoncelo nos Países Baixos.")
+
+
+def test_se_continuar_em_ingles_fica_com_a_primeira_resposta(db_session, gemini):
+    opp_id = make_opportunity(db_session, raw_text="Audition: Tutti Cello").id
+    english = "Audition for a Tutti Cello position in the Netherlands."
+    client = gemini([_ok(description=english), _ok(description=english)])
+
+    _run()
+
+    assert client.calls == 2
+    assert db_session.get(Opportunity, opp_id).description == english
+
+
+def test_padroniza_os_instrumentos_das_ja_enriquecidas(db_session, gemini):
+    antiga = make_opportunity(db_session, raw_text="x", enriched_at=enricher._utc_now(),
+                              instruments=["Clarineta", "Jazz", "Fagot"])
+    certa = make_opportunity(db_session, raw_text="x", enriched_at=enricher._utc_now(),
+                             instruments=["Violino"])
+    antiga_id, certa_id = antiga.id, certa.id
+    client = gemini([])
+
+    _run()
+
+    assert client.calls == 0
+    assert db_session.get(Opportunity, antiga_id).instruments == ["Clarinete", "Fagote"]
+    assert db_session.get(Opportunity, certa_id).instruments == ["Violino"]
 
 
 def test_resposta_ilegivel_marca_como_processada_com_confianca_zero(db_session, gemini):

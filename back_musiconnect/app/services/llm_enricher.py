@@ -16,6 +16,7 @@ Confiança (llm_confidence):
 import asyncio
 import json
 import logging
+import re
 from datetime import datetime, date, timezone
 from typing import Optional
 
@@ -31,12 +32,33 @@ from app.services.institution_factory import VALID_CATEGORIES
 logger = logging.getLogger("services.llm_enricher")
 
 # Modelo Gemini Flash — atualizar conforme modelos forem disponibilizados
-# gemini-3.5-flash-lite: modelo lite disponível com quota generosa no free tier
-GEMINI_MODEL = "gemini-3.5-flash-lite"
+# gemini-3.5-flash (não o "lite"): o lite deixava termos em inglês no título,
+# trocava cargo por nome de instituição e às vezes soltava caracteres de
+# outros alfabetos no meio do texto. A cota gratuita do flash é menor, mas
+# chegam poucas oportunidades novas por dia; se acabar, o 429 abaixo espera
+# e o que sobrar fica para o dia seguinte.
+GEMINI_MODEL = "gemini-3.5-flash"
 
-# Aguarda entre chamadas para respeitar o free tier
-# gemini-2.0-flash-lite: 30 req/min, 1500 req/dia
-RATE_LIMIT_SLEEP = 2.5  # segundos → max ~24 req/min (com margem de segurança)
+# Aguarda entre chamadas para respeitar o limite por minuto do free tier
+RATE_LIMIT_SLEEP = 7  # segundos → ~8 req/min (com margem de segurança)
+
+
+# Nomes oficiais dos instrumentos — os que aparecem no filtro do app. O
+# prompt pede ao Gemini para usar exatamente um destes; o que vier fora da
+# lista passa por _INSTRUMENT_PT (inglês, grafias variantes) e, se ainda
+# assim for desconhecido, fica como veio e é registrado no log para que a
+# lista seja completada.
+CANONICAL_INSTRUMENTS = [
+    "Violino", "Viola", "Violoncelo", "Contrabaixo", "Harpa",
+    "Flauta", "Flautim", "Oboé", "Corne Inglês", "Clarinete", "Clarone",
+    "Fagote", "Contrafagote", "Saxofone",
+    "Trompa", "Trompete", "Trombone", "Trombone Baixo", "Tuba",
+    "Percussão", "Tímpanos", "Bateria",
+    "Piano", "Órgão", "Cravo", "Teclado", "Acordeão",
+    "Violão", "Guitarra", "Baixo", "Bandolim", "Alaúde", "Sitar", "Gaita de Fole",
+    "Vocal", "Soprano", "Mezzo-Soprano", "Contralto", "Tenor", "Barítono",
+    "Baixo-Barítono", "Regência", "Composição",
+]
 
 
 def _build_prompt(raw_text: str) -> str:
@@ -49,10 +71,10 @@ Retorne APENAS o JSON válido, sem textos técnicos adicionais, sem markdown, se
 A data de hoje é {today}.
 
 {{
-  "title": "título TRADUZIDO para português brasileiro, limpo e conciso (máx 150 caracteres)",
-  "description": "descrição clara do que é a oportunidade em 2-4 frases em português",
+  "title": "título em português brasileiro, conciso (máx 150 caracteres), no formato 'O quê + instrumento/cargo + na/no Organização' (ex: 'Audição para Tutti Violoncelo na Orquestra Sinfônica de Lahti', 'Bolsa de Harpa na National Repertory Orchestra', 'Verbier Festival Junior Orchestra 2027 - Clarinete'). Só o NOME da organização/evento/programa fica no idioma original; todas as outras palavras vão para o português, inclusive termos em inglês como Audition, Fellowship, Scholarship, Principal, Section, Supplementary, Senior Artist, Teacher, Clarinet, Cello. Revise a ortografia.",
+  "description": "descrição clara do que é a oportunidade em 2-4 frases em português, com ortografia revisada",
   "type": "um de: audicao | emprego | curso | competicao",
-  "instruments": ["Violino", "Piano", "Vocal"] — lista de instrumentos SEMPRE em português, primeira letra maiúscula. Use 'Vocal' para voz/cântante/singer/voice. Se não mencionado, retorne [].
+  "instruments": ["Violino", "Piano", "Vocal"] — lista de instrumentos. Use EXATAMENTE um destes nomes: {", ".join(CANONICAL_INSTRUMENTS)}. Use 'Vocal' para voz/canto/singer/voice. Só se o instrumento não estiver na lista, escreva o nome dele em português. Gêneros e formações (jazz, música de câmara, orquestra) NÃO são instrumentos. Se não mencionado, retorne [].
   "level": "um de: iniciante | intermediario | avancado | profissional | null",
   "deadline": "DD/MM/AAAA — se houver intervalo de datas (ex: '1 Aug 2026 - 15 Jan 2027'), use a data FINAL como prazo. Se não houver prazo explícito, retorne null",
   "country": "país onde ocorre em português (ex: Brasil, Bélgica, Alemanha) ou null",
@@ -68,6 +90,31 @@ A data de hoje é {today}.
 
 Texto do edital:
 {raw_text[:3000]}"""
+
+
+# Lembrete acrescentado ao prompt quando a resposta volta em inglês — o
+# modelo "lite" às vezes só copia o anúncio quando o texto original é curto.
+_PORTUGUESE_REMINDER = (
+    "\n\nIMPORTANTE: a resposta anterior veio em inglês. Escreva \"title\" e "
+    "\"description\" em português brasileiro (só o nome da organização fica no original)."
+)
+
+_EN_WORDS = {"the", "and", "of", "for", "to", "is", "are", "will", "with", "at", "on",
+             "audition", "position", "we", "our", "be", "take", "place", "looking"}
+_PT_WORDS = {"de", "da", "do", "para", "com", "em", "é", "são", "na", "no", "uma", "um",
+             "os", "as", "que", "pelo", "pela", "vaga", "audição"}
+
+
+def _looks_english(text: Optional[str]) -> bool:
+    """Heurística simples: mais palavras típicas do inglês que do português."""
+    words = re.findall(r"[a-zà-ÿ]+", (text or "").lower())
+    en = sum(w in _EN_WORDS for w in words)
+    pt = sum(w in _PT_WORDS for w in words)
+    return en >= 2 and en > pt
+
+
+def _in_english(data: dict) -> bool:
+    return _looks_english(data.get("title")) or _looks_english(data.get("description"))
 
 
 def _utc_now() -> datetime:
@@ -101,7 +148,7 @@ def _parse_deadline(deadline_str: Optional[str]) -> Optional[date]:
         return None
 
 
-# Mapeamento de nomes de instrumentos em inglês para português
+# Inglês e grafias variantes → nome oficial (chaves em minúsculas)
 _INSTRUMENT_PT = {
     "violin": "Violino", "viola": "Viola",
     "cello": "Violoncelo", "violoncello": "Violoncelo",
@@ -119,14 +166,73 @@ _INSTRUMENT_PT = {
     "conducting": "Regência", "conductor": "Regência",
     "composition": "Composição", "composing": "Composição",
     "saxophone": "Saxofone", "accordion": "Acordeão",
-    "lute": "Alaude", "mandolin": "Mandolim",
+    "lute": "Alaúde", "mandolin": "Bandolim",
+    "piccolo": "Flautim", "english horn": "Corne Inglês", "cor anglais": "Corne Inglês",
+    "bass clarinet": "Clarone", "contrabassoon": "Contrafagote",
+    "bass trombone": "Trombone Baixo", "timpani": "Tímpanos", "tímpani": "Tímpanos",
+    "tímpano": "Tímpanos", "timpano": "Tímpanos", "drums": "Bateria", "drum kit": "Bateria",
+    "keyboard": "Teclado", "electric guitar": "Guitarra", "bass guitar": "Baixo",
+    "bagpipes": "Gaita de Fole", "voz": "Vocal", "canto": "Vocal",
+    # Grafias que o Gemini já devolveu
+    "clarineta": "Clarinete", "fagot": "Fagote", "tpa": "Trompa", "alaude": "Alaúde",
+    "mandolim": "Bandolim",
+}
+_CANONICAL_BY_KEY = {name.lower(): name for name in CANONICAL_INSTRUMENTS}
+
+# Gêneros e formações que o Gemini às vezes devolve como instrumento.
+_NOT_INSTRUMENTS = {
+    "jazz", "câmara", "camara", "música de câmara", "musica de camara",
+    "chamber music", "orquestra", "orchestra",
 }
 
+# Palavras que ficam minúsculas no meio do nome ("Gaita de Fole").
+_LOWERCASE_WORDS = {"de", "da", "do", "das", "dos", "e"}
 
-def _normalize_instrument(name: str) -> str:
-    """Normaliza nome do instrumento para português capitalizado."""
-    key = name.strip().lower()
-    return _INSTRUMENT_PT.get(key, name.strip().title())
+
+def _title_pt(name: str) -> str:
+    words = name.split()
+    return " ".join(
+        w.lower() if i > 0 and w.lower() in _LOWERCASE_WORDS else w[:1].upper() + w[1:].lower()
+        for i, w in enumerate(words)
+    )
+
+
+def _normalize_instrument(name: str) -> Optional[str]:
+    """Nome oficial do instrumento, em português; None se não for instrumento
+    (gênero ou formação). Desconhecido: fica como veio (capitalizado) e vai
+    para o log, para completar a lista."""
+    key = " ".join(name.split()).lower()
+    if not key or key in _NOT_INSTRUMENTS:
+        return None
+    known = _CANONICAL_BY_KEY.get(key) or _INSTRUMENT_PT.get(key)
+    if known:
+        return known
+    logger.warning(f"[Enricher] Instrumento fora da lista: '{name.strip()}'")
+    return _title_pt(key)
+
+
+def normalize_instruments(names) -> list[str]:
+    """Normaliza a lista inteira, sem repetidos e na ordem original."""
+    result: list[str] = []
+    for name in names or []:
+        normalized = _normalize_instrument(name) if name else None
+        if normalized and normalized not in result:
+            result.append(normalized)
+    return result
+
+
+def renormalize_existing(db: Session) -> int:
+    """Aplica a normalização atual às oportunidades já enriquecidas — assim um
+    nome acrescentado à lista corrige também as antigas. Devolve quantas
+    mudaram."""
+    changed = 0
+    for opp in db.query(Opportunity).filter(Opportunity.instruments != None):  # noqa: E711
+        normalized = normalize_instruments(opp.instruments)
+        if normalized != list(opp.instruments):
+            opp.instruments = normalized
+            changed += 1
+    db.commit()
+    return changed
 
 
 def _apply_enrichment(opp: Opportunity, data: dict) -> None:
@@ -142,7 +248,7 @@ def _apply_enrichment(opp: Opportunity, data: dict) -> None:
 
     # Normaliza instrumentos para português
     raw_instruments = data.get("instruments") or opp.instruments or []
-    opp.instruments  = [_normalize_instrument(i) for i in raw_instruments if i]
+    opp.instruments  = normalize_instruments(raw_instruments)
 
     opp.level        = data.get("level") or opp.level
     # deadline e institution: se já vieram da página de detalhe do scraper
@@ -185,6 +291,10 @@ async def enrich_opportunities() -> dict:
     failed = 0
 
     try:
+        fixed = renormalize_existing(db)
+        if fixed:
+            logger.info(f"[Enricher] Instrumentos padronizados em {fixed} oportunidades já existentes")
+
         # Busca todas as oportunidades ainda não enriquecidas
         pending = (
             db.query(Opportunity)
@@ -212,8 +322,7 @@ async def enrich_opportunities() -> dict:
                         err_str = str(api_err)
                         # 429: cota esgotada — lê o retryDelay da resposta da API
                         if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
-                            import re as _re
-                            delay_match = _re.search(r'retryDelay.*?\"(\d+)s', err_str)
+                            delay_match = re.search(r'retryDelay.*?\"(\d+)s', err_str)
                             wait_s = int(delay_match.group(1)) + 5 if delay_match else 60
                             logger.warning(
                                 f"[Enricher] Cota esgotada (429). "
@@ -236,6 +345,18 @@ async def enrich_opportunities() -> dict:
                     raise RuntimeError("Sem resposta após retries")
 
                 data = _parse_llm_response(response.text)
+
+                if data and _in_english(data):
+                    logger.info(f"[Enricher] Resposta em inglês, pedindo de novo: '{opp.title[:60]}'")
+                    await asyncio.sleep(RATE_LIMIT_SLEEP)
+                    retry = client.models.generate_content(
+                        model=GEMINI_MODEL, contents=prompt + _PORTUGUESE_REMINDER,
+                    )
+                    retry_data = _parse_llm_response(retry.text)
+                    if retry_data and not _in_english(retry_data):
+                        data = retry_data
+                    else:
+                        logger.warning(f"[Enricher] Continua em inglês: '{opp.title[:60]}'")
 
                 if data:
                     _apply_enrichment(opp, data)
