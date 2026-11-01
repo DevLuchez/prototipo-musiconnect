@@ -26,6 +26,9 @@ class Monitoring {
   static const _prefsKey = 'usage_data_enabled';
 
   static bool _enabled = false;
+
+  /// O Firebase iniciou (as notificações dependem dele).
+  static bool get firebaseReady => _enabled;
   static FirebaseAnalytics? _analytics;
 
   /// Escolha da pessoa no Perfil (padrão: ligado).

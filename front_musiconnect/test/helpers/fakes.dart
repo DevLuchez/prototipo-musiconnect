@@ -4,7 +4,10 @@
 // serviço real e respondem o que cada teste definir. Métodos que um teste
 // não usa caem no noSuchMethod e falham se forem chamados.
 
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
+import 'package:prototipo_musiconnect/core/push_notifications.dart';
 import 'package:prototipo_musiconnect/data/models/opportunity_model.dart';
 import 'package:prototipo_musiconnect/data/services/auth_service.dart';
 import 'package:prototipo_musiconnect/data/services/dashboard_service.dart';
@@ -190,4 +193,46 @@ class FakeOpportunitiesService implements OpportunitiesService {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// Firebase Cloud Messaging simulado: [permitted] é a permissão do
+/// Android; [allowOnRequest] é a resposta da pessoa ao pedido.
+class FakePushBackend implements PushBackend {
+  FakePushBackend({this.permitted = false, this.allowOnRequest = true, this.initial});
+
+  bool permitted;
+  bool allowOnRequest;
+  PushMessage? initial;
+  int permissionRequests = 0;
+  int tokensDeleted = 0;
+  final tapController = StreamController<PushMessage>.broadcast();
+  final foregroundController = StreamController<PushMessage>.broadcast();
+
+  @override
+  Future<bool> requestPermission() async {
+    permissionRequests++;
+    permitted = allowOnRequest;
+    return permitted;
+  }
+
+  @override
+  Future<bool> isPermitted() async => permitted;
+
+  @override
+  Future<String?> getToken() async => 'aparelho-teste';
+
+  @override
+  Stream<String> get onTokenRefresh => const Stream.empty();
+
+  @override
+  Future<void> deleteToken() async => tokensDeleted++;
+
+  @override
+  Future<PushMessage?> initialTap() async => initial;
+
+  @override
+  Stream<PushMessage> get taps => tapController.stream;
+
+  @override
+  Stream<PushMessage> get foreground => foregroundController.stream;
 }

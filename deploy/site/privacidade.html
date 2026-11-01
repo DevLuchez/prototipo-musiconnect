@@ -53,14 +53,12 @@
     <a class="brand" href="/"><img src="/logo.png" alt=""><b>Musi<span>Connect</span></b></a>
 
     <h1>Política de privacidade</h1>
-    <p class="updated">Atualizada em 31/10/2026</p>
+    <p class="updated">Atualizada em 01/11/2026</p>
 
     <div class="summary">
       <h2>O que mudou nesta versão</h2>
       <ul>
-          <li>Explicamos que, além das oportunidades com prazo encerrado, também saem dos seus favoritos as oportunidades cujo anúncio foi retirado da fonte e as instituições que deixaram de existir no mapa.</li>
-          <li>Incluímos o que acontece quando você entra sem uma conta cadastrada.</li>
-          <li>Explicamos que as cópias de segurança do banco de dados guardam os dados por até 14 dias depois da exclusão da conta.</li>
+          <li>Incluímos as notificações: se você permitir, guardamos um identificador do seu celular para avisar de oportunidades novas que combinam com você e de prazos dos seus favoritos. Você pode desligá-las no Perfil.</li>
       </ul>
       <p class="legend"><mark>Trechos destacados</mark> são novos ou foram alterados nesta versão.</p>
     </div>
@@ -79,6 +77,7 @@
         <li>Instrumentos, ramo de atuação (estudante e/ou profissional) e localização (país, estado e cidade), escolhidos por você em listas.</li>
         <li>Oportunidades e instituições que você marca como favoritas.</li>
         <li>A data e a versão desta política quando você a aceitou.</li>
+        <li class="changed">Se você permitir as notificações: um identificador do seu celular gerado pelo Firebase Cloud Messaging (o endereço para onde vão os avisos), quais avisos você quer receber e quais já recebeu, para não repetir.</li>
         </ul>
         <p>E, enquanto você usa o app, dados técnicos que não identificam você pelo nome ou e-mail:</p>
         <ul>
@@ -86,7 +85,7 @@
         <li>Relatórios de erro: quando o app trava ou falha, o que estava acontecendo no código naquele momento.</li>
         <li>Junto com eles, informações do aparelho: modelo, versão do Android, idioma, país aproximado e um identificador aleatório da instalação do app.</li>
         </ul>
-        <p class="changed">Se você entrar sem uma conta cadastrada, não coletamos dados de cadastro: só os dados técnicos de uso e erros descritos acima, e a visita termina quando o app é fechado.</p>
+        <p>Se você entrar sem uma conta cadastrada, não coletamos dados de cadastro: só os dados técnicos de uso e erros descritos acima, e a visita termina quando o app é fechado.</p>
         <p>Não usamos o ID de publicidade do celular, não acessamos a localização GPS, seus contatos, fotos, câmera ou microfone, e não coletamos dados de pagamento.</p>
       </section>
 
@@ -97,6 +96,7 @@
         <li>Enviar e-mails de confirmação de cadastro e de redefinição de senha. Não enviamos propaganda.</li>
         <li>Calcular o percentual de compatibilidade (match) entre o seu perfil e cada oportunidade.</li>
         <li>Mostrar e guardar os seus favoritos.</li>
+        <li class="changed">Enviar notificações de oportunidades novas que combinam com você e de prazos dos seus favoritos, se você permitir — no máximo uma de cada tipo por dia.</li>
         <li>Entender como o app é usado e corrigir erros (dados de uso e relatórios de erro).</li>
         </ul>
         <p>Usamos os dados da conta com base no seu consentimento e para prestar o serviço que você pediu ao se cadastrar (art. 7º, incisos I e V, da Lei Geral de Proteção de Dados — Lei nº 13.709/2018). Os dados de uso e os relatórios de erro são tratados com base no legítimo interesse de manter o app funcionando e melhorá-lo (art. 7º, inciso IX) — e você pode desligar esse envio quando quiser: Perfil → Enviar dados de uso e erros.</p>
@@ -112,6 +112,7 @@
         <li>GeoNames: fornece as listas de países, estados e cidades do cadastro. Recebe apenas a consulta da lista, sem nenhum dado seu.</li>
         <li>Google Gemini: lê os textos públicos dos anúncios de oportunidades para organizá-los. Nenhum dado de usuário é enviado a ele.</li>
         <li>Google Firebase (Analytics e Crashlytics): recebe os dados de uso e os relatórios de erro descritos acima, sem o seu nome nem o seu e-mail. Os servidores do Google podem ficar fora do Brasil; o Google trata esses dados conforme os termos de proteção de dados do Firebase.</li>
+        <li class="changed">Google Firebase Cloud Messaging: entrega as notificações ao seu celular. Recebe o identificador do aparelho e o texto do aviso (como o título de uma oportunidade), sem o seu nome nem o seu e-mail.</li>
         </ul>
       </section>
 
@@ -120,15 +121,17 @@
         <ul>
         <li>O código da sua sessão, para você não precisar fazer login toda vez. Ele fica em armazenamento criptografado do aparelho e é apagado ao sair da conta.</li>
         <li>Preferências de exibição, como a ordenação das listas de favoritos, e a sua escolha de enviar ou não dados de uso e erros.</li>
-        <li class="changed">Se você entrou sem conta, a versão desta política que aceitou — para não pedir o aceite a cada visita.</li>
+        <li class="changed">Se o convite das notificações já apareceu, para não perguntar de novo.</li>
+        <li>Se você entrou sem conta, a versão desta política que aceitou — para não pedir o aceite a cada visita.</li>
         </ul>
       </section>
 
       <section>
         <h2>Por quanto tempo guardamos</h2>
         <p>Seus dados ficam guardados enquanto a sua conta existir. Ao excluir a conta, a conta e os seus favoritos são apagados na hora do app, de forma definitiva.</p>
-        <p class="changed">As cópias de segurança do banco de dados, feitas diariamente e guardadas por até 14 dias, são apagadas automaticamente depois desse prazo.</p>
-        <p class="changed">Oportunidades favoritas cujo prazo de inscrição terminou ou cujo anúncio foi retirado da fonte, e instituições favoritas que deixaram de existir no mapa, são removidas automaticamente dos seus favoritos.</p>
+        <p>As cópias de segurança do banco de dados, feitas diariamente e guardadas por até 14 dias, são apagadas automaticamente depois desse prazo.</p>
+        <p>Oportunidades favoritas cujo prazo de inscrição terminou ou cujo anúncio foi retirado da fonte, e instituições favoritas que deixaram de existir no mapa, são removidas automaticamente dos seus favoritos.</p>
+        <p class="changed">O identificador do celular para notificações é apagado quando você sai da conta, quando exclui a conta ou quando o app é desinstalado.</p>
         <p>No Firebase, os dados de uso ligados ao identificador da instalação ficam guardados por até 2 meses, e os relatórios de erro por até 90 dias; depois disso, só restam números agregados (ex: quantas pessoas abriram o mapa).</p>
       </section>
 
@@ -140,6 +143,7 @@
         <li>Corrigir seus dados: Perfil → Editar.</li>
         <li>Excluir seus dados e revogar o consentimento: Perfil → Excluir conta.</li>
         <li>Se opor ao envio de dados de uso e erros: Perfil → Enviar dados de uso e erros.</li>
+        <li class="changed">Parar de receber notificações: Perfil → Notificações, ou nas configurações do Android.</li>
         <li>Tirar dúvidas ou fazer qualquer outro pedido pelo e-mail laura.luchez@gmail.com.</li>
         </ul>
       </section>

@@ -1,14 +1,16 @@
 import 'package:flutter/foundation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../../core/monitoring.dart';
+import '../../core/push_notifications.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/services/favorites_service.dart';
 import '../../data/services/match_count_service.dart';
+import '../../data/services/notifications_service.dart';
 import 'view_model.dart';
 
 /// Estado e regras da aba Perfil ([ProfileScreen]): dados do usuário já
 /// formatados para exibir, números do card de estatísticas, a chave de
-/// dados de uso e as ações da conta. Abrir telas e diálogos fica na tela.
+/// dados de uso, as chaves de notificação e as ações da conta. Abrir telas e diálogos fica na tela.
 ///
 /// Escuta os favoritos, o número de matches e a chave de dados de uso — os
 /// números mudam na hora quando um coração é marcado em qualquer tela.
@@ -21,7 +23,11 @@ class ProfileViewModel extends ViewModel {
     ValueListenable<bool>? usageDataEnabled,
     Future<void> Function(bool enabled)? setUsageDataEnabled,
     Future<PackageInfo> Function()? packageInfo,
+    PushNotifications? push,
+    NotificationsService? notificationsService,
   })  : _user = user,
+        _push = push ?? PushNotifications.instance,
+        _notificationsService = notificationsService ?? NotificationsService(),
         _authService = authService ?? AuthService(),
         _favorites = favorites ?? FavoritesService.instance,
         _matchCount = matchCount ?? MatchCountService.instance,
@@ -31,6 +37,8 @@ class ProfileViewModel extends ViewModel {
     _matchCount.addListener(notifyListeners);
     _usageDataEnabled.addListener(notifyListeners);
     _loadAppVersion(packageInfo ?? PackageInfo.fromPlatform);
+    _push.permitted.addListener(notifyListeners);
+    _push.isPermitted();
   }
 
   final AuthService _authService;
@@ -38,6 +46,8 @@ class ProfileViewModel extends ViewModel {
   final MatchCountService _matchCount;
   final ValueListenable<bool> _usageDataEnabled;
   final Future<void> Function(bool enabled) _setUsageDataEnabled;
+  final PushNotifications _push;
+  final NotificationsService _notificationsService;
 
   AuthUser _user;
   AuthUser get user => _user;
@@ -91,6 +101,45 @@ class ProfileViewModel extends ViewModel {
   bool get usageDataEnabled => _usageDataEnabled.value;
   Future<void> setUsageDataEnabled(bool enabled) => _setUsageDataEnabled(enabled);
 
+  // ── Notificações ────────────────────────────────────────────────────
+
+  bool get _notificationsPermitted => _push.permitted.value;
+
+  /// Chave ligada = a pessoa quer E o Android permite (sem a permissão,
+  /// nada chega — mostrar ligada seria enganoso).
+  bool get notifyNewMatches => _notificationsPermitted && _user.notifyNewMatches;
+  bool get notifyDeadlines => _notificationsPermitted && _user.notifyDeadlines;
+
+  /// Liga/desliga um tipo de notificação. Ligar sem a permissão do Android
+  /// pede a permissão antes. Devolve a mensagem de erro para exibir, ou null.
+  Future<String?> setNotification({bool? newMatches, bool? deadlines}) async {
+    // A outra chave fica como estava na tela (sem a permissão, desligada).
+    final shownNewMatches = notifyNewMatches;
+    final shownDeadlines = notifyDeadlines;
+    final turningOn = newMatches == true || deadlines == true;
+    if (turningOn && !_notificationsPermitted) {
+      if (!await _push.enable()) {
+        return 'Permita as notificações do MusiConnect nas configurações do Android.';
+      }
+    }
+    try {
+      final updated = await _notificationsService.updatePreferences(
+        newMatches: newMatches ?? shownNewMatches,
+        deadlines: deadlines ?? shownDeadlines,
+      );
+      _user = updated;
+      notifyListeners();
+      onUserUpdated?.call(updated);
+      return null;
+    } on AuthException catch (e) {
+      return e.message;
+    }
+  }
+
+  /// Avisado quando as chaves de notificação mudam o usuário (o
+  /// MainNavigation guarda a versão atual).
+  ValueChanged<AuthUser>? onUserUpdated;
+
   /// Depois de salvar a edição: instrumentos/ramo/localização mudam o match
   /// de cada oportunidade, então o número de matches é recalculado.
   void profileEdited(AuthUser updated) {
@@ -104,6 +153,7 @@ class ProfileViewModel extends ViewModel {
   Future<String?> deleteAccount(String password) async {
     try {
       await _authService.deleteAccount(password);
+      await _push.unregister();
       return null;
     } on AuthException catch (e) {
       return e.message;
@@ -115,6 +165,7 @@ class ProfileViewModel extends ViewModel {
     _favorites.removeListener(notifyListeners);
     _matchCount.removeListener(notifyListeners);
     _usageDataEnabled.removeListener(notifyListeners);
+    _push.permitted.removeListener(notifyListeners);
     super.dispose();
   }
 }

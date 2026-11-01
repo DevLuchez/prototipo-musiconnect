@@ -51,7 +51,15 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  late final _viewModel = widget.viewModel ?? ProfileViewModel(user: widget.user);
+  late final _viewModel = (widget.viewModel ?? ProfileViewModel(user: widget.user))
+    ..onUserUpdated = widget.onUserChanged;
+
+  Future<void> _setNotification({bool? newMatches, bool? deadlines}) async {
+    final error = await _viewModel.setNotification(newMatches: newMatches, deadlines: deadlines);
+    if (error != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+    }
+  }
 
   @override
   void didUpdateWidget(ProfileScreen oldWidget) {
@@ -187,6 +195,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ramoLabels: vm.ramoLabels,
           location: vm.location,
           onEdit: _editProfile,
+        ),
+        const SizedBox(height: 16),
+        NotificationsCard(
+          newMatches: vm.notifyNewMatches,
+          deadlines: vm.notifyDeadlines,
+          onNewMatchesChanged: (v) => _setNotification(newMatches: v),
+          onDeadlinesChanged: (v) => _setNotification(deadlines: v),
         ),
         const SizedBox(height: 16),
         UsageDataCard(enabled: vm.usageDataEnabled, onChanged: vm.setUsageDataEnabled),
@@ -468,6 +483,99 @@ class _InfoChip extends StatelessWidget {
         label,
         style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color),
       ),
+    );
+  }
+}
+
+/// Notificações: "Novas oportunidades para você" e "Prazos dos favoritos".
+class NotificationsCard extends StatelessWidget {
+  final bool newMatches;
+  final bool deadlines;
+  final ValueChanged<bool> onNewMatchesChanged;
+  final ValueChanged<bool> onDeadlinesChanged;
+
+  const NotificationsCard({
+    super.key,
+    required this.newMatches,
+    required this.deadlines,
+    required this.onNewMatchesChanged,
+    required this.onDeadlinesChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 12, offset: const Offset(0, 4)),
+        ],
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 14, 12, 6),
+      // Sino centralizado na altura do cartão (mesmo arranjo do cartão de
+      // dados de uso: ícone à esquerda, conteúdo à direita).
+      child: Row(
+        children: [
+          Icon(Icons.notifications_none_rounded, size: 20, color: Colors.grey[600]),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Notificações',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: kAuthTextDark)),
+                _NotificationSwitch(
+                  title: 'Novas oportunidades para você',
+                  subtitle: 'Quando surgir uma com 85% ou mais de match.',
+                  value: newMatches,
+                  onChanged: onNewMatchesChanged,
+                ),
+                _NotificationSwitch(
+                  title: 'Prazos dos favoritos',
+                  subtitle: 'Quando faltar menos de uma semana e no último dia.',
+                  value: deadlines,
+                  onChanged: onDeadlinesChanged,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NotificationSwitch extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _NotificationSwitch({
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: kAuthTextDark)),
+              const SizedBox(height: 2),
+              Text(subtitle, style: TextStyle(fontSize: 11.5, color: Colors.grey[500])),
+            ],
+          ),
+        ),
+        Switch(value: value, activeColor: kAuthPink, onChanged: onChanged),
+      ],
     );
   }
 }

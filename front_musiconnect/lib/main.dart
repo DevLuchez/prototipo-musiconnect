@@ -6,10 +6,13 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/deep_links.dart';
 import 'core/monitoring.dart';
+import 'core/push_notifications.dart';
 import 'core/visitor_mode.dart';
 import 'data/services/auth_service.dart';
 import 'data/services/favorites_service.dart';
 import 'data/services/match_count_service.dart';
+import 'data/services/notifications_service.dart';
+import 'data/services/opportunities_service.dart';
 import 'presentation/screens/auth/login_screen.dart';
 import 'presentation/screens/auth/reset_password_screen.dart';
 import 'presentation/screens/auth/welcome_screen.dart';
@@ -18,6 +21,7 @@ import 'presentation/screens/favorites_screens.dart';
 import 'presentation/screens/help_screen.dart';
 import 'presentation/screens/map_explorer_screen.dart';
 import 'presentation/screens/matcher_screen.dart';
+import 'presentation/screens/opportunity_detail_screen.dart';
 import 'presentation/screens/privacy_policy_screen.dart';
 import 'presentation/screens/profile/profile_screen.dart';
 import 'presentation/screens/profile/visitor_profile_screen.dart';
@@ -34,6 +38,7 @@ final navigatorKey = GlobalKey<NavigatorState>();
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Monitoring.init();
+  PushNotifications.instance.init();
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.dark,
@@ -178,7 +183,7 @@ class MainNavigation extends StatefulWidget {
 }
 
 class MainNavigationState extends State<MainNavigation>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   int _selectedIndex = _homeTab; // começa na aba Início
 
   // Usuário logado, atualizado quando o perfil é editado — repassado às
@@ -216,6 +221,9 @@ class MainNavigationState extends State<MainNavigation>
 
   bool get _isVisitor => _user.isVisitor;
 
+  StreamSubscription<PushMessage>? _pushTaps;
+  StreamSubscription<PushMessage>? _pushForeground;
+
   @override
   void initState() {
     super.initState();
@@ -227,6 +235,12 @@ class MainNavigationState extends State<MainNavigation>
       FavoritesService.instance.load();
       // Número de Matches do Perfil.
       MatchCountService.instance.refresh(clear: true);
+      // Notificações: aparelho registrado de novo a cada abertura (se já
+      // permitidas) e o que fazer ao tocar numa / ao chegar com o app aberto.
+      final push = PushNotifications.instance;
+      push.register();
+      _pushTaps = push.taps.listen(_openFromNotification);
+      _pushForeground = push.foreground.listen(_showForegroundNotification);
     }
     _iconPulse = AnimationController(
       vsync: this,
@@ -236,28 +250,140 @@ class MainNavigationState extends State<MainNavigation>
       CurvedAnimation(parent: _iconPulse, curve: Curves.easeInOut),
     );
     tutorialRequest.addListener(_startTutorial);
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _onFirstFrame());
+  }
+
+  /// Voltando ao app (ex: das configurações do Android): a permissão de
+  /// notificação pode ter mudado — o Perfil mostra as chaves certas e, se
+  /// passou a valer, o aparelho é registrado.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && !_isVisitor) {
+      PushNotifications.instance.register();
+    }
   }
 
   Future<void> _onFirstFrame() async {
     // A política mudou desde o último aceite: pede o novo aceite antes de
     // seguir (vale tanto para a sessão salva quanto para o login).
     if (_user.needsPrivacyAcceptance) await _askPrivacyAcceptance();
-    if (mounted) await _offerTutorial();
+    if (!mounted) return;
+    // App aberto pelo toque numa notificação: vai direto ao que ela avisa.
+    final tap = _isVisitor ? null : await PushNotifications.instance.initialTap();
+    if (!mounted) return;
+    if (tap != null) {
+      _openFromNotification(tap);
+      return;
+    }
+    await _offerTutorial();
   }
 
   /// Primeira entrada neste aparelho (com conta ou como visitante): oferece
   /// o tutorial uma única vez — ele fica também na Ajuda.
   Future<void> _offerTutorial() async {
     final prefs = await SharedPreferences.getInstance();
-    if (prefs.getBool(tutorialOfferedKey) ?? false) return;
+    if (prefs.getBool(tutorialOfferedKey) ?? false) {
+      // Tutorial já oferecido (ex: quem atualizou o app): segue para o
+      // convite das notificações, se ainda não apareceu.
+      await _offerNotifications();
+      return;
+    }
     await prefs.setBool(tutorialOfferedKey, true);
     if (!mounted) return;
     if (await askToStartTutorial(context)) {
       _startTutorial();
     } else if (mounted) {
       _showTutorialMessage(kTutorialLaterMessage);
+      await _offerNotifications();
     }
+  }
+
+  /// Convite das notificações — uma vez por aparelho, só com conta, depois
+  /// do tutorial. Explica para que servem antes do pedido do Android; só o
+  /// "Quero" mostra o pedido. "Agora não" desliga as duas chaves do Perfil
+  /// (onde a pessoa pode ligar depois).
+  Future<void> _offerNotifications() async {
+    final push = PushNotifications.instance;
+    if (_isVisitor || !push.available || await PushNotifications.wasOffered()) return;
+    await PushNotifications.markOffered();
+    if (!mounted) return;
+    final wants = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AuthDialog.message(
+        title: 'Notificações',
+        message: 'Quer ser avisado de oportunidades que combinam com você e de '
+            'prazos dos seus favoritos?',
+        primaryLabel: 'Quero',
+        onPrimary: () => Navigator.of(dialogContext).pop(true),
+        secondaryLabel: 'Agora não',
+        onSecondary: () => Navigator.of(dialogContext).pop(false),
+      ),
+    );
+    Monitoring.logEvent(wants == true ? 'notifications_accept' : 'notifications_decline');
+    if (wants == true && await push.enable()) return;
+    if (wants != true) {
+      try {
+        final user = await NotificationsService()
+            .updatePreferences(newMatches: false, deadlines: false);
+        if (mounted) setState(() => _user = user);
+      } catch (_) {
+        // Sem conexão: as chaves ficam como estavam; sem o aparelho
+        // registrado, nada é enviado de qualquer forma.
+      }
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text(kNotificationsLaterMessage),
+      duration: Duration(seconds: 5),
+    ));
+  }
+
+  /// Toque numa notificação: abre a oportunidade, "Minhas oportunidades"
+  /// ou os favoritos (o que o servidor mandou em `data.open`).
+  Future<void> _openFromNotification(PushMessage message) async {
+    if (!mounted) return;
+    final route = ModalRoute.of(context);
+    if (route != null) Navigator.of(context).popUntil((r) => r == route);
+    switch (message.data['open']) {
+      case 'opportunity':
+        final id = int.tryParse('${message.data['opportunity_id']}');
+        final opportunity = id == null ? null : await OpportunitiesService().fetchById(id);
+        if (!mounted) return;
+        if (opportunity == null) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Essa oportunidade não está mais disponível.'),
+          ));
+          return;
+        }
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => OpportunityDetailScreen(
+            opportunity: opportunity,
+            user: _user,
+            onOpenMap: (opp) => _focusOnMap(MapFocusTarget.opportunity(opp)),
+          ),
+        ));
+      case 'matches':
+        _openMatcher(0);
+      case 'favorites':
+        _openSavedOpportunities();
+    }
+  }
+
+  /// Notificação que chega com o app aberto (o Android não mostra): aviso
+  /// rápido com "Ver".
+  void _showForegroundNotification(PushMessage message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text([message.title, message.body].whereType<String>().join('\n')),
+      duration: const Duration(seconds: 6),
+      action: SnackBarAction(
+        label: 'Ver',
+        textColor: Colors.white,
+        onPressed: () => _openFromNotification(message),
+      ),
+    ));
   }
 
   void _startTutorial() {
@@ -273,6 +399,7 @@ class MainNavigationState extends State<MainNavigation>
       _selectedIndex = _homeTab;
     });
     _showTutorialMessage(completed ? kTutorialDoneMessage : kTutorialSkipMessage);
+    _offerNotifications();
   }
 
   /// Aba pedida pelo passo do tutorial. No Matcher, a aba onde está a busca
@@ -315,6 +442,9 @@ class MainNavigationState extends State<MainNavigation>
   @override
   void dispose() {
     tutorialRequest.removeListener(_startTutorial);
+    WidgetsBinding.instance.removeObserver(this);
+    _pushTaps?.cancel();
+    _pushForeground?.cancel();
     _iconPulse.dispose();
     _mapFocusRequest.dispose();
     _matcherTabRequest.dispose();

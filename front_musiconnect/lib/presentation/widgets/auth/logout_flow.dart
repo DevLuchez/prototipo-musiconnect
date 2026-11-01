@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import '../../../core/push_notifications.dart';
 import '../../../data/services/auth_service.dart';
 import '../../screens/auth/welcome_screen.dart';
 import 'auth_common.dart';
 
 /// "Sair da conta" — mesmo fluxo no Perfil e no menu lateral: pede
-/// confirmação, invalida a sessão no backend e volta para a tela inicial
-/// (limpando toda a pilha de telas).
+/// confirmação, invalida a sessão no backend (que também para as
+/// notificações do aparelho) e volta para a tela inicial (limpando toda a
+/// pilha de telas).
 Future<void> confirmAndLogout(BuildContext context) async {
   final confirmed = await showDialog<bool>(
     context: context,
@@ -21,6 +23,7 @@ Future<void> confirmAndLogout(BuildContext context) async {
   if (confirmed != true) return;
 
   await AuthService().logout();
+  await PushNotifications.instance.unregister();
   if (!context.mounted) return;
   Navigator.of(context).pushAndRemoveUntil(
     MaterialPageRoute(builder: (_) => const WelcomeScreen()),

@@ -42,6 +42,10 @@ class ApiConfig {
   static const String authLogout         = '$baseUrl/api/auth/logout';
   static const String authAcceptPrivacy  = '$baseUrl/api/auth/accept-privacy';
 
+  // Notificações
+  static const String notificationsDevice      = '$baseUrl/api/notifications/device';
+  static const String notificationsPreferences = '$baseUrl/api/notifications/preferences';
+
   // ── GeoNames (país/estado/cidade do cadastro) ──────────────────
   // Conta gratuita em https://www.geonames.org/login — depois de criar,
   // ative "Free Web Services" no perfil (geonames.org/manageaccount) e

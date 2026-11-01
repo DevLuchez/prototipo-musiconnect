@@ -98,14 +98,15 @@ void main() {
   });
 
   testWidgets('chave de dados de uso liga e desliga', (tester) async {
+    final usageSwitch = find.descendant(of: find.byType(UsageDataCard), matching: find.byType(Switch));
     await pumpProfile(tester);
-    expect(tester.widget<Switch>(find.byType(Switch)).value, isTrue);
+    expect(tester.widget<Switch>(usageSwitch).value, isTrue);
 
-    await tester.tap(find.byType(Switch));
+    await tester.tap(usageSwitch);
     await tester.pumpAndSettle();
 
     expect(usageData.value, isFalse);
-    expect(tester.widget<Switch>(find.byType(Switch)).value, isFalse);
+    expect(tester.widget<Switch>(usageSwitch).value, isFalse);
   });
 
   testWidgets('alterar senha abre a tela de troca de senha', (tester) async {

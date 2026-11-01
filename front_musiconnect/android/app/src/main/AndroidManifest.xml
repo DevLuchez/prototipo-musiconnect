@@ -22,6 +22,15 @@
         <meta-data android:name="google_analytics_adid_collection_enabled"
             android:value="false"/>
 
+        <!-- Notificações (Firebase Cloud Messaging): ícone branco da barra de
+             status, cor rosa do app e o canal criado no MainActivity. -->
+        <meta-data android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification"/>
+        <meta-data android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification_pink"/>
+        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="oportunidades"/>
+
         <meta-data android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyCUyLZsk0YK9N15ZvRmPDMs5SjpIkJ-9gQ"/>
 

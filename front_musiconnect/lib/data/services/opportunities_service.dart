@@ -244,6 +244,23 @@ class OpportunitiesService {
     return [];
   }
 
+  /// Uma oportunidade pelo id (ex: a da notificação tocada). Null se não
+  /// existir mais ou se a consulta falhar.
+  Future<OpportunityModel?> fetchById(int id) async {
+    try {
+      final response = await http
+          .get(Uri.parse('${ApiConfig.opportunities}$id'), headers: await _authHeaders())
+          .timeout(_timeout);
+      if (response.statusCode == 200) {
+        return OpportunityModel.fromJson(
+            json.decode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>);
+      }
+    } catch (e) {
+      print('[OpportunitiesService] Exceção (por id): $e');
+    }
+    return null;
+  }
+
   /// Oportunidades abertas vinculadas a um pino do mapa (osm_id) — usado
   /// no detalhe da instituição. Retorna lista vazia em caso de erro.
   Future<List<OpportunityModel>> fetchByInstitution(String osmId) async {

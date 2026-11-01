@@ -26,6 +26,10 @@ class AuthUser {
   final String? city;
   // Versão da Política de privacidade aceita (null em contas antigas).
   final String? privacyPolicyVersion;
+  // Chaves de notificação do Perfil (o servidor só envia se o aparelho
+  // estiver registrado — ver core/push_notifications.dart).
+  final bool notifyNewMatches;
+  final bool notifyDeadlines;
   // Modo visitante (sem conta) — ver core/visitor_mode.dart.
   final bool isVisitor;
 
@@ -40,6 +44,8 @@ class AuthUser {
     this.state,
     this.city,
     this.privacyPolicyVersion,
+    this.notifyNewMatches = true,
+    this.notifyDeadlines = true,
     this.isVisitor = false,
   });
 
@@ -56,6 +62,8 @@ class AuthUser {
         state = null,
         city = null,
         privacyPolicyVersion = kPrivacyPolicyVersion,
+        notifyNewMatches = false,
+        notifyDeadlines = false,
         isVisitor = true;
 
   /// Aceitou uma versão anterior da política — precisa aceitar a atual.
@@ -74,6 +82,8 @@ class AuthUser {
         state: json['state'] as String?,
         city: json['city'] as String?,
         privacyPolicyVersion: json['privacy_policy_version'] as String?,
+        notifyNewMatches: json['notify_new_matches'] as bool? ?? true,
+        notifyDeadlines: json['notify_deadlines'] as bool? ?? true,
       );
 }
 

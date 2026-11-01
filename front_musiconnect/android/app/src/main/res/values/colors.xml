@@ -3,4 +3,6 @@
     <color name="ic_launcher_background">#D82674</color>
     <!-- Fundo da tela de abertura (splash) — rosa kAuthPink do app -->
     <color name="splash_background">#DF2881</color>
+    <!-- Cor das notificações (ícone e nome do app) -->
+    <color name="notification_pink">#DF2881</color>
 </resources>

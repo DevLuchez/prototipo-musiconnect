@@ -32,12 +32,9 @@ class _Changed {
 
 /// Resumo do que mudou na versão atual em relação à anterior.
 const _changesSummary = [
-  'Explicamos que, além das oportunidades com prazo encerrado, também saem '
-      'dos seus favoritos as oportunidades cujo anúncio foi retirado da fonte '
-      'e as instituições que deixaram de existir no mapa.',
-  'Incluímos o que acontece quando você entra sem uma conta cadastrada.',
-  'Explicamos que as cópias de segurança do banco de dados guardam os dados '
-      'por até 14 dias depois da exclusão da conta.',
+  'Incluímos as notificações: se você permitir, guardamos um identificador '
+      'do seu celular para avisar de oportunidades novas que combinam com você '
+      'e de prazos dos seus favoritos. Você pode desligá-las no Perfil.',
 ];
 
 const _sections = [
@@ -57,6 +54,11 @@ const _sections = [
         'localização (país, estado e cidade), escolhidos por você em listas.',
     '• Oportunidades e instituições que você marca como favoritas.',
     '• A data e a versão desta política quando você a aceitou.',
+    _Changed(
+        '• Se você permitir as notificações: um identificador do seu celular '
+        'gerado pelo Firebase Cloud Messaging (o endereço para onde vão os '
+        'avisos), quais avisos você quer receber e quais já recebeu, para não '
+        'repetir.'),
     'E, enquanto você usa o app, dados técnicos que não identificam você '
         'pelo nome ou e-mail:',
     '• Dados de uso: telas abertas e ações como entrar, cadastrar-se, favoritar '
@@ -67,10 +69,9 @@ const _sections = [
     '• Junto com eles, informações do aparelho: modelo, versão do Android, '
         'idioma, país aproximado e um identificador aleatório da instalação '
         'do app.',
-    _Changed(
-        'Se você entrar sem uma conta cadastrada, não coletamos dados de '
+    'Se você entrar sem uma conta cadastrada, não coletamos dados de '
         'cadastro: só os dados técnicos de uso e erros descritos acima, e a '
-        'visita termina quando o app é fechado.'),
+        'visita termina quando o app é fechado.',
     'Não usamos o ID de publicidade do celular, não acessamos a localização '
         'GPS, seus contatos, fotos, câmera ou microfone, e não coletamos dados '
         'de pagamento.',
@@ -82,6 +83,10 @@ const _sections = [
     '• Calcular o percentual de compatibilidade (match) entre o seu perfil '
         'e cada oportunidade.',
     '• Mostrar e guardar os seus favoritos.',
+    _Changed(
+        '• Enviar notificações de oportunidades novas que combinam com você e '
+        'de prazos dos seus favoritos, se você permitir — no máximo uma de '
+        'cada tipo por dia.'),
     '• Entender como o app é usado e corrigir erros (dados de uso e '
         'relatórios de erro).',
     'Usamos os dados da conta com base no seu consentimento e para prestar o '
@@ -111,6 +116,10 @@ const _sections = [
         'e-mail. Os servidores do Google podem ficar fora do Brasil; o Google '
         'trata esses dados conforme os termos de proteção de dados do '
         'Firebase.',
+    _Changed(
+        '• Google Firebase Cloud Messaging: entrega as notificações ao seu '
+        'celular. Recebe o identificador do aparelho e o texto do aviso (como o '
+        'título de uma oportunidade), sem o seu nome nem o seu e-mail.'),
   ]),
   _PolicySection('O que fica guardado no seu celular', [
     '• O código da sua sessão, para você não precisar fazer login toda vez. '
@@ -119,21 +128,24 @@ const _sections = [
     '• Preferências de exibição, como a ordenação das listas de favoritos, '
         'e a sua escolha de enviar ou não dados de uso e erros.',
     _Changed(
-        '• Se você entrou sem conta, a versão desta política que aceitou — para '
-        'não pedir o aceite a cada visita.'),
+        '• Se o convite das notificações já apareceu, para não perguntar de '
+        'novo.'),
+    '• Se você entrou sem conta, a versão desta política que aceitou — para '
+        'não pedir o aceite a cada visita.',
   ]),
   _PolicySection('Por quanto tempo guardamos', [
     'Seus dados ficam guardados enquanto a sua conta existir. Ao excluir a '
         'conta, a conta e os seus favoritos são apagados na hora do app, de '
         'forma definitiva.',
-    _Changed(
-        'As cópias de segurança do banco de dados, feitas diariamente e '
+    'As cópias de segurança do banco de dados, feitas diariamente e '
         'guardadas por até 14 dias, são apagadas automaticamente depois desse '
-        'prazo.'),
-    _Changed(
-        'Oportunidades favoritas cujo prazo de inscrição terminou ou cujo anúncio '
+        'prazo.',
+    'Oportunidades favoritas cujo prazo de inscrição terminou ou cujo anúncio '
         'foi retirado da fonte, e instituições favoritas que deixaram de existir '
-        'no mapa, são removidas automaticamente dos seus favoritos.'),
+        'no mapa, são removidas automaticamente dos seus favoritos.',
+    _Changed(
+        'O identificador do celular para notificações é apagado quando você '
+        'sai da conta, quando exclui a conta ou quando o app é desinstalado.'),
     'No Firebase, os dados de uso ligados ao identificador da instalação '
         'ficam guardados por até 2 meses, e os relatórios de erro por até 90 '
         'dias; depois disso, só restam números agregados (ex: quantas pessoas '
@@ -146,6 +158,9 @@ const _sections = [
     '• Excluir seus dados e revogar o consentimento: Perfil → Excluir conta.',
     '• Se opor ao envio de dados de uso e erros: Perfil → Enviar dados de uso '
         'e erros.',
+    _Changed(
+        '• Parar de receber notificações: Perfil → Notificações, ou nas '
+        'configurações do Android.'),
     '• Tirar dúvidas ou fazer qualquer outro pedido pelo e-mail '
         '$kSupportEmail.',
   ]),
