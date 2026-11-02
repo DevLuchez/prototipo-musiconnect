@@ -8,7 +8,7 @@ O Gemini é sempre simulado — nenhum teste acessa a API nem gasta cota.
 
 import asyncio
 import json
-from datetime import date
+from datetime import date, datetime
 
 import pytest
 
@@ -357,3 +357,48 @@ def test_outro_erro_conta_como_falha(db_session, gemini):
     gemini([ValueError("erro inesperado")])
 
     assert _run()["failed"] == 1
+
+
+def test_quem_so_ouve_estuda_ou_debate_sai_do_app():
+    """Decisão da Laura (02/11/2026): sem participação ativa (curso teórico,
+    palestra, inscrição como ouvinte, musicalização infantil), não fica."""
+    ouvinte = _opp()
+    enricher._apply_enrichment(ouvinte, {"is_music_related": True, "is_open_call": True,
+                                         "is_active_participation": False})
+    toca = _opp()
+    enricher._apply_enrichment(toca, {"is_music_related": True, "is_open_call": True,
+                                      "is_active_participation": True})
+    # Com instrumento, a regra não se aplica (um erro do modelo não esconde
+    # uma audição de violino).
+    com_instrumento = _opp()
+    enricher._apply_enrichment(com_instrumento, {
+        "is_music_related": True, "is_open_call": True,
+        "is_active_participation": False, "instruments": ["Violino"]})
+
+    assert (ouvinte.is_active, toca.is_active, com_instrumento.is_active) == (False, True, True)
+    prompt = enricher._build_prompt("x")
+    assert '"is_active_participation"' in prompt
+    assert "quarteto de cordas → Violino, Viola, Violoncelo" in prompt
+
+
+def test_migracao_manda_de_volta_ao_gemini_o_que_a_regra_nova_pode_mudar(db_session):
+    from sqlalchemy import text
+
+    from app.migrations import _STATEMENTS
+
+    [stmt] = [s for s in _STATEMENTS if "SET enriched_at = NULL" in s]
+    antes = datetime(2026, 11, 2, 12, 0)
+    depois = datetime(2026, 11, 3, 9, 0)
+    ids = {
+        "sem_instrumento": make_opportunity(db_session, instruments=[], enriched_at=antes).id,
+        "nulo": make_opportunity(db_session, instruments=None, enriched_at=antes).id,
+        "com_instrumento": make_opportunity(db_session, instruments=["Piano"], enriched_at=antes).id,
+        "refeita": make_opportunity(db_session, instruments=[], enriched_at=depois).id,
+        "inativa": make_opportunity(db_session, instruments=[], enriched_at=antes, is_active=False).id,
+    }
+
+    db_session.execute(text(stmt))
+    db_session.execute(text(stmt))  # de novo: sem efeito
+
+    pendentes = {k for k, i in ids.items() if db_session.get(Opportunity, i).enriched_at is None}
+    assert pendentes == {"sem_instrumento", "nulo"}

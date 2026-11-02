@@ -74,7 +74,7 @@ A data de hoje é {today}.
   "title": "título em português brasileiro, conciso (máx 150 caracteres), no formato 'O quê + instrumento/cargo + na/no Organização' (ex: 'Audição para Tutti Violoncelo na Orquestra Sinfônica de Lahti', 'Bolsa de Harpa na National Repertory Orchestra', 'Verbier Festival Junior Orchestra 2027 - Clarinete'). Só o NOME da organização/evento/programa fica no idioma original; todas as outras palavras vão para o português, inclusive termos em inglês como Audition, Fellowship, Scholarship, Principal, Section, Supplementary, Senior Artist, Teacher, Clarinet, Cello. Revise a ortografia.",
   "description": "descrição clara do que é a oportunidade em 2-4 frases em português, com ortografia revisada",
   "type": "um de: audicao | emprego | curso | competicao",
-  "instruments": ["Violino", "Piano", "Vocal"] — lista de instrumentos. Use EXATAMENTE um destes nomes: {", ".join(CANONICAL_INSTRUMENTS)}. Use 'Vocal' para voz/canto/singer/voice. Só se o instrumento não estiver na lista, escreva o nome dele em português. Gêneros e formações (jazz, música de câmara, orquestra) NÃO são instrumentos. Se não mencionado, retorne [].
+  "instruments": ["Violino", "Piano", "Vocal"] — lista de instrumentos. Use EXATAMENTE um destes nomes: {", ".join(CANONICAL_INSTRUMENTS)}. Use 'Vocal' para voz/canto/singer/voice. Só se o instrumento não estiver na lista, escreva o nome dele em português. Gêneros (jazz, música de câmara, orquestra) NÃO são instrumentos. Formação com instrumentos definidos → liste-os (quarteto de cordas → Violino, Viola, Violoncelo; trio com piano → Violino, Violoncelo, Piano; quinteto de metais → Trompete, Trompa, Trombone, Tuba; quinteto de sopros → Flauta, Oboé, Clarinete, Fagote, Trompa). Se não mencionado, retorne [].
   "level": "um de: iniciante | intermediario | avancado | profissional | null",
   "deadline": "DD/MM/AAAA — se houver intervalo de datas (ex: '1 Aug 2026 - 15 Jan 2027'), use a data FINAL como prazo. Se não houver prazo explícito, retorne null",
   "country": "país onde ocorre em português (ex: Brasil, Bélgica, Alemanha) ou null",
@@ -85,6 +85,7 @@ A data de hoje é {today}.
   "is_remote": true se online/remoto, false se presencial ou não especificado,
   "is_active": true se prazo ainda não venceu ou não especificado, false se claramente vencido,
   "is_music_related": true ou false,
+  "is_active_participation": true se a pessoa participa fazendo música — tocando, cantando, regendo ou compondo (vaga, audição, concurso, master class, aula de instrumento/canto/regência/composição, festival-escola, curso aberto a qualquer instrumento); false se é só para ouvir, estudar ou debater (curso teórico ou de apreciação, palestra, conferência, simpósio, inscrição como ouvinte, audição comentada) ou se é para crianças pequenas (musicalização infantil),
   "is_open_call": true se o texto anuncia algo em que músicos podem se inscrever ou se candidatar (vaga, audição, curso, oficina, masterclass, concurso, bolsa, festival com inscrição); false se é notícia, relato, fotos, programação de concertos ou balanço de algo que já aconteceu,
   "llm_confidence": 0.0 a 1.0 (confiança na extração e relevância para músicos)
 }}
@@ -284,6 +285,14 @@ def _apply_enrichment(opp: Opportunity, data: dict) -> None:
     # site de instituição, ver scrapers/wordpress_scraper.py) —, desativa
     # para não exibir
     if not data.get("is_music_related", True) or not data.get("is_open_call", True):
+        opp.is_active = False
+
+    # Sem instrumento informado, só fica se a pessoa participa fazendo música
+    # — com qualquer instrumento ou numa formação (decisão da Laura,
+    # 02/11/2026): curso teórico, palestra, inscrição como ouvinte e
+    # musicalização infantil saem. Com instrumento, a regra não se aplica —
+    # um erro do modelo não esconde uma audição de violino.
+    if not opp.instruments and not data.get("is_active_participation", True):
         opp.is_active = False
 
     opp.llm_confidence = float(data.get("llm_confidence", 0.5))

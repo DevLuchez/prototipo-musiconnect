@@ -69,6 +69,20 @@ _STATEMENTS = [
     # ── Notificações (chaves do Perfil, ligadas por padrão) ───────────────
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS notify_new_matches BOOLEAN NOT NULL DEFAULT TRUE",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS notify_deadlines BOOLEAN NOT NULL DEFAULT TRUE",
+    # ── Participação ativa (02/11/2026) ───────────────────────────────────
+    # O Gemini passou a responder se a pessoa participa fazendo música (só
+    # vale para quem não informa instrumento) e a listar os instrumentos de
+    # formações (quarteto de cordas...). Volta para o Gemini só o que pode
+    # mudar com isso: as visíveis sem instrumento, enriquecidas antes da
+    # mudança — depois de refeitas, não casam mais (roda em todo startup sem
+    # efeito).
+    """
+    UPDATE opportunities
+       SET enriched_at = NULL
+     WHERE is_active
+       AND enriched_at < '2026-11-02 21:00:00'
+       AND (instruments IS NULL OR cardinality(instruments) = 0)
+    """,
 ]
 
 
