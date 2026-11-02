@@ -20,9 +20,9 @@ from tests.helpers import make_opportunity
 # ── Partes isoladas ──────────────────────────────────────────────────────
 
 def test_prompt_traz_a_data_de_hoje_e_corta_o_texto_longo():
-    prompt = enricher._build_prompt("x" * 5000)
+    prompt = enricher._build_prompt("x" * 8000)
     assert date.today().strftime("%d/%m/%Y") in prompt
-    assert "x" * 3000 in prompt and "x" * 3001 not in prompt
+    assert "x" * 6000 in prompt and "x" * 6001 not in prompt
 
 
 def test_resposta_json_simples_e_com_markdown():

@@ -90,7 +90,7 @@ A data de hoje é {today}.
 }}
 
 Texto do edital:
-{raw_text[:3000]}"""
+{raw_text[:6000]}"""
 
 
 # Lembrete acrescentado ao prompt quando a resposta volta em inglês — o

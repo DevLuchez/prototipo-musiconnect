@@ -22,6 +22,15 @@ isso:
 Post sem prazo some do app depois de NO_DEADLINE_MAX_AGE; post apagado do
 site (404) é desativado — mesma regra do Musical Chairs.
 
+Páginas fixas do FEMUSC (02/11/2026): o FEMUSC publica as chamadas nas
+páginas de cada programa (FEMUSC Jovem, Concurso Scheherazade, vagas
+remanescentes), não em notícias. As páginas que parecem chamada entram;
+voltam ao Gemini quando o texto muda (a edição seguinte entra sozinha) e
+saem se a página sumir ou deixar de parecer chamada. Sem prazo, saem
+NO_DEADLINE_MAX_AGE depois da última atualização da página (a entrada da
+oportunidade é a data dessa atualização) — página abandonada não fica no
+app para sempre.
+
 Cursos de música da SCAR (decisão da Laura, 01/11/2026): os cursos
 regulares da escola (Cordas, Piano, Metais...) entram como "curso" sem
 prazo — a matrícula é contínua. Ficam no app enquanto estiverem na página
@@ -58,7 +67,7 @@ NO_DEADLINE_MAX_AGE = timedelta(days=45)
 # Palavras que indicam uma chamada (título ou começo do texto).
 _CALL_PATTERN = re.compile(
     r"inscri|audi[çc]|sele[çc]|vagas?\b|matr[íi]cula|bolsa|edital|"
-    r"chamada|convoca|processo seletivo|oficina|masterclass|workshop",
+    r"chamada|convoca|processo seletivo|oficina|masterclass|workshop|concurso",
     re.IGNORECASE,
 )
 
@@ -85,6 +94,8 @@ class WordPressSource:
     institution: str
     # Pino do mapa da instituição (osm_id), quando ela já está no mapa.
     institution_id: Optional[str] = None
+    # Ler também as páginas fixas do site (onde ficam as chamadas).
+    read_pages: bool = False
 
 
 SOURCES = [
@@ -102,13 +113,29 @@ SOURCES = [
         city="Jaraguá do Sul",
         state="SC",
         institution="FEMUSC – Festival de Música de Santa Catarina",
+        read_pages=True,
     ),
 ]
 
+# Marca o link das oportunidades que vêm de páginas fixas (o app abre a
+# página normalmente; o "#" só as distingue das notícias).
+_PAGE_MARK = "#pagina"
+
+# Páginas institucionais, nunca chamada.
+_SKIP_PAGE_SLUGS = {
+    "contato", "politica-de-privacidade", "galeria-de-fotos", "alojamentos",
+    "partituras", "locais-de-apresentacao", "noticias", "como-apoiar",
+    "teste-pt", "sobre-o-festival", "programacao", "cursos", "quadro-de-avisos",
+    "selecionados", "matriculas",
+}
+
 
 def _text(html_text: str) -> str:
-    text = BeautifulSoup(html_text or "", "html.parser").get_text(" ")
-    return re.sub(r"\s+", " ", unescape(text)).strip()
+    soup = BeautifulSoup(html_text or "", "html.parser")
+    # Páginas de construtor visual trazem CSS dentro do conteúdo.
+    for tag in soup(["style", "script"]):
+        tag.decompose()
+    return re.sub(r"\s+", " ", unescape(soup.get_text(" "))).strip()
 
 
 def looks_like_call(title: str, content: str) -> bool:
@@ -279,51 +306,58 @@ def _known_courses() -> dict[str, tuple[Optional[str], Optional[datetime]]]:
         db.close()
 
 
-def _save_courses(pages: dict[str, tuple[str, str]], now: datetime) -> dict:
-    """Grava os cursos lidos: novos entram, os de texto mudado voltam ao
-    Gemini, os que saíram da página são desativados."""
+def _sync_static(records: dict[str, dict], url_filter, now: datetime) -> dict:
+    """Grava páginas que não são notícia (cursos, páginas fixas): novas
+    entram, as de texto mudado voltam ao Gemini (continuam visíveis com os
+    dados antigos até ele refazer), as que saíram são desativadas.
+    `url_filter` escolhe, no banco, as oportunidades desse grupo."""
     from app.database import SessionLocal
 
     stats = {"new": 0, "changed": 0, "removed": 0}
-    pin = _pin_if_on_map(SOURCES[0].institution_id)
     db = SessionLocal()
     try:
-        known = {
-            o.source_url: o
-            for o in db.query(Opportunity).filter(
-                Opportunity.source_url.like(f"{_COURSE_URL_PREFIX}%")
-            )
-        }
-        for url, (name, text) in pages.items():
-            raw = _course_raw_text(name, text)
+        known = {o.source_url: o for o in db.query(Opportunity).filter(url_filter)}
+        for url, record in records.items():
             opp = known.get(url)
             if opp is None:
-                db.add(Opportunity(
-                    title=f"Curso de {name} na SCAR" if name else url,
-                    description=text[:500], raw_text=raw,
-                    type="curso", instruments=[], source_name="SCAR", source_url=url,
-                    institution="SCAR – Sociedade Cultura Artística",
-                    institution_id=pin, country="Brasil", state="SC",
-                    city="Jaraguá do Sul", is_active=True, llm_confidence=0.0,
-                    scraped_at=now,
-                ))
+                db.add(Opportunity(**record, source_url=url, scraped_at=now))
                 stats["new"] += 1
                 continue
-            if opp.raw_text != raw:
-                # Continua visível com os dados antigos até o Gemini refazer.
-                opp.raw_text = raw
+            if opp.raw_text != record["raw_text"]:
+                opp.raw_text = record["raw_text"]
                 opp.enriched_at = None
+                # Texto novo (ex: a edição seguinte): volta ao app e a
+                # entrada passa a ser a da atualização.
+                opp.is_active = True
+                if record.get("created_at"):
+                    opp.created_at = record["created_at"]
                 stats["changed"] += 1
-            opp.is_active = True
             opp.scraped_at = now
         for url, opp in known.items():
-            if url not in pages and opp.is_active:
+            if url not in records and opp.is_active:
                 opp.is_active = False
                 stats["removed"] += 1
         db.commit()
     finally:
         db.close()
     return stats
+
+
+def _save_courses(pages: dict[str, tuple[str, str]], now: datetime) -> dict:
+    """Grava os cursos lidos (ver _sync_static)."""
+    pin = _pin_if_on_map(SOURCES[0].institution_id)
+    records = {
+        url: dict(
+            title=f"Curso de {name} na SCAR" if name else url,
+            description=text[:500], raw_text=_course_raw_text(name, text),
+            type="curso", instruments=[], source_name="SCAR",
+            institution="SCAR – Sociedade Cultura Artística",
+            institution_id=pin, country="Brasil", state="SC",
+            city="Jaraguá do Sul", is_active=True, llm_confidence=0.0,
+        )
+        for url, (name, text) in pages.items()
+    }
+    return _sync_static(records, Opportunity.source_url.like(f"{_COURSE_URL_PREFIX}%"), now)
 
 
 async def sync_scar_courses(now: Optional[datetime] = None) -> Optional[dict]:
@@ -358,6 +392,81 @@ async def sync_scar_courses(now: Optional[datetime] = None) -> Optional[dict]:
         f"{stats['changed']} com texto mudado, {stats['removed']} saíram do site"
     )
     return stats
+
+
+# ── Páginas fixas (FEMUSC) ───────────────────────────────────────────────
+
+def _parse_pages(pages: list[dict], source: WordPressSource) -> dict[str, dict]:
+    """Páginas que parecem chamada, já como oportunidade bruta."""
+    records = {}
+    for page in pages:
+        if page.get("lang") not in (None, "pt") or page.get("slug") in _SKIP_PAGE_SLUGS:
+            continue
+        link = (page.get("link") or "").strip()
+        if link.rstrip("/") == source.base_url:  # página inicial: vitrine, muda sempre
+            continue
+        title = _text((page.get("title") or {}).get("rendered", ""))
+        content = _text((page.get("content") or {}).get("rendered", ""))
+        if not link or _NOT_CALL_TITLE.search(title) or not _CALL_PATTERN.search(
+                f"{title} {content}"):
+            continue
+        updated = (page.get("modified") or "")[:10]
+        record = dict(
+            title=title, description=content[:500],
+            raw_text=(
+                f"Página do site do {source.name} (atualizada em {updated}).\n\n"
+                f"Título: {title}\n\nLocal: {source.city}, {source.state}, Brasil"
+                f"\n\nTexto:\n{content}"
+            ),
+            type=None, instruments=[], source_name=source.name,
+            institution=source.institution,
+            institution_id=_pin_if_on_map(source.institution_id),
+            country="Brasil", state=source.state, city=source.city,
+            is_active=True, llm_confidence=0.0,
+        )
+        # Entrada = última atualização da página (ver NO_DEADLINE_MAX_AGE).
+        try:
+            record["created_at"] = datetime.fromisoformat(page.get("modified_gmt") or "")
+        except ValueError:
+            pass
+        records[link + _PAGE_MARK] = record
+    return records
+
+
+async def sync_wordpress_pages(now: Optional[datetime] = None) -> dict:
+    """Confere as páginas fixas das fontes com `read_pages` (todo dia: é uma
+    consulta por site, e o Gemini só roda se uma página mudar). Site fora do
+    ar não desativa nada."""
+    now = (now or datetime.now(timezone.utc)).replace(tzinfo=None)
+    totals = {}
+    async with httpx.AsyncClient(headers=_HEADERS, follow_redirects=True) as client:
+        for source in (s for s in SOURCES if s.read_pages):
+            try:
+                response = await client.get(
+                    f"{source.base_url}/wp-json/wp/v2/pages",
+                    params={"per_page": 100,
+                            "_fields": "link,slug,modified,modified_gmt,title,content,lang"},
+                    timeout=30,
+                )
+                response.raise_for_status()
+                pages = response.json()
+            except (httpx.HTTPError, ValueError) as exc:
+                logger.warning(f"[WP] {source.name}: falha ao ler as páginas: {exc}")
+                continue
+            records = _parse_pages(pages, source)
+            stats = _sync_static(
+                records,
+                (Opportunity.source_name == source.name)
+                & Opportunity.source_url.like(f"%{_PAGE_MARK}"),
+                now,
+            )
+            logger.info(
+                f"[WP] {source.name}: {len(pages)} páginas, {len(records)} parecem chamada — "
+                f"{stats['new']} novas, {stats['changed']} com texto mudado, "
+                f"{stats['removed']} saíram"
+            )
+            totals[source.name] = stats
+    return totals
 
 
 # ── Saída do app ─────────────────────────────────────────────────────────
@@ -403,7 +512,7 @@ async def deactivate_stale_posts(now: Optional[datetime] = None) -> int:
     now = (now or datetime.now(timezone.utc)).replace(tzinfo=None)
     rows = _active_from_sources()
     # Cursos não têm prazo de propósito (matrícula contínua): só saem se
-    # sumirem do site.
+    # sumirem do site (ver _sync_static).
     expired = [
         url for url, deadline, created in rows
         if deadline is None and created and created < now - NO_DEADLINE_MAX_AGE

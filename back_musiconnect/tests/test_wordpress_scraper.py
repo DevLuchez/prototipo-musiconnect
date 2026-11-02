@@ -310,3 +310,98 @@ def test_curso_sem_prazo_nao_vence_por_idade(monkeypatch, same_session):
 
     assert asyncio.run(wp.deactivate_stale_posts(now=now)) == 0
     assert db.get(Opportunity, curso.id).is_active is True
+
+
+# ── Páginas fixas (FEMUSC) ───────────────────────────────────────────────
+
+def _page(slug, title, content, modified="2026-10-20T10:00:00", lang=None,
+          link=None):
+    page = {"slug": slug, "link": link or f"https://femusc.com.br/{slug}/",
+            "modified": modified, "modified_gmt": modified,
+            "title": {"rendered": title},
+            "content": {"rendered": f"<style>#uc_x {{ color: red; }}</style><p>{content}</p>"}}
+    if lang:
+        page["lang"] = lang
+    return page
+
+
+FEMUSC_PAGES = [
+    _page("femusc-jovem", "Femusc Jovem", "EDITAL DE SELEÇÃO. Inscrições de 5 a 15 de novembro."),
+    _page("concurso-sheherazade", "Concurso", "Regulamento do concurso para solistas."),
+    _page("femusckinho", "Femusckinho", "Colônia de férias musical."),  # não parece chamada
+    _page("contato", "Contato", "Inscrições por e-mail"),             # institucional
+    _page("", "Início", "Inscrições abertas", link="https://femusc.com.br/"),  # página inicial
+    _page("femusc-youth", "Femusc Youth", "Registration", lang="en"),
+    _page("galeria", "[FOTOS] Galeria", "inscrições"),
+]
+
+
+def test_paginas_que_parecem_chamada():
+    records = wp._parse_pages(FEMUSC_PAGES, FEMUSC)
+
+    assert set(records) == {
+        "https://femusc.com.br/femusc-jovem/#pagina",
+        "https://femusc.com.br/concurso-sheherazade/#pagina",
+    }
+    jovem = records["https://femusc.com.br/femusc-jovem/#pagina"]
+    assert jovem["source_name"] == "FEMUSC" and jovem["type"] is None
+    assert "color: red" not in jovem["raw_text"]  # CSS do construtor de páginas fora
+    assert "Inscrições de 5 a 15 de novembro" in jovem["raw_text"]
+    assert "atualizada em 2026-10-20" in jovem["raw_text"]
+    assert jovem["created_at"] == datetime(2026, 10, 20, 10, 0)
+
+
+def test_pagina_com_data_invalida_entra_sem_data():
+    [rec] = wp._parse_pages([_page("x", "Edital", "inscrições", modified="")], FEMUSC).values()
+    assert "created_at" not in rec
+
+
+def test_sincronizacao_das_paginas(monkeypatch, same_session):
+    db = same_session
+    pages = {"list": list(FEMUSC_PAGES)}
+
+    def handler(request):
+        if request.url.host == "femusc.com.br" and request.url.path == "/wp-json/wp/v2/pages":
+            return httpx.Response(200, json=pages["list"])
+        return httpx.Response(404)
+
+    _mock_sites(monkeypatch, handler)
+    assert asyncio.run(wp.sync_wordpress_pages()) == {
+        "FEMUSC": {"new": 2, "changed": 0, "removed": 0}}
+    for opp in db.query(Opportunity):
+        opp.enriched_at = datetime(2026, 11, 2)
+    db.commit()
+
+    # Página velha sem prazo foi desativada pela idade; depois o FEMUSC
+    # atualiza o FEMUSC Jovem (edição nova) e tira o concurso do ar.
+    jovem = db.query(Opportunity).filter(Opportunity.source_url.like("%femusc-jovem%")).one()
+    jovem.is_active = False
+    db.commit()
+    pages["list"] = [_page("femusc-jovem", "Femusc Jovem", "EDITAL 2028. Inscrições em novembro.",
+                           modified="2027-10-01T09:00:00")]
+
+    stats = asyncio.run(wp.sync_wordpress_pages())
+
+    assert stats == {"FEMUSC": {"new": 0, "changed": 1, "removed": 1}}
+    db.refresh(jovem)
+    assert jovem.is_active is True and jovem.enriched_at is None
+    assert jovem.created_at == datetime(2027, 10, 1, 9, 0)
+    concurso = db.query(Opportunity).filter(Opportunity.source_url.like("%sheherazade%")).one()
+    assert concurso.is_active is False
+
+
+def test_site_fora_do_ar_nao_mexe_nas_paginas(monkeypatch, same_session):
+    _mock_sites(monkeypatch, lambda request: httpx.Response(503))
+    assert asyncio.run(wp.sync_wordpress_pages()) == {}
+
+
+def test_pagina_sem_prazo_vence_pela_data_da_atualizacao(monkeypatch, same_session):
+    db = same_session
+    now = datetime(2026, 11, 2)
+    velha = make_opportunity(db, source_name="FEMUSC", deadline=None,
+                             source_url="https://femusc.com.br/harpa/#pagina",
+                             created_at=now - timedelta(days=150))
+    _mock_sites(monkeypatch, lambda request: httpx.Response(200))
+
+    assert asyncio.run(wp.deactivate_stale_posts(now=now)) == 1
+    assert db.get(Opportunity, velha.id).is_active is False

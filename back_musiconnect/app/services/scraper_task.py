@@ -28,6 +28,7 @@ from app.services.scrapers.wordpress_scraper import (
     deactivate_stale_posts,
     scrape_wordpress_sources,
     sync_scar_courses,
+    sync_wordpress_pages,
 )
 from app.services.llm_enricher import enrich_opportunities
 from app.services.institution_resolver import resolve_opportunity_institutions
@@ -100,6 +101,8 @@ async def run_all_scrapers() -> None:
         )
         # Cursos de música da SCAR (conferidos uma vez por mês).
         await sync_scar_courses()
+        # Páginas fixas do FEMUSC (chamadas dos programas).
+        await sync_wordpress_pages()
     except Exception as exc:
         logger.error(f"[Scrapers] Erro no SCAR/FEMUSC: {exc}", exc_info=True)
 
