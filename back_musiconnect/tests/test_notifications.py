@@ -71,6 +71,25 @@ def test_registrar_aparelho_substitui_o_anterior_e_passa_de_conta(api, db_sessio
     assert [(d.token, d.user_id) for d in db_session.query(DeviceToken)] == [("cel-2", bia.id)]
 
 
+def test_registro_simultaneo_do_mesmo_aparelho_nao_da_erro(api, db_session):
+    # Depois do login o app registra o aparelho duas vezes quase juntas; a
+    # outra requisição grava o token no meio desta (erro 500 em 04/11/2026).
+    from sqlalchemy import event, text
+
+    user = make_user(db_session)
+    headers = auth_headers(db_session, user)
+
+    @event.listens_for(db_session, "after_bulk_delete", once=True)
+    def _outra_requisicao(_):
+        db_session.execute(
+            text("INSERT INTO device_tokens (token, user_id) VALUES ('cel-1', :u)"),
+            {"u": user.id},
+        )
+
+    assert api.put("/api/notifications/device", json={"token": "cel-1"}, headers=headers).status_code == 204
+    assert [(d.token, d.user_id) for d in db_session.query(DeviceToken)] == [("cel-1", user.id)]
+
+
 def test_registrar_aparelho_exige_login(api):
     assert api.put("/api/notifications/device", json={"token": "x"}).status_code == 401
 

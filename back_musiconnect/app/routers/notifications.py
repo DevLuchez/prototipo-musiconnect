@@ -10,6 +10,7 @@ O "Sair" (POST /api/auth/logout) apaga o aparelho; excluir a conta também
 """
 
 from fastapi import APIRouter, Depends, Response
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -33,11 +34,18 @@ def register_device(
     anterior), então o aparelho novo substitui os antigos da conta. E o
     mesmo aparelho só pertence a uma conta: num celular compartilhado, ele
     passa para quem entrou por último.
+
+    O app pode registrar o mesmo aparelho duas vezes quase juntas (logo
+    depois do login): o ON CONFLICT faz a segunda só confirmar a primeira.
     """
     db.query(DeviceToken).filter(
-        (DeviceToken.user_id == user.id) | (DeviceToken.token == data.token)
+        DeviceToken.user_id == user.id, DeviceToken.token != data.token
     ).delete(synchronize_session=False)
-    db.add(DeviceToken(token=data.token, user_id=user.id))
+    db.execute(
+        insert(DeviceToken)
+        .values(token=data.token, user_id=user.id)
+        .on_conflict_do_update(index_elements=[DeviceToken.token], set_={"user_id": user.id})
+    )
     db.commit()
     return Response(status_code=204)
 
