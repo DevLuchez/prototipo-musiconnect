@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -319,6 +320,56 @@ void main() {
       });
     });
 
+    testWidgets('segundo toque com a janela da permissão aberta não dá aviso', (tester) async {
+      backend.permissionDialog = Completer<void>();
+      await api.run(() async {
+        await pumpProfile(tester);
+
+        await tester.tap(switchOf('Prazos dos favoritos'));
+        await tester.pump();
+        await tester.tap(switchOf('Novas oportunidades para você'));
+        await tester.pump();
+        backend.permissionDialog!.complete();
+        await tester.pumpAndSettle();
+
+        expect(backend.permissionRequests, 1);
+        expect(find.byType(SnackBar), findsNothing);
+        expect(prefsSent, {'notify_new_matches': true, 'notify_deadlines': true});
+        expect(tester.widget<Switch>(switchOf('Prazos dos favoritos')).value, isTrue);
+        expect(tester.widget<Switch>(switchOf('Novas oportunidades para você')).value, isTrue);
+      });
+    });
+
+    testWidgets('erro no pedido com a permissão dada não dá aviso', (tester) async {
+      backend.failOnRequest = true;
+      await api.run(() async {
+        await pumpProfile(tester);
+
+        await tester.tap(switchOf('Prazos dos favoritos'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(SnackBar), findsNothing);
+        expect(prefsSent, {'notify_new_matches': false, 'notify_deadlines': true});
+      });
+    });
+
+    testWidgets('toques rápidos nas duas chaves salvam as duas', (tester) async {
+      backend.permitted = true;
+      await api.run(() async {
+        final vm = await pumpProfile(tester);
+
+        final first = vm.setNotification(newMatches: false);
+        final second = vm.setNotification(deadlines: false);
+        await tester.pumpAndSettle();
+        expect(await first, isNull);
+        expect(await second, isNull);
+
+        expect(prefsSent, {'notify_new_matches': false, 'notify_deadlines': false});
+        expect(tester.widget<Switch>(switchOf('Novas oportunidades para você')).value, isFalse);
+        expect(tester.widget<Switch>(switchOf('Prazos dos favoritos')).value, isFalse);
+      });
+    });
+
     testWidgets('desligar com a permissão dada só salva a chave', (tester) async {
       backend.permitted = true;
       await api.run(() async {
@@ -363,6 +414,19 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(backend.tokensDeleted, 1);
+    });
+  });
+
+  test('dois pedidos de permissão juntos esperam a mesma janela', () async {
+    backend.permissionDialog = Completer<void>();
+    await api.run(() async {
+      final first = PushNotifications.instance.enable();
+      final second = PushNotifications.instance.enable();
+      backend.permissionDialog!.complete();
+
+      expect(await first, isTrue);
+      expect(await second, isTrue);
+      expect(backend.permissionRequests, 1);
     });
   });
 

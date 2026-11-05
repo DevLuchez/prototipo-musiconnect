@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/deep_links.dart';
+import 'core/keyboard_focus.dart';
 import 'core/monitoring.dart';
 import 'core/push_notifications.dart';
 import 'core/visitor_mode.dart';
@@ -143,6 +144,7 @@ class _MusicConnectAppState extends State<MusicConnectApp> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
+      builder: (context, child) => KeyboardFocusGuard(child: child!),
       home: _AuthGate(authService: _authService),
     );
   }

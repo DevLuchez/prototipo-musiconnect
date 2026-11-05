@@ -15,6 +15,7 @@ import '../widgets/app_loading_indicator.dart';
 import '../widgets/favorite_button.dart';
 import '../widgets/opportunity_card.dart';
 import 'opportunity_detail_screen.dart';
+import '../../core/keyboard_focus.dart';
 
 const String _mapStyle = '''
 [
@@ -770,6 +771,7 @@ class _MapExplorerScreenState extends State<MapExplorerScreen> {
                           ],
                         ),
                         child: TextField(
+                          onTapOutside: unfocusOnTapOutside,
                           controller: _searchController,
                           focusNode: _searchFocus,
                           onChanged: vm.onSearchChanged,

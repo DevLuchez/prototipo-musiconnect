@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/text_utils.dart';
 import '../../data/models/opportunity_model.dart';
 import '../../data/services/opportunities_service.dart';
+import '../../core/keyboard_focus.dart';
 
 const _pink = Color(0xFFEC4899);
 
@@ -782,7 +783,7 @@ class _PickerFieldState extends State<_PickerField> {
   // sozinho) só pra poder limpar o texto digitado depois de escolher uma
   // opção, sem perder o que foi selecionado.
   final _controller = TextEditingController();
-  final _focusNode = FocusNode();
+  final _focusNode = KeepsFocusWithoutKeyboard();
 
   @override
   void dispose() {
@@ -864,6 +865,7 @@ class _PickerFieldState extends State<_PickerField> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: TextField(
+                    onTapOutside: unfocusOnTapOutside,
                     controller: controller,
                     focusNode: focusNode,
                     style: const TextStyle(fontSize: 13),

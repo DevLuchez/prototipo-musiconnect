@@ -12,6 +12,7 @@ import '../widgets/favorite_button.dart';
 import '../widgets/opportunity_card.dart';
 import '../widgets/visitor_invite.dart';
 import 'opportunity_detail_screen.dart';
+import '../../core/keyboard_focus.dart';
 
 // Estrela de "tem oportunidade aberta" — mesma cor dos pinos do mapa.
 const _starColor = Color.fromARGB(255, 255, 183, 0);
@@ -406,6 +407,7 @@ class _FavoritesBrowserState<T> extends State<_FavoritesBrowser<T>> {
               height: 42,
               decoration: _controlDecoration,
               child: TextField(
+                onTapOutside: unfocusOnTapOutside,
                 controller: _searchController,
                 onChanged: (value) => setState(() => _query = value),
                 textInputAction: TextInputAction.search,

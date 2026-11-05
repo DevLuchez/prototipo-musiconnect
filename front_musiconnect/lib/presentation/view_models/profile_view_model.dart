@@ -112,7 +112,18 @@ class ProfileViewModel extends ViewModel {
 
   /// Liga/desliga um tipo de notificação. Ligar sem a permissão do Android
   /// pede a permissão antes. Devolve a mensagem de erro para exibir, ou null.
-  Future<String?> setNotification({bool? newMatches, bool? deadlines}) async {
+  ///
+  /// Uma gravação por vez: com toques rápidos nas duas chaves, a segunda
+  /// levaria o valor antigo da primeira (e a desfaria no servidor).
+  Future<String?> setNotification({bool? newMatches, bool? deadlines}) {
+    final result = _lastSave.then((_) => _saveNotification(newMatches, deadlines));
+    _lastSave = result.then<void>((_) {}, onError: (_) {});
+    return result;
+  }
+
+  Future<void> _lastSave = Future.value();
+
+  Future<String?> _saveNotification(bool? newMatches, bool? deadlines) async {
     // A outra chave fica como estava na tela (sem a permissão, desligada).
     final shownNewMatches = notifyNewMatches;
     final shownDeadlines = notifyDeadlines;

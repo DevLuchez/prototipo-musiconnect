@@ -208,11 +208,27 @@ class FakePushBackend implements PushBackend {
   final tapController = StreamController<PushMessage>.broadcast();
   final foregroundController = StreamController<PushMessage>.broadcast();
 
+  /// Janela do Android aberta até completar (null = responde na hora).
+  Completer<void>? permissionDialog;
+
+  /// O pedido dá erro mesmo com a pessoa permitindo.
+  bool failOnRequest = false;
+  bool _requestRunning = false;
+
   @override
   Future<bool> requestPermission() async {
+    // Como o Firebase: um segundo pedido com a janela aberta dá erro.
+    if (_requestRunning) throw Exception('A request for permissions is already running');
     permissionRequests++;
-    permitted = allowOnRequest;
-    return permitted;
+    _requestRunning = true;
+    try {
+      await permissionDialog?.future;
+      permitted = allowOnRequest;
+      if (failOnRequest) throw Exception('falha no pedido');
+      return permitted;
+    } finally {
+      _requestRunning = false;
+    }
   }
 
   @override

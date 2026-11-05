@@ -125,14 +125,24 @@ class PushNotifications {
 
   /// Pede a permissão do Android e, se a pessoa permitir, registra o
   /// aparelho. Devolve se ficou permitido.
-  Future<bool> enable() async {
+  ///
+  /// Um pedido por vez: o Firebase responde com erro a um segundo pedido
+  /// feito com a janela do Android ainda aberta (ex: dois toques numa
+  /// chave), então quem chega depois espera a resposta do primeiro.
+  Future<bool> enable() => _enabling ??= _enable().whenComplete(() => _enabling = null);
+
+  Future<bool>? _enabling;
+
+  Future<bool> _enable() async {
     final backend = _backend;
     if (backend == null) return false;
     try {
       permitted.value = await backend.requestPermission();
     } catch (e) {
+      // Erro no pedido não quer dizer permissão negada: vale o que o
+      // Android diz agora.
       debugPrint('[Push] Falha ao pedir a permissão: $e');
-      permitted.value = false;
+      await isPermitted();
     }
     if (!permitted.value) return false;
     await register();

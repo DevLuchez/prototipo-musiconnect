@@ -8,6 +8,7 @@ import 'app_loading_indicator.dart';
 import 'filter_modal.dart';
 import 'opportunity_card.dart';
 import 'opportunity_carousel_section.dart';
+import '../../core/keyboard_focus.dart';
 
 const _pink = Color(0xFFEC4899);
 
@@ -249,6 +250,7 @@ class _OpportunityBrowserViewState extends State<OpportunityBrowserView> {
                     ],
                   ),
                   child: TextField(
+                    onTapOutside: unfocusOnTapOutside,
                     controller: _searchController,
                     enabled: !widget.locked,
                     onChanged: (text) => vm.query = text,

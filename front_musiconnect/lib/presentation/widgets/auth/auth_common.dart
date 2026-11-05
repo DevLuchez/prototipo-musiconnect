@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import '../../../core/text_utils.dart';
 import '../app_loading_indicator.dart';
+import '../../../core/keyboard_focus.dart';
 
 /// Paleta e widgets compartilhados pelas telas de autenticação
 /// (Entrada, Login, Cadastro), seguindo o protótipo.
@@ -101,6 +102,7 @@ class _AuthTextFieldState extends State<AuthTextField> {
             border: Border.all(color: const Color(0xFFE5E7EB)),
           ),
           child: TextField(
+            onTapOutside: unfocusOnTapOutside,
             controller: widget.controller,
             enabled: widget.enabled,
             obscureText: widget.isPassword && _obscure,
@@ -443,7 +445,7 @@ class AuthMultiSelectField extends StatefulWidget {
 
 class _AuthMultiSelectFieldState extends State<AuthMultiSelectField> {
   final _controller = TextEditingController();
-  final _focusNode = FocusNode();
+  final _focusNode = KeepsFocusWithoutKeyboard();
 
   @override
   void dispose() {
@@ -539,6 +541,7 @@ class _AuthMultiSelectFieldState extends State<AuthMultiSelectField> {
                     border: Border.all(color: const Color(0xFFE5E7EB)),
                   ),
                   child: TextField(
+                    onTapOutside: unfocusOnTapOutside,
                     controller: controller,
                     focusNode: focusNode,
                     style: const TextStyle(fontSize: 14, color: kAuthTextDark),
@@ -676,7 +679,7 @@ class AuthSingleSelectField<T extends Object> extends StatefulWidget {
 class _AuthSingleSelectFieldState<T extends Object> extends State<AuthSingleSelectField<T>> {
   late final TextEditingController _controller =
       TextEditingController(text: _textFor(widget.selected));
-  final _focusNode = FocusNode();
+  final _focusNode = KeepsFocusWithoutKeyboard();
 
   String _textFor(T? value) => value == null ? '' : widget.displayString(value);
 
@@ -801,6 +804,7 @@ class _AuthSingleSelectFieldState<T extends Object> extends State<AuthSingleSele
                         border: Border.all(color: const Color(0xFFE5E7EB)),
                       ),
                       child: TextField(
+                        onTapOutside: unfocusOnTapOutside,
                         controller: controller,
                         focusNode: focusNode,
                         style: const TextStyle(fontSize: 14, color: kAuthTextDark),
