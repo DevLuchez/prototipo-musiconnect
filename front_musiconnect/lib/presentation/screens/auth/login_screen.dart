@@ -149,31 +149,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       isPassword: true,
                       required: true,
                     ),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton(
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const ForgotPasswordScreen(),
-                            ),
-                          );
-                        },
-                        style: TextButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          minimumSize: const Size(0, 32),
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        child: const Text(
-                          'Esqueci minha senha',
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            color: kAuthPink,
-                          ),
-                        ),
-                      ),
-                    ),
+                    const ForgotPasswordLink(),
                     if (_loginError != null) ...[
                       const SizedBox(height: 4),
                       SizedBox(

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prototipo_musiconnect/data/services/auth_service.dart';
+import 'package:prototipo_musiconnect/presentation/screens/auth/forgot_password_screen.dart';
 import 'package:prototipo_musiconnect/presentation/screens/profile/change_password_screen.dart';
 import 'package:prototipo_musiconnect/presentation/screens/profile/edit_profile_screen.dart';
 
@@ -186,6 +187,23 @@ void main() {
 
         await fill(tester, 'Insira sua senha atual', 'outra');
         expect(find.text('Senha atual incorreta.'), findsNothing);
+      });
+    });
+
+    testWidgets('"Esqueci minha senha" abre a redefinição com o e-mail da conta', (tester) async {
+      final api = FakeApi((_) => jsonResponse({'message': 'ok'}));
+      await api.run(() async {
+        await openFrom(tester, const ChangePasswordScreen(email: 'laura@example.com'));
+
+        await tapText(tester, 'Esqueci minha senha');
+        expect(find.byType(ForgotPasswordScreen), findsOneWidget);
+        expect(find.text('laura@example.com'), findsOneWidget);
+        // Com a conta conectada não há "Faça login".
+        expect(find.text('Faça login'), findsNothing);
+
+        await tapText(tester, 'Enviar link');
+        expect(jsonDecode(api.last.body), {'email': 'laura@example.com'});
+        expect(find.textContaining('entre de novo com a nova senha'), findsOneWidget);
       });
     });
 

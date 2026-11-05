@@ -4,6 +4,7 @@ import '../../view_models/profile_view_model.dart';
 import '../../widgets/auth/auth_common.dart';
 import '../../tutorial/tutorial.dart';
 import '../../widgets/auth/logout_flow.dart';
+import '../auth/forgot_password_screen.dart';
 import '../auth/welcome_screen.dart';
 import 'change_password_screen.dart';
 import 'edit_profile_screen.dart';
@@ -85,7 +86,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _changePassword() {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
+      MaterialPageRoute(builder: (_) => ChangePasswordScreen(email: _viewModel.user.email)),
     );
   }
 
@@ -95,7 +96,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _deleteAccount() async {
     final password = await showDialog<String>(
       context: context,
-      builder: (_) => const _DeleteAccountDialog(),
+      builder: (_) => _DeleteAccountDialog(email: _viewModel.user.email),
     );
     if (password == null || password.isEmpty) return;
     final error = await _viewModel.deleteAccount(password);
@@ -735,7 +736,9 @@ class _DangerRow extends StatelessWidget {
 /// Diálogo que pede a senha atual para confirmar a exclusão da conta —
 /// ação irreversível, não basta ter chegado até aqui com uma sessão válida.
 class _DeleteAccountDialog extends StatefulWidget {
-  const _DeleteAccountDialog();
+  const _DeleteAccountDialog({required this.email});
+
+  final String email;
 
   @override
   State<_DeleteAccountDialog> createState() => _DeleteAccountDialogState();
@@ -769,6 +772,7 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
             controller: _passwordController,
             isPassword: true,
           ),
+          ForgotPasswordLink(email: widget.email, closeDialog: true),
         ],
       ),
       primaryLabel: 'Excluir',

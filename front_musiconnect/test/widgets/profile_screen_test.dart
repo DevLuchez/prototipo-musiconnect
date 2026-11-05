@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:prototipo_musiconnect/data/services/auth_service.dart';
+import 'package:prototipo_musiconnect/presentation/screens/auth/forgot_password_screen.dart';
 import 'package:prototipo_musiconnect/presentation/screens/auth/welcome_screen.dart';
 import 'package:prototipo_musiconnect/presentation/screens/profile/change_password_screen.dart';
 import 'package:prototipo_musiconnect/presentation/screens/profile/profile_screen.dart';
@@ -156,6 +157,27 @@ void main() {
 
       expect(auth.deletedWith, 'Senha#123');
       expect(find.byType(WelcomeScreen), findsOneWidget);
+    });
+
+    testWidgets('"Esqueci minha senha" fecha a janela e abre a redefinição com o e-mail',
+        (tester) async {
+      await pumpProfile(tester);
+
+      await tester.tap(find.text('Excluir conta'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Esqueci minha senha'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ForgotPasswordScreen), findsOneWidget);
+      expect(find.text('Excluir'), findsNothing);
+      expect(find.text('aluna@example.com'), findsOneWidget);
+      expect(auth.deletedWith, isNull);
+
+      // Voltar leva ao Perfil, não à janela de excluir.
+      await tester.tap(find.byIcon(Icons.arrow_back_ios_new_rounded));
+      await tester.pumpAndSettle();
+      expect(find.byType(ProfileScreen), findsOneWidget);
+      expect(find.text('Excluir'), findsNothing);
     });
 
     testWidgets('cancelar não exclui', (tester) async {

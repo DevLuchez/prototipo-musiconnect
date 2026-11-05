@@ -8,15 +8,61 @@ import '../../widgets/auth/auth_common.dart';
 /// redefinição (via backend real) e mostra um estado de "e-mail
 /// enviado" com opção de reenviar — mesmo padrão da confirmação de
 /// cadastro.
+/// "Esqueci minha senha" abaixo de um campo de senha: no login e, com a
+/// conta conectada, na troca de senha e na exclusão da conta (sem ele, quem
+/// não lembra a senha ficava sem saída). Com [email], a tela abre com ele
+/// preenchido; [closeDialog] fecha antes a janela em que o link está.
+class ForgotPasswordLink extends StatelessWidget {
+  const ForgotPasswordLink({super.key, this.email, this.closeDialog = false});
+
+  final String? email;
+  final bool closeDialog;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: TextButton(
+        onPressed: () {
+          final navigator = Navigator.of(context);
+          if (closeDialog) navigator.pop();
+          navigator.push(MaterialPageRoute(
+            builder: (_) => ForgotPasswordScreen(initialEmail: email, signedIn: email != null),
+          ));
+        },
+        style: TextButton.styleFrom(
+          padding: EdgeInsets.zero,
+          minimumSize: const Size(0, 32),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+        child: const Text(
+          'Esqueci minha senha',
+          style: TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+            color: kAuthPink,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class ForgotPasswordScreen extends StatefulWidget {
-  const ForgotPasswordScreen({super.key});
+  const ForgotPasswordScreen({super.key, this.initialEmail, this.signedIn = false});
+
+  final String? initialEmail;
+
+  /// Aberta com a conta conectada (Perfil): redefinir pelo e-mail encerra a
+  /// sessão, então a tela avisa que é preciso entrar de novo.
+  final bool signedIn;
 
   @override
   State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
-  final _emailController = TextEditingController();
+  late final _emailController = TextEditingController(text: widget.initialEmail);
   final _authService = AuthService();
   bool _sending = false;
   bool _sent = false;
@@ -158,6 +204,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               ),
                               const TextSpan(
                                   text: '. Acesse sua caixa de e-mails e clique no link.'),
+                              if (widget.signedIn)
+                                const TextSpan(
+                                    text: ' Depois de redefinir, entre de novo com a nova senha.'),
                             ],
                           ),
                         ),
@@ -182,12 +231,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         ),
                       ),
                     ],
-                    const SizedBox(height: 24),
-                    AuthFooterLink(
-                      question: 'Lembrou a senha?',
-                      action: 'Faça login',
-                      onTap: () => Navigator.of(context).pop(),
-                    ),
+                    if (!widget.signedIn) ...[
+                      const SizedBox(height: 24),
+                      AuthFooterLink(
+                        question: 'Lembrou a senha?',
+                        action: 'Faça login',
+                        onTap: () => Navigator.of(context).pop(),
+                      ),
+                    ],
                   ],
                 ),
               ),

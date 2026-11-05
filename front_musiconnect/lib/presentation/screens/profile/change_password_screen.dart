@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import '../../../data/services/auth_service.dart';
 import '../../widgets/auth/auth_common.dart';
+import '../auth/forgot_password_screen.dart';
 
 /// Troca de senha estando logado — diferente do fluxo "Esqueci minha
 /// senha", pede a senha atual em vez de depender de um link por e-mail.
 class ChangePasswordScreen extends StatefulWidget {
-  const ChangePasswordScreen({super.key});
+  const ChangePasswordScreen({super.key, this.email});
+
+  /// E-mail da conta, para o "Esqueci minha senha".
+  final String? email;
 
   @override
   State<ChangePasswordScreen> createState() => _ChangePasswordScreenState();
@@ -113,7 +117,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       isPassword: true,
                       required: true,
                     ),
-                    const SizedBox(height: 16),
+                    ForgotPasswordLink(email: widget.email ?? ''),
+                    const SizedBox(height: 8),
                     AuthTextField(
                       label: 'Nova senha',
                       hint: 'Digite a nova senha',
