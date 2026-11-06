@@ -4,7 +4,7 @@
 #
 # Só reconstrói o que mudou:
 #   back_musiconnect/ ou docker-compose*.yml → reconstrói e reinicia a API
-#   deploy/Caddyfile                         → recarrega o Caddy
+#   deploy/Caddyfile (diferente do em uso)   → recria o Caddy
 #   deploy/site/                             → nada (o Caddy lê direto da pasta)
 #
 # O servidor nunca edita arquivos do repositório: o código é sempre o da
@@ -30,9 +30,13 @@ if changed back_musiconnect docker-compose.yml docker-compose.prod.yml; then
     docker image prune -f >/dev/null
 fi
 
-if changed deploy/Caddyfile; then
-    echo "Caddyfile mudou — recarregando o Caddy..."
-    docker exec musiconnect_caddy caddy reload --config /etc/caddy/Caddyfile
+# O Caddyfile é montado como arquivo avulso: o git troca o arquivo no disco
+# e o container continua vendo o antigo (um "caddy reload" relê o velho).
+# Por isso compara o que o Caddy está usando com o do repositório e, se
+# diferir, recria o container (alguns segundos fora do ar).
+if ! docker exec musiconnect_caddy cat /etc/caddy/Caddyfile | cmp -s - deploy/Caddyfile; then
+    echo "Caddyfile mudou — recriando o Caddy..."
+    $COMPOSE up -d --force-recreate caddy
 fi
 
 # Confere se a API voltou a responder.
