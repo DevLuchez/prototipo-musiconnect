@@ -4,161 +4,209 @@
 
 ### Sistema Inteligente de Dados para Gestão de Oportunidades Musicais
 
-[![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev)
+Aplicativo mobile que reúne audições, concursos, bolsas, cursos e vagas para músicos, mostra o quanto cada oportunidade combina com o perfil de quem usa e localiza no mapa as instituições musicais do mundo inteiro.
+
+[![CI](https://github.com/DevLuchez/prototipo-musiconnect/actions/workflows/ci.yml/badge.svg)](https://github.com/DevLuchez/prototipo-musiconnect/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/DevLuchez/prototipo-musiconnect?label=app)](https://github.com/DevLuchez/prototipo-musiconnect/releases/latest)
+[![Quality Gate API](https://sonarcloud.io/api/project_badges/measure?project=DevLuchez_prototipo-musiconnect&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=DevLuchez_prototipo-musiconnect)
+[![Quality Gate App](https://sonarcloud.io/api/project_badges/measure?project=DevLuchez_prototipo-musiconnect-app&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=DevLuchez_prototipo-musiconnect-app)
+
+[![Flutter](https://img.shields.io/badge/Flutter-3.24-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL+PostGIS-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://postgis.net)
-[![Python](https://img.shields.io/badge/Python-3.12+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+
+**[📲 Baixar o app](https://musiconnect.app.br)** · **[📖 API](https://api.musiconnect.app.br/docs)** · **[🔒 Política de privacidade](https://musiconnect.app.br/privacidade)**
 
 **Portfólio de TCC · Engenharia de Software · Centro Universitário Católica de Santa Catarina**
 
-*Laura Heloísa Luchez · PAC VII – 2026/1*
+*Laura Heloísa Luchez · Jaraguá do Sul/SC – 2026*
 
 </div>
 
 ---
 
-## Sobre o Projeto | Portifólio
+## Índice
 
-O **MusiConnect** é um aplicativo mobile com **Inteligência Artificial** projetado para mitigar a carga cognitiva e a evasão de estudantes de música em seus processos de profissionalização. O projeto foi desenvolvido como parte das atividades acadêmicas do PAC (Projeto de Aprendizagem Colaborativa) do curso de Engenharia de Software.
-
-### Problema
-
-A fragmentação de informações sobre processos seletivos e oportunidades musicais — editais, audições, vagas internacionais — constitui uma barreira significativa à profissionalização de músicos, especialmente no contexto de instituições como a **Sociedade Cultura Artística de Jaraguá do Sul (SCAR)**. O processo manual de busca consome tempo, exige domínio de idiomas e conhecimento de portais especializados dispersos na web.
-
-### Solução
-
-O MusiConnect propõe uma plataforma **intuitiva e preditiva** que combina três frentes tecnológicas:
-
-| Frente | Tecnologia | Descrição |
-|--------|-----------|-----------|
-| **Acessibilidade Cognitiva via RAG** | LLM + Vector DB | Interpretação automática de editais complexos com extração de datas, requisitos e prazos |
-| **Recomendação Personalizada** | Machine Learning (Clustering + Matching) | Alinhamento do perfil técnico do músico às exigências das oportunidades |
-| **Mapa Interativo de Conexões** | Google Maps + OpenStreetMap | Hub visual global de instituições musicais em tempo real |
-
----
-
-## Arquitetura
-
-O protótipo segue **Clean Architecture** no frontend e separação clara de camadas no backend:
-
-```
-prototipo_musiconnect/
-├── front_musiconnect/          # Aplicativo Flutter (Mobile)
-│   └── lib/
-│       ├── core/               # Utilitários e configurações globais
-│       ├── data/               # Modelos e fontes de dados
-│       │   └── models/
-│       │       ├── place_model.dart
-│       │       └── providers/  # API Service (MusiConnect API)
-│       ├── domain/             # Regras de negócio (casos de uso)
-│       └── presentation/       # UI (Screens + Widgets)
-│           └── screens/
-│               ├── map_explorer_screen.dart   # Mapa global de instituições
-│               ├── future_events.dart          # Radar de oportunidades (roadmap)
-│               └── portfolio_screen.dart       # Perfil do músico (roadmap)
-│
-└── back_musiconnect/           # API REST Python (FastAPI)
-    └── app/
-        ├── main.py             # Entry point da API
-        ├── models.py           # Modelos SQLAlchemy + PostGIS
-        ├── schemas.py          # Schemas Pydantic
-        ├── database.py         # Configuração do banco
-        ├── routers/
-        │   └── institutions.py # Endpoints de instituições
-        └── services/
-            └── overpass_etl.py # Pipeline ETL global (OSM → PostgreSQL)
-```
-
-### Diagrama de Fluxo de Dados
-
-```
-OpenStreetMap (Overpass API)
-         │
-         ▼
-   [ETL Python]          ← Coleta global em grade 30°×45°
-   overpass_etl.py       ← Upsert por osm_id (sem duplicatas)
-         │
-         ▼
-PostgreSQL + PostGIS      ← Índice GIST espacial (ST_DWithin)
-         │
-         ▼
-   FastAPI REST API       ← /institutions/nearby?lat&lng&radius
-         │
-         ▼
-  Flutter (Mobile)        ← Google Maps com marcadores por categoria
-```
+1. [Introdução](#1-introdução)
+2. [Escopo e limitações](#2-escopo-e-limitações)
+3. [Funcionalidades e diferencial](#3-funcionalidades-e-diferencial)
+4. [Vídeo da aplicação](#4-vídeo-da-aplicação)
+5. [Requisitos](#5-requisitos)
+6. [Casos de uso](#6-casos-de-uso)
+7. [Fluxos de uso](#7-fluxos-de-uso)
+8. [Estrutura de navegação](#8-estrutura-de-navegação)
+9. [Arquitetura](#9-arquitetura)
+10. [Stack tecnológica](#10-stack-tecnológica)
+11. [Documentação da API](#11-documentação-da-api)
+12. [Decisões técnicas e mudanças em relação ao RFC](#12-decisões-técnicas-e-mudanças-em-relação-ao-rfc)
+13. [CI/CD, testes, qualidade, privacidade e monitoramento](#13-cicd-testes-qualidade-privacidade-e-monitoramento)
+14. [Resultados e validação com o cliente](#14-resultados-e-validação-com-o-cliente)
+15. [Aderência à linha de Aplicações Mobile](#15-aderência-à-linha-de-aplicações-mobile)
+16. [Trabalhos futuros](#16-trabalhos-futuros)
+17. [Instalação e deploy](#17-instalação-e-deploy)
+18. [Execução local](#18-execução-local)
+19. [Contribuições externas](#19-contribuições-externas)
+20. [Referências](#20-referências)
+21. [Autora](#21-autora)
 
 ---
 
-## Funcionalidades Implementadas
+## 1. Introdução
 
-### Mapa Explorador de Instituições
-- Visualização em mapa de **instituições musicais globais** com marcadores coloridos por categoria
-- Busca dinâmica por raio conforme o usuário navega pelo mapa (debounce de 800ms)
-- Categorias suportadas: Escola de Música, Casa de Shows, Teatro/Ópera, Nightclub, Local ao Vivo, Loja de Instrumentos
-- Painel de detalhes ao clicar em cada instituição (nome, categoria, endereço)
-- Legenda interativa com contadores em tempo real
-- Tratamento gracioso de backend offline com banner de aviso
+> 🚧 Em construção.
 
-### Pipeline ETL Global (Backend)
-- Coleta automática de dados do **OpenStreetMap** via Overpass API
-- Processamento paralelo com semáforo (4 células simultâneas)
-- Grade global de ~24 células (30°×45°) para cobertura total do planeta
-- **Upsert idempotente** por `osm_id` — execuções repetidas nunca duplicam dados
-- Backoff automático com retry em caso de rate-limiting (429) ou timeout
+### 1.1 Contexto
 
-### API REST
-- Endpoint de busca geoespacial por raio (`ST_DWithin` via PostGIS)
-- Retorno tipado com Pydantic schemas
-- CORS configurado para desenvolvimento mobile
-- Health check integrado
+### 1.2 Problema de pesquisa
+
+### 1.3 Público beneficiado
+
+### 1.4 Justificativa
+
+### 1.5 Objetivos
 
 ---
 
-## Funcionalidades Futuras
+## 2. Escopo e limitações
 
-- [ ] **Sistema de Recomendação** — Clustering + Matching por perfil técnico do músico
-- [ ] **Ingestão Autônoma de Editais** — Web Scraping + RAG (LLM + pgvector)
-- [ ] **Perfil do Músico** — Cadastro de repertório, nível técnico e histórico
-- [ ] **Radar de Oportunidades** — Notificações de editais e audições alinhados ao perfil
-- [ ] **Integração com SCAR** — Conexão direta com os sistemas da instituição parceira
-- [ ] **Publicação na Play Store** — APK instalável ou distribuição via Google Play
+> 🚧 Em construção.
 
 ---
 
-## Stack Tecnológica
+## 3. Funcionalidades e diferencial
 
-### Frontend — Flutter
-| Dependência | Versão | Uso |
-|-------------|--------|-----|
-| `flutter` | SDK ^3.x | Framework mobile multiplataforma |
-| `google_maps_flutter` | ^2.5.0 | Mapa interativo |
-| `http` | ^1.1.0 | Requisições à API REST |
-| `cupertino_icons` | ^1.0.8 | Iconografia iOS |
-
-### Backend — Python / FastAPI
-| Dependência | Versão | Uso |
-|-------------|--------|-----|
-| `fastapi` | >=0.115.0 | Framework REST assíncrono |
-| `uvicorn` | >=0.30.0 | Servidor ASGI |
-| `sqlalchemy` | >=2.0.36 | ORM |
-| `geoalchemy2` | >=0.15.2 | Tipos e funções PostGIS |
-| `psycopg` | >=3.2.0 | Driver PostgreSQL (async) |
-| `alembic` | >=1.14.0 | Migrações de banco |
-| `httpx` | >=0.27.0 | HTTP assíncrono (ETL) |
-| `pydantic-settings` | >=2.3.0 | Configuração por variáveis de ambiente |
-
-### Infraestrutura
-- **Banco de dados:** PostgreSQL 16 + extensão PostGIS
-- **Dados geoespaciais:** OpenStreetMap via Overpass API
-- **Versionamento:** GitHub (Clean Architecture + commits frequentes)
-- **Monitoramento:** Firebase Analytics (roadmap)
-- **Qualidade de código:** SonarQube / SonarCloud (roadmap)
-- **Testes:** TDD — cobertura alvo 75% backend, 25% frontend (roadmap)
+> 🚧 Em construção.
 
 ---
 
-## Autora
+## 4. Vídeo da aplicação
+
+> 🚧 Em construção — o vídeo de demonstração do app final entra aqui.
+
+Pitch de apresentação da proposta (PAC Extensionista VII, jun/2026): [MusiConnect – Sua motivação para seguir a carreira da música](https://youtu.be/iI1wommzjRY)
+
+---
+
+## 5. Requisitos
+
+> 🚧 Em construção.
+
+### 5.1 Requisitos funcionais
+
+### 5.2 Requisitos não funcionais
+
+---
+
+## 6. Casos de uso
+
+> 🚧 Em construção.
+
+---
+
+## 7. Fluxos de uso
+
+> 🚧 Em construção.
+
+---
+
+## 8. Estrutura de navegação
+
+> 🚧 Em construção.
+
+---
+
+## 9. Arquitetura
+
+> 🚧 Em construção.
+
+### 9.1 Visão geral (C4)
+
+### 9.2 Arquitetura do app (MVVM)
+
+### 9.3 Modelagem de dados
+
+### 9.4 Pipeline de dados e fontes
+
+---
+
+## 10. Stack tecnológica
+
+> 🚧 Em construção.
+
+---
+
+## 11. Documentação da API
+
+> 🚧 Em construção.
+
+---
+
+## 12. Decisões técnicas e mudanças em relação ao RFC
+
+> 🚧 Em construção.
+
+---
+
+## 13. CI/CD, testes, qualidade, privacidade e monitoramento
+
+> 🚧 Em construção.
+
+### 13.1 CI/CD
+
+### 13.2 Testes
+
+### 13.3 Qualidade e segurança do código
+
+### 13.4 Privacidade e LGPD
+
+### 13.5 Monitoramento
+
+---
+
+## 14. Resultados e validação com o cliente
+
+> 🚧 Em construção.
+
+---
+
+## 15. Aderência à linha de Aplicações Mobile
+
+> 🚧 Em construção.
+
+---
+
+## 16. Trabalhos futuros
+
+> 🚧 Em construção.
+
+---
+
+## 17. Instalação e deploy
+
+> 🚧 Em construção.
+
+---
+
+## 18. Execução local
+
+> 🚧 Em construção.
+
+---
+
+## 19. Contribuições externas
+
+> 🚧 Em construção.
+
+---
+
+## 20. Referências
+
+> 🚧 Em construção.
+
+---
+
+## 21. Autora
 
 **Laura Heloísa Luchez**
 Estudante de Engenharia de Software · Centro Universitário Católica de Santa Catarina
