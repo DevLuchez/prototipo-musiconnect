@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:app_links/app_links.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,6 +10,7 @@ import 'core/keyboard_focus.dart';
 import 'core/monitoring.dart';
 import 'core/push_notifications.dart';
 import 'core/visitor_mode.dart';
+import 'data/services/app_update_service.dart';
 import 'data/services/auth_service.dart';
 import 'data/services/favorites_service.dart';
 import 'data/services/match_count_service.dart';
@@ -26,6 +28,7 @@ import 'presentation/screens/opportunity_detail_screen.dart';
 import 'presentation/screens/privacy_policy_screen.dart';
 import 'presentation/screens/profile/profile_screen.dart';
 import 'presentation/screens/profile/visitor_profile_screen.dart';
+import 'presentation/widgets/app_update_prompt.dart';
 import 'presentation/widgets/auth/auth_common.dart';
 import 'presentation/tutorial/tutorial.dart';
 import 'presentation/widgets/auth/logout_flow.dart';
@@ -66,6 +69,17 @@ class _MusicConnectAppState extends State<MusicConnectApp> {
     // (https://musiconnect.app.br/... — ver core/deep_links.dart e
     // AndroidManifest.xml).
     _linkSubscription = _appLinks.uriLinkStream.listen(_handleIncomingLink);
+    // Build de desenvolvimento (flutter run) é sempre "1.0.0": avisaria
+    // de versão nova toda vez.
+    if (!kDebugMode) _checkForUpdate();
+  }
+
+  Future<void> _checkForUpdate() async {
+    final service = AppUpdateService();
+    final update = await service.check();
+    final context = navigatorKey.currentContext;
+    if (update == null || context == null || !context.mounted) return;
+    showAppUpdatePrompt(context, update, service);
   }
 
   @override

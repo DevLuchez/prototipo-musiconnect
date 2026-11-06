@@ -22,6 +22,7 @@ class ApiConfig {
   // GET /api/institutions/{osm_id} e /api/institutions/{osm_id}/opportunities
   static const String institutions         = '$baseUrl/api/institutions';
   static const String health               = '$baseUrl/';
+  static const String appVersion           = '$baseUrl/api/app/version';
   static const String opportunities        = '$baseUrl/api/opportunities/';
   static const String opportunityFilterOptions = '$baseUrl/api/opportunities/filter-options';
   // GET /ids, /opportunities, /institutions; PUT/DELETE /opportunities/{id} e /institutions/{osm_id}

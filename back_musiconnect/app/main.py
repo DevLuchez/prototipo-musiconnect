@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine
 from app.migrations import run_migrations
 from app.models import Base
+from app.routers import app_version
 from app.routers import auth
 from app.routers import dashboard
 from app.routers import favorites
@@ -81,6 +82,7 @@ app.add_middleware(
     expose_headers=["X-Total-Count"],
 )
 
+app.include_router(app_version.router)
 app.include_router(auth.router)
 app.include_router(dashboard.router)
 app.include_router(favorites.router)

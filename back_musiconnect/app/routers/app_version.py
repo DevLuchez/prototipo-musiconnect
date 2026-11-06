@@ -1,0 +1,72 @@
+"""
+Router da versão do app — o app consulta ao abrir para avisar que há
+versão nova (ou exigir a atualização).
+
+Endpoint:
+  GET /api/app/version → {"latest", "minimum", "download_url"}
+
+- latest: versão mais recente publicada — a tag do último release do
+  GitHub (o mesmo que o link de download baixa), sem o "v". Publicar uma
+  tag já atualiza o aviso, sem mexer no servidor. Guardada por
+  CACHE_TTL; se o GitHub não responder, vale a última conhecida (ou null:
+  o app não avisa nada).
+- minimum: versão mínima aceita (APP_MINIMUM_VERSION no .env). Abaixo
+  dela o app bloqueia até atualizar — só subir quando uma mudança no
+  servidor quebrar as versões antigas. Vazia = ninguém é obrigado.
+"""
+
+import logging
+import time
+from typing import Optional
+
+import httpx
+from fastapi import APIRouter
+from pydantic import BaseModel
+
+from app.config import settings
+
+logger = logging.getLogger("routers.app_version")
+
+router = APIRouter(prefix="/api/app", tags=["app"])
+
+GITHUB_LATEST_RELEASE = (
+    "https://api.github.com/repos/DevLuchez/prototipo-musiconnect/releases/latest"
+)
+# A API do GitHub sem login aceita 60 consultas por hora por IP.
+CACHE_TTL = 10 * 60
+
+_cache: dict = {"version": None, "fetched_at": 0.0}
+
+
+class AppVersionOut(BaseModel):
+    latest: Optional[str] = None
+    minimum: Optional[str] = None
+    download_url: str
+
+
+def fetch_latest_release() -> Optional[str]:
+    """Versão do último release do GitHub ("v1.2.2" → "1.2.2")."""
+    response = httpx.get(GITHUB_LATEST_RELEASE, timeout=10)
+    response.raise_for_status()
+    return response.json()["tag_name"].lstrip("v")
+
+
+def _latest_version() -> Optional[str]:
+    if time.monotonic() - _cache["fetched_at"] < CACHE_TTL:
+        return _cache["version"]
+    try:
+        _cache["version"] = fetch_latest_release()
+    except Exception as e:
+        logger.warning("[Versão] GitHub não respondeu: %s", e)
+    # Mesmo com falha: tenta de novo só depois do CACHE_TTL.
+    _cache["fetched_at"] = time.monotonic()
+    return _cache["version"]
+
+
+@router.get("/version", response_model=AppVersionOut)
+def app_version():
+    return AppVersionOut(
+        latest=_latest_version(),
+        minimum=settings.app_minimum_version or None,
+        download_url=settings.app_download_url,
+    )

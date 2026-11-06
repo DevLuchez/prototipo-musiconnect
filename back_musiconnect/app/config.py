@@ -35,6 +35,14 @@ class Settings(BaseSettings):
     # (https://musiconnect.app.br/confirmar?token=...).
     public_base_url: str = "https://musiconnect.app.br"
 
+    # Aviso de versão nova no app (GET /api/app/version): versão mínima
+    # aceita — abaixo dela o app exige atualizar (vazia = ninguém é
+    # obrigado) — e o link que o botão "Atualizar" abre.
+    app_minimum_version: str = ""
+    app_download_url: str = (
+        "https://github.com/DevLuchez/prototipo-musiconnect/releases/latest/download/musiconnect.apk"
+    )
+
     # App Links do Android (/.well-known/assetlinks.json): pacote do app e
     # impressões digitais SHA-256 das chaves que o assinam, separadas por
     # vírgula. Não são segredo — o Android as publica. Release (APK
