@@ -57,9 +57,8 @@ services:
       # Chave das rotas de administração (header X-Admin-Key) — sem ela,
       # essas rotas ficam sempre bloqueadas
       ADMIN_API_KEY: ${ADMIN_API_KEY}
-      # Versão mínima do app: abaixo dela, o app exige atualizar (vazia =
-      # ninguém é obrigado). Só subir quando uma mudança na API quebrar as
-      # versões antigas — no .env do servidor e `up -d` de novo.
+      # Versão mínima do app — reserva para quando o GitHub não responder
+      # (toda versão nova publicada já é obrigatória). Vazia por padrão.
       APP_MINIMUM_VERSION: ${APP_MINIMUM_VERSION:-}
       # ETL (00h) e scrapers (06h) só rodam no servidor
       # (docker-compose.prod.yml) — no computador, gastariam a cota do

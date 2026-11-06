@@ -57,7 +57,7 @@ class MusicConnectApp extends StatefulWidget {
   State<MusicConnectApp> createState() => _MusicConnectAppState();
 }
 
-class _MusicConnectAppState extends State<MusicConnectApp> {
+class _MusicConnectAppState extends State<MusicConnectApp> with WidgetsBindingObserver {
   final _appLinks = AppLinks();
   final _authService = AuthService();
   StreamSubscription<Uri>? _linkSubscription;
@@ -69,21 +69,37 @@ class _MusicConnectAppState extends State<MusicConnectApp> {
     // (https://musiconnect.app.br/... — ver core/deep_links.dart e
     // AndroidManifest.xml).
     _linkSubscription = _appLinks.uriLinkStream.listen(_handleIncomingLink);
-    // Build de desenvolvimento (flutter run) é sempre "1.0.0": avisaria
-    // de versão nova toda vez.
-    if (!kDebugMode) _checkForUpdate();
+    // Versão nova é obrigatória: confere ao abrir e a cada volta ao app
+    // (ele pode ficar dias em segundo plano). Build de desenvolvimento
+    // (flutter run) é sempre "1.0.0" e pediria atualização toda vez.
+    if (!kDebugMode) {
+      WidgetsBinding.instance.addObserver(this);
+      _checkForUpdate();
+    }
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _checkForUpdate();
+  }
+
+  bool _updatePromptOpen = false;
+
   Future<void> _checkForUpdate() async {
-    final service = AppUpdateService();
-    final update = await service.check();
+    if (_updatePromptOpen) return;
+    final update = await AppUpdateService().check();
     final context = navigatorKey.currentContext;
-    if (update == null || context == null || !context.mounted) return;
-    showAppUpdatePrompt(context, update, service);
+    if (update == null || _updatePromptOpen || context == null || !context.mounted) return;
+    _updatePromptOpen = true;
+    // O aviso não fecha sozinho, mas uma troca de tela que limpa a pilha
+    // (ex: link do e-mail) o remove — aí a próxima volta ao app mostra de novo.
+    await showAppUpdatePrompt(context, update);
+    _updatePromptOpen = false;
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _linkSubscription?.cancel();
     super.dispose();
   }
