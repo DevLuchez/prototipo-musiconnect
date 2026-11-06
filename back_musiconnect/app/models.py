@@ -243,6 +243,9 @@ class User(Base):
     # app registrou o aparelho (DeviceToken), o que pede a permissão antes.
     notify_new_matches = Column(Boolean, nullable=False, default=True, server_default="true")
     notify_deadlines = Column(Boolean, nullable=False, default=True, server_default="true")
+    notify_app_updates = Column(Boolean, nullable=False, default=True, server_default="true")
+    # Última versão do app avisada por notificação — cada versão uma vez só.
+    app_update_notified = Column(String(20), nullable=True)
 
     created_at = Column(DateTime, server_default=func.now())
 
@@ -306,6 +309,10 @@ class DeviceToken(Base):
     user_id = Column(
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    # Versão do app instalada, informada a cada registro (o app registra a
+    # cada abertura): o aviso de versão nova só vai para quem não
+    # atualizou. Vazia = app até a 1.2.5, que não informava.
+    app_version = Column(String(20), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
 
 

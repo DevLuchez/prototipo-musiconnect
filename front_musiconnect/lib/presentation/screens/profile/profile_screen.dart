@@ -55,8 +55,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late final _viewModel = (widget.viewModel ?? ProfileViewModel(user: widget.user))
     ..onUserUpdated = widget.onUserChanged;
 
-  Future<void> _setNotification({bool? newMatches, bool? deadlines}) async {
-    final error = await _viewModel.setNotification(newMatches: newMatches, deadlines: deadlines);
+  Future<void> _setNotification({bool? newMatches, bool? deadlines, bool? appUpdates}) async {
+    final error = await _viewModel.setNotification(
+        newMatches: newMatches, deadlines: deadlines, appUpdates: appUpdates);
     if (error != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
     }
@@ -201,8 +202,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         NotificationsCard(
           newMatches: vm.notifyNewMatches,
           deadlines: vm.notifyDeadlines,
+          appUpdates: vm.notifyAppUpdates,
           onNewMatchesChanged: (v) => _setNotification(newMatches: v),
           onDeadlinesChanged: (v) => _setNotification(deadlines: v),
+          onAppUpdatesChanged: (v) => _setNotification(appUpdates: v),
         ),
         const SizedBox(height: 16),
         UsageDataCard(enabled: vm.usageDataEnabled, onChanged: vm.setUsageDataEnabled),
@@ -488,19 +491,24 @@ class _InfoChip extends StatelessWidget {
   }
 }
 
-/// Notificações: "Novas oportunidades para você" e "Prazos dos favoritos".
+/// Notificações: "Novas oportunidades para você", "Prazos dos favoritos" e
+/// "Novas versões do app".
 class NotificationsCard extends StatelessWidget {
   final bool newMatches;
   final bool deadlines;
+  final bool appUpdates;
   final ValueChanged<bool> onNewMatchesChanged;
   final ValueChanged<bool> onDeadlinesChanged;
+  final ValueChanged<bool> onAppUpdatesChanged;
 
   const NotificationsCard({
     super.key,
     required this.newMatches,
     required this.deadlines,
+    required this.appUpdates,
     required this.onNewMatchesChanged,
     required this.onDeadlinesChanged,
+    required this.onAppUpdatesChanged,
   });
 
   @override
@@ -537,6 +545,12 @@ class NotificationsCard extends StatelessWidget {
                   subtitle: 'Quando faltar menos de uma semana e no último dia.',
                   value: deadlines,
                   onChanged: onDeadlinesChanged,
+                ),
+                _NotificationSwitch(
+                  title: 'Novas versões do app',
+                  subtitle: 'Quando sair uma versão nova para instalar.',
+                  value: appUpdates,
+                  onChanged: onAppUpdatesChanged,
                 ),
               ],
             ),

@@ -3,7 +3,8 @@ Router de notificações — aparelho que recebe e chaves do Perfil.
 
 Endpoints:
   PUT /api/notifications/device       — registra o aparelho (identificador do FCM)
-  PUT /api/notifications/preferences  — chaves "Novas para você" e "Prazos dos favoritos"
+  PUT /api/notifications/preferences  — chaves "Novas para você", "Prazos dos
+                                        favoritos" e "Novas versões do app"
 
 O "Sair" (POST /api/auth/logout) apaga o aparelho; excluir a conta também
 (ON DELETE CASCADE). O envio diário fica em services/notifications.py.
@@ -43,8 +44,11 @@ def register_device(
     ).delete(synchronize_session=False)
     db.execute(
         insert(DeviceToken)
-        .values(token=data.token, user_id=user.id)
-        .on_conflict_do_update(index_elements=[DeviceToken.token], set_={"user_id": user.id})
+        .values(token=data.token, user_id=user.id, app_version=data.app_version)
+        .on_conflict_do_update(
+            index_elements=[DeviceToken.token],
+            set_={"user_id": user.id, "app_version": data.app_version},
+        )
     )
     db.commit()
     return Response(status_code=204)
@@ -59,5 +63,7 @@ def update_preferences(
     """Liga/desliga cada tipo de notificação (chaves do Perfil)."""
     user.notify_new_matches = data.notify_new_matches
     user.notify_deadlines = data.notify_deadlines
+    if data.notify_app_updates is not None:
+        user.notify_app_updates = data.notify_app_updates
     db.commit()
     return user

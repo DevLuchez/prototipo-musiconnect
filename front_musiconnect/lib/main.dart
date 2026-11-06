@@ -10,7 +10,6 @@ import 'core/keyboard_focus.dart';
 import 'core/monitoring.dart';
 import 'core/push_notifications.dart';
 import 'core/visitor_mode.dart';
-import 'data/services/app_update_service.dart';
 import 'data/services/auth_service.dart';
 import 'data/services/favorites_service.dart';
 import 'data/services/match_count_service.dart';
@@ -83,19 +82,7 @@ class _MusicConnectAppState extends State<MusicConnectApp> with WidgetsBindingOb
     if (state == AppLifecycleState.resumed) _checkForUpdate();
   }
 
-  bool _updatePromptOpen = false;
-
-  Future<void> _checkForUpdate() async {
-    if (_updatePromptOpen) return;
-    final update = await AppUpdateService().check();
-    final context = navigatorKey.currentContext;
-    if (update == null || _updatePromptOpen || context == null || !context.mounted) return;
-    _updatePromptOpen = true;
-    // O aviso não fecha sozinho, mas uma troca de tela que limpa a pilha
-    // (ex: link do e-mail) o remove — aí a próxima volta ao app mostra de novo.
-    await showAppUpdatePrompt(context, update);
-    _updatePromptOpen = false;
-  }
+  Future<void> _checkForUpdate() => checkForAppUpdate(navigatorKey);
 
   @override
   void dispose() {
@@ -353,8 +340,8 @@ class MainNavigationState extends State<MainNavigation>
       barrierDismissible: false,
       builder: (dialogContext) => AuthDialog.message(
         title: 'Notificações',
-        message: 'Quer ser avisado de oportunidades que combinam com você e de '
-            'prazos dos seus favoritos?',
+        message: 'Quer ser avisado de oportunidades que combinam com você, de '
+            'prazos dos seus favoritos e de versões novas do app?',
         primaryLabel: 'Quero',
         onPrimary: () => Navigator.of(dialogContext).pop(true),
         secondaryLabel: 'Agora não',
@@ -366,7 +353,7 @@ class MainNavigationState extends State<MainNavigation>
     if (wants != true) {
       try {
         final user = await NotificationsService()
-            .updatePreferences(newMatches: false, deadlines: false);
+            .updatePreferences(newMatches: false, deadlines: false, appUpdates: false);
         if (mounted) setState(() => _user = user);
       } catch (_) {
         // Sem conexão: as chaves ficam como estavam; sem o aparelho
@@ -380,8 +367,9 @@ class MainNavigationState extends State<MainNavigation>
     ));
   }
 
-  /// Toque numa notificação: abre a oportunidade, "Minhas oportunidades"
-  /// ou os favoritos (o que o servidor mandou em `data.open`).
+  /// Toque numa notificação: abre a oportunidade, "Minhas oportunidades",
+  /// os favoritos ou o aviso de versão nova (o que o servidor mandou em
+  /// `data.open`).
   Future<void> _openFromNotification(PushMessage message) async {
     if (!mounted) return;
     final route = ModalRoute.of(context);
@@ -408,6 +396,9 @@ class MainNavigationState extends State<MainNavigation>
         _openMatcher(0);
       case 'favorites':
         _openSavedOpportunities();
+      case 'app_update':
+        // Com o app fechado, abrir já confere a versão; aberto, confere aqui.
+        if (!kDebugMode) checkForAppUpdate(navigatorKey);
     }
   }
 

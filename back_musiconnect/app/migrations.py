@@ -69,6 +69,10 @@ _STATEMENTS = [
     # ── Notificações (chaves do Perfil, ligadas por padrão) ───────────────
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS notify_new_matches BOOLEAN NOT NULL DEFAULT TRUE",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS notify_deadlines BOOLEAN NOT NULL DEFAULT TRUE",
+    # ── Aviso de versão nova do app (06/11/2026) ──────────────────────────
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS notify_app_updates BOOLEAN NOT NULL DEFAULT TRUE",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS app_update_notified VARCHAR(20)",
+    "ALTER TABLE device_tokens ADD COLUMN IF NOT EXISTS app_version VARCHAR(20)",
     # ── Participação ativa (02/11/2026) ───────────────────────────────────
     # O Gemini passou a responder se a pessoa participa fazendo música (só
     # vale para quem não informa instrumento) e a listar os instrumentos de

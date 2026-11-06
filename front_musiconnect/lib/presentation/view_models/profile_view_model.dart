@@ -109,25 +109,28 @@ class ProfileViewModel extends ViewModel {
   /// nada chega — mostrar ligada seria enganoso).
   bool get notifyNewMatches => _notificationsPermitted && _user.notifyNewMatches;
   bool get notifyDeadlines => _notificationsPermitted && _user.notifyDeadlines;
+  bool get notifyAppUpdates => _notificationsPermitted && _user.notifyAppUpdates;
 
   /// Liga/desliga um tipo de notificação. Ligar sem a permissão do Android
   /// pede a permissão antes. Devolve a mensagem de erro para exibir, ou null.
   ///
   /// Uma gravação por vez: com toques rápidos nas duas chaves, a segunda
   /// levaria o valor antigo da primeira (e a desfaria no servidor).
-  Future<String?> setNotification({bool? newMatches, bool? deadlines}) {
-    final result = _lastSave.then((_) => _saveNotification(newMatches, deadlines));
+  Future<String?> setNotification({bool? newMatches, bool? deadlines, bool? appUpdates}) {
+    final result =
+        _lastSave.then((_) => _saveNotification(newMatches, deadlines, appUpdates));
     _lastSave = result.then<void>((_) {}, onError: (_) {});
     return result;
   }
 
   Future<void> _lastSave = Future.value();
 
-  Future<String?> _saveNotification(bool? newMatches, bool? deadlines) async {
-    // A outra chave fica como estava na tela (sem a permissão, desligada).
+  Future<String?> _saveNotification(bool? newMatches, bool? deadlines, bool? appUpdates) async {
+    // As outras chaves ficam como estavam na tela (sem a permissão, desligadas).
     final shownNewMatches = notifyNewMatches;
     final shownDeadlines = notifyDeadlines;
-    final turningOn = newMatches == true || deadlines == true;
+    final shownAppUpdates = notifyAppUpdates;
+    final turningOn = newMatches == true || deadlines == true || appUpdates == true;
     if (turningOn && !_notificationsPermitted) {
       if (!await _push.enable()) {
         return 'Permita as notificações do MusiConnect nas configurações do Android.';
@@ -137,6 +140,7 @@ class ProfileViewModel extends ViewModel {
       final updated = await _notificationsService.updatePreferences(
         newMatches: newMatches ?? shownNewMatches,
         deadlines: deadlines ?? shownDeadlines,
+        appUpdates: appUpdates ?? shownAppUpdates,
       );
       _user = updated;
       notifyListeners();

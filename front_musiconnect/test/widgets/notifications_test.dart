@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:prototipo_musiconnect/core/constants.dart';
 import 'package:prototipo_musiconnect/core/push_notifications.dart';
 import 'package:prototipo_musiconnect/core/visitor_mode.dart';
@@ -21,8 +22,8 @@ import '../helpers/api.dart';
 import '../helpers/fakes.dart';
 import '../helpers/screen.dart';
 
-const _question = 'Quer ser avisado de oportunidades que combinam com você e de '
-    'prazos dos seus favoritos?';
+const _question = 'Quer ser avisado de oportunidades que combinam com você, de '
+    'prazos dos seus favoritos e de versões novas do app?';
 
 late FakePushBackend backend;
 late Map<String, dynamic> prefsSent;
@@ -77,6 +78,8 @@ void main() {
 
   setUp(() {
     FlutterSecureStorage.setMockInitialValues({'session_token': 'tok'});
+    PackageInfo.setMockInitialValues(appName: 'MusiConnect', packageName: 'x', version: '1.2.5',
+        buildNumber: '8', buildSignature: '');
     backend = FakePushBackend();
     prefsSent = {};
     PushNotifications.instance = PushNotifications(backend: backend);
@@ -127,7 +130,7 @@ void main() {
         await settle(tester);
 
         expect(backend.permissionRequests, 0);
-        expect(prefsSent, {'notify_new_matches': false, 'notify_deadlines': false});
+        expect(prefsSent, {'notify_new_matches': false, 'notify_deadlines': false, 'notify_app_updates': false});
         expect(find.text(kNotificationsLaterMessage), findsOneWidget);
         await tester.pumpWidget(const SizedBox());
 
@@ -167,6 +170,10 @@ void main() {
         await pumpApp(tester, notificationsOffered: true);
 
         expect(deviceRegistered(), isTrue);
+        // Com a versão instalada: o aviso de versão nova só vai para quem
+        // não atualizou.
+        final device = api.requests.lastWhere((r) => r.url.path.endsWith('/api/notifications/device'));
+        expect(json.decode(device.body)['app_version'], '1.2.5');
       });
     });
   });
@@ -300,7 +307,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(backend.permissionRequests, 1);
-        expect(prefsSent, {'notify_new_matches': false, 'notify_deadlines': true});
+        expect(prefsSent, {'notify_new_matches': false, 'notify_deadlines': true, 'notify_app_updates': false});
         expect(tester.widget<Switch>(switchOf('Prazos dos favoritos')).value, isTrue);
         expect(tester.widget<Switch>(switchOf('Novas oportunidades para você')).value, isFalse);
       });
@@ -334,7 +341,7 @@ void main() {
 
         expect(backend.permissionRequests, 1);
         expect(find.byType(SnackBar), findsNothing);
-        expect(prefsSent, {'notify_new_matches': true, 'notify_deadlines': true});
+        expect(prefsSent, {'notify_new_matches': true, 'notify_deadlines': true, 'notify_app_updates': false});
         expect(tester.widget<Switch>(switchOf('Prazos dos favoritos')).value, isTrue);
         expect(tester.widget<Switch>(switchOf('Novas oportunidades para você')).value, isTrue);
       });
@@ -349,7 +356,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(SnackBar), findsNothing);
-        expect(prefsSent, {'notify_new_matches': false, 'notify_deadlines': true});
+        expect(prefsSent, {'notify_new_matches': false, 'notify_deadlines': true, 'notify_app_updates': false});
       });
     });
 
@@ -364,7 +371,7 @@ void main() {
         expect(await first, isNull);
         expect(await second, isNull);
 
-        expect(prefsSent, {'notify_new_matches': false, 'notify_deadlines': false});
+        expect(prefsSent, {'notify_new_matches': false, 'notify_deadlines': false, 'notify_app_updates': true});
         expect(tester.widget<Switch>(switchOf('Novas oportunidades para você')).value, isFalse);
         expect(tester.widget<Switch>(switchOf('Prazos dos favoritos')).value, isFalse);
       });
@@ -380,7 +387,25 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(backend.permissionRequests, 0);
-        expect(prefsSent, {'notify_new_matches': false, 'notify_deadlines': true});
+        expect(prefsSent, {'notify_new_matches': false, 'notify_deadlines': true, 'notify_app_updates': true});
+      });
+    });
+
+    testWidgets('chave de versões novas salva só ela', (tester) async {
+      backend.permitted = true;
+      await api.run(() async {
+        await pumpProfile(tester);
+        expect(tester.widget<Switch>(switchOf('Novas versões do app')).value, isTrue);
+
+        await tester.tap(switchOf('Novas versões do app'));
+        await tester.pumpAndSettle();
+
+        expect(prefsSent, {
+          'notify_new_matches': true,
+          'notify_deadlines': true,
+          'notify_app_updates': false,
+        });
+        expect(tester.widget<Switch>(switchOf('Novas versões do app')).value, isFalse);
       });
     });
 

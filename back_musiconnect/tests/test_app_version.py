@@ -6,6 +6,7 @@ versão mínima do app.
 import pytest
 
 import app.routers.app_version as app_version
+from app.routers.app_version import is_older
 from app.config import settings
 
 
@@ -62,3 +63,12 @@ def test_github_fora_do_ar_desde_o_inicio_nao_avisa_nada(api, github):
     github["fail"] = True
 
     assert api.get("/api/app/version").json()["latest"] is None
+
+
+def test_compara_versoes_numero_a_numero():
+    assert is_older("1.2.9", "1.2.10")
+    assert not is_older("1.2.10", "1.2.9")
+    assert not is_older("1.2", "1.2.0")
+    # App até a 1.2.5 não informava: conta como 1.2.5.
+    assert not is_older(None, "1.2.5")
+    assert is_older(None, "1.2.6")

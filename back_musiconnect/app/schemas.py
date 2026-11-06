@@ -210,6 +210,7 @@ class UserOut(BaseModel):
     # Chaves de notificação do Perfil.
     notify_new_matches: bool = True
     notify_deadlines: bool = True
+    notify_app_updates: bool = True
     # Só vem preenchido nas respostas de login/troca de senha — o cliente
     # usa esse valor pra atualizar o token guardado localmente.
     token: Optional[str] = None
@@ -229,6 +230,8 @@ class DeviceTokenIn(BaseModel):
     """Identificador do aparelho no Firebase Cloud Messaging."""
 
     token: str = Field(min_length=1, max_length=4096)
+    # Versão do app instalada ("1.2.6"). Apps até a 1.2.5 não enviam.
+    app_version: Optional[str] = Field(default=None, max_length=20)
 
 
 class NotificationPreferencesIn(BaseModel):
@@ -236,3 +239,5 @@ class NotificationPreferencesIn(BaseModel):
 
     notify_new_matches: bool
     notify_deadlines: bool
+    # Apps até a 1.2.5 não têm essa chave — sem ela, fica como está.
+    notify_app_updates: Optional[bool] = None

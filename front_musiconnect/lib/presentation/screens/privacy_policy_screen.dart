@@ -32,9 +32,10 @@ class _Changed {
 
 /// Resumo do que mudou na versão atual em relação à anterior.
 const _changesSummary = [
-  'Incluímos as notificações: se você permitir, guardamos um identificador '
-      'do seu celular para avisar de oportunidades novas que combinam com você '
-      'e de prazos dos seus favoritos. Você pode desligá-las no Perfil.',
+  'Incluímos o aviso de versão nova do app: se você permitir as '
+      'notificações, guardamos a versão do app instalada no seu celular, para '
+      'avisar quando sair uma mais nova. Você pode desligar esse aviso no '
+      'Perfil.',
 ];
 
 const _sections = [
@@ -57,8 +58,8 @@ const _sections = [
     _Changed(
         '• Se você permitir as notificações: um identificador do seu celular '
         'gerado pelo Firebase Cloud Messaging (o endereço para onde vão os '
-        'avisos), quais avisos você quer receber e quais já recebeu, para não '
-        'repetir.'),
+        'avisos), a versão do app instalada nele, quais avisos você quer '
+        'receber e quais já recebeu, para não repetir.'),
     'E, enquanto você usa o app, dados técnicos que não identificam você '
         'pelo nome ou e-mail:',
     '• Dados de uso: telas abertas e ações como entrar, cadastrar-se, favoritar '
@@ -84,9 +85,9 @@ const _sections = [
         'e cada oportunidade.',
     '• Mostrar e guardar os seus favoritos.',
     _Changed(
-        '• Enviar notificações de oportunidades novas que combinam com você e '
-        'de prazos dos seus favoritos, se você permitir — no máximo uma de '
-        'cada tipo por dia.'),
+        '• Enviar notificações de oportunidades novas que combinam com você, '
+        'de prazos dos seus favoritos e de versões novas do app, se você '
+        'permitir — no máximo uma de cada tipo por dia.'),
     '• Entender como o app é usado e corrigir erros (dados de uso e '
         'relatórios de erro).',
     'Usamos os dados da conta com base no seu consentimento e para prestar o '
@@ -116,10 +117,9 @@ const _sections = [
         'e-mail. Os servidores do Google podem ficar fora do Brasil; o Google '
         'trata esses dados conforme os termos de proteção de dados do '
         'Firebase.',
-    _Changed(
-        '• Google Firebase Cloud Messaging: entrega as notificações ao seu '
+    '• Google Firebase Cloud Messaging: entrega as notificações ao seu '
         'celular. Recebe o identificador do aparelho e o texto do aviso (como o '
-        'título de uma oportunidade), sem o seu nome nem o seu e-mail.'),
+        'título de uma oportunidade), sem o seu nome nem o seu e-mail.',
   ]),
   _PolicySection('O que fica guardado no seu celular', [
     '• O código da sua sessão, para você não precisar fazer login toda vez. '
@@ -127,9 +127,8 @@ const _sections = [
         'sair da conta.',
     '• Preferências de exibição, como a ordenação das listas de favoritos, '
         'e a sua escolha de enviar ou não dados de uso e erros.',
-    _Changed(
-        '• Se o convite das notificações já apareceu, para não perguntar de '
-        'novo.'),
+    '• Se o convite das notificações já apareceu, para não perguntar de '
+        'novo.',
     '• Se você entrou sem conta, a versão desta política que aceitou — para '
         'não pedir o aceite a cada visita.',
   ]),
@@ -143,9 +142,8 @@ const _sections = [
     'Oportunidades favoritas cujo prazo de inscrição terminou ou cujo anúncio '
         'foi retirado da fonte, e instituições favoritas que deixaram de existir '
         'no mapa, são removidas automaticamente dos seus favoritos.',
-    _Changed(
-        'O identificador do celular para notificações é apagado quando você '
-        'sai da conta, quando exclui a conta ou quando o app é desinstalado.'),
+    'O identificador do celular para notificações é apagado quando você '
+        'sai da conta, quando exclui a conta ou quando o app é desinstalado.',
     'No Firebase, os dados de uso ligados ao identificador da instalação '
         'ficam guardados por até 2 meses, e os relatórios de erro por até 90 '
         'dias; depois disso, só restam números agregados (ex: quantas pessoas '
@@ -158,9 +156,8 @@ const _sections = [
     '• Excluir seus dados e revogar o consentimento: Perfil → Excluir conta.',
     '• Se opor ao envio de dados de uso e erros: Perfil → Enviar dados de uso '
         'e erros.',
-    _Changed(
-        '• Parar de receber notificações: Perfil → Notificações, ou nas '
-        'configurações do Android.'),
+    '• Parar de receber notificações: Perfil → Notificações, ou nas '
+        'configurações do Android.',
     '• Tirar dúvidas ou fazer qualquer outro pedido pelo e-mail '
         '$kSupportEmail.',
   ]),

@@ -1,6 +1,6 @@
 """
 Notificações diárias (09h, depois da coleta das 06h) pelo Firebase Cloud
-Messaging. Dois avisos, cada um com sua chave no Perfil:
+Messaging. Três avisos, cada um com sua chave no Perfil:
 
   - Novas para você: oportunidades que entraram nos últimos dias com match
     >= HIGH_MATCH_THRESHOLD (o mesmo corte de "Minhas oportunidades"). Uma
@@ -9,6 +9,10 @@ Messaging. Dois avisos, cada um com sua chave no Perfil:
     (mesma regra do "Última chance" do Início e da data vermelha no card) e
     no último dia. Várias no mesmo dia → uma notificação só, que abre os
     favoritos.
+  - Novas versões do app: o aparelho está numa versão anterior à mais
+    recente publicada. Uma vez por versão (User.app_update_notified) — e
+    só às 09h: várias publicações no mesmo dia viram um aviso só, da
+    última. Ao tocar, o app abre e exige a atualização.
 
 No máximo uma notificação de cada tipo por dia, e cada aviso uma única vez
 por oportunidade (NotificationLog). Só recebe quem está conectado num
@@ -26,6 +30,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import SessionLocal
 from app.models import DeviceToken, FavoriteOpportunity, NotificationLog, Opportunity, User
+from app.routers.app_version import is_older, latest_version
 from app.routers.opportunities import _apply_filters, _only_open
 from app.services.matching import (
     HIGH_MATCH_THRESHOLD,
@@ -53,6 +58,8 @@ class Push:
     data: dict
     # (opportunity_id, kind) registrados no NotificationLog se o envio sair.
     logged: list = field(default_factory=list)
+    # Aviso de versão nova: guardada em User.app_update_notified se sair.
+    app_version: Optional[str] = None
 
 
 def _days_left_text(days: int) -> str:
@@ -114,13 +121,41 @@ def _deadlines_push(user: User, soon: list[Opportunity], last: list[Opportunity]
     )
 
 
+def _app_update_pushes(db: Session, latest: Optional[str]) -> list[Push]:
+    """Aviso de versão nova para quem tem a chave ligada, um aparelho numa
+    versão anterior e ainda não foi avisado desta versão."""
+    if not latest:
+        return []
+    rows = (
+        db.query(User, DeviceToken.app_version)
+        .join(DeviceToken, DeviceToken.user_id == User.id)
+        .filter(User.notify_app_updates)
+        .all()
+    )
+    pushes = {}
+    for user, installed in rows:
+        if user.app_update_notified == latest or not is_older(installed, latest):
+            continue
+        pushes[user.id] = Push(
+            user_id=user.id,
+            title="Nova versão do MusiConnect",
+            body=f"A versão {latest} já está disponível. Toque para atualizar.",
+            data={"open": "app_update"},
+            app_version=latest,
+        )
+    return list(pushes.values())
+
+
 def build_daily_pushes(db: Session, today: Optional[date] = None,
-                       now: Optional[datetime] = None) -> list[Push]:
+                       now: Optional[datetime] = None,
+                       latest: Optional[str] = None) -> list[Push]:
     """Monta as notificações do dia (sem enviar). Só para quem tem aparelho
-    registrado e a chave correspondente ligada."""
+    registrado e a chave correspondente ligada. `latest`: versão mais
+    recente do app (None = sem aviso de versão)."""
     today = today or date.today()
     now = now or datetime.now(timezone.utc).replace(tzinfo=None)
 
+    pushes: list[Push] = _app_update_pushes(db, latest)
     users = (
         db.query(User)
         .filter(User.id.in_(db.query(DeviceToken.user_id)))
@@ -128,7 +163,7 @@ def build_daily_pushes(db: Session, today: Optional[date] = None,
         .all()
     )
     if not users:
-        return []
+        return pushes
 
     visible = _only_open(_apply_filters(db.query(Opportunity))).all()
     recent = [o for o in visible if o.created_at and o.created_at >= now - NEW_WINDOW]
@@ -144,7 +179,6 @@ def build_daily_pushes(db: Session, today: Optional[date] = None,
     ):
         favorites.setdefault(fav.user_id, set()).add(fav.opportunity_id)
 
-    pushes: list[Push] = []
     for user in users:
         if user.notify_new_matches:
             new = []
@@ -216,13 +250,14 @@ def _firebase_sender() -> Optional[Sender]:
 
 
 def send_daily_notifications(sender: Optional[Sender] = None, today: Optional[date] = None,
-                             now: Optional[datetime] = None) -> dict:
+                             now: Optional[datetime] = None,
+                             latest: Optional[str] = None) -> dict:
     """Monta e envia as notificações do dia. Registra no NotificationLog o
     que foi entregue a ao menos um aparelho e apaga os aparelhos que o
     Firebase diz não existirem mais."""
     db = SessionLocal()
     try:
-        pushes = build_daily_pushes(db, today=today, now=now)
+        pushes = build_daily_pushes(db, today=today, now=now, latest=latest)
         stats = {"pushes": len(pushes), "sent": 0, "failed": 0, "invalid_tokens": 0}
         if not pushes:
             return stats
@@ -250,6 +285,9 @@ def send_daily_notifications(sender: Optional[Sender] = None, today: Optional[da
                 for opportunity_id, kind in push.logged:
                     db.add(NotificationLog(
                         user_id=push.user_id, opportunity_id=opportunity_id, kind=kind))
+                if push.app_version:
+                    db.query(User).filter(User.id == push.user_id).update(
+                        {"app_update_notified": push.app_version})
                 stats["sent"] += 1
             else:
                 stats["failed"] += 1
@@ -262,7 +300,7 @@ def send_daily_notifications(sender: Optional[Sender] = None, today: Optional[da
 async def run_daily_notifications() -> dict:
     """Job do agendador (09h)."""
     logger.info("[Notificações] Montando as notificações do dia...")
-    stats = send_daily_notifications()
+    stats = send_daily_notifications(latest=latest_version())
     logger.info(
         f"[Notificações] {stats['sent']} enviadas, {stats['failed']} sem entrega, "
         f"{stats['invalid_tokens']} aparelhos removidos"

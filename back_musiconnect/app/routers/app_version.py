@@ -53,7 +53,26 @@ def fetch_latest_release() -> Optional[str]:
     return response.json()["tag_name"].lstrip("v")
 
 
-def _latest_version() -> Optional[str]:
+# Última versão do app que não informava a versão instalada ao registrar
+# o aparelho: aparelho sem versão está nela (ou antes).
+LAST_UNREPORTED_VERSION = "1.2.5"
+
+
+def is_older(version: Optional[str], than: str) -> bool:
+    """"1.2.9" é mais antiga que "1.2.10"? Versão desconhecida (None) conta
+    como LAST_UNREPORTED_VERSION — quem está na 1.2.5 não é avisado da
+    própria 1.2.5, só a partir da seguinte."""
+    version = version or LAST_UNREPORTED_VERSION
+
+    def parts(v: str) -> list[int]:
+        return [int(p) if p.isdigit() else 0 for p in v.split(".")]
+
+    a, b = parts(version), parts(than)
+    size = max(len(a), len(b))
+    return a + [0] * (size - len(a)) < b + [0] * (size - len(b))
+
+
+def latest_version() -> Optional[str]:
     fetched_at = _cache["fetched_at"]
     if fetched_at is not None and time.monotonic() - fetched_at < CACHE_TTL:
         return _cache["version"]
@@ -69,7 +88,7 @@ def _latest_version() -> Optional[str]:
 @router.get("/version", response_model=AppVersionOut)
 def app_version():
     return AppVersionOut(
-        latest=_latest_version(),
+        latest=latest_version(),
         minimum=settings.app_minimum_version or None,
         download_url=settings.app_download_url,
     )

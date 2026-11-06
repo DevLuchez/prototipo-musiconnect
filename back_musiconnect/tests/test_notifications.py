@@ -1,13 +1,13 @@
 """
 Notificações: registro do aparelho, chaves do Perfil e envio diário
-(novas com match alto + prazos dos favoritos).
+(novas com match alto + prazos dos favoritos + versão nova do app).
 """
 
 from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
-from app.models import DeviceToken, FavoriteOpportunity, NotificationLog
+from app.models import DeviceToken, FavoriteOpportunity, NotificationLog, User
 from app.services import notifications as notif
 from tests.helpers import auth_headers, make_opportunity, make_user
 
@@ -23,8 +23,8 @@ def _same_session(monkeypatch, db_session):
     monkeypatch.setattr(db_session, "close", lambda: None)
 
 
-def _device(db, user, token="aparelho-1"):
-    db.add(DeviceToken(token=token, user_id=user.id))
+def _device(db, user, token="aparelho-1", app_version=None):
+    db.add(DeviceToken(token=token, user_id=user.id, app_version=app_version))
     db.commit()
 
 
@@ -49,8 +49,8 @@ class _Sender:
         return self.result(token) if callable(self.result) else self.result
 
 
-def _send(sender):
-    return notif.send_daily_notifications(sender=sender, today=HOJE, now=AGORA)
+def _send(sender, latest=None):
+    return notif.send_daily_notifications(sender=sender, today=HOJE, now=AGORA, latest=latest)
 
 
 # ── Rotas ────────────────────────────────────────────────────────────────
@@ -128,6 +128,26 @@ def test_chaves_do_perfil(api, db_session):
     assert body["notify_new_matches"] is False and body["notify_deadlines"] is True
     me = api.get("/api/auth/me", headers=headers).json()
     assert me["notify_new_matches"] is False and me["notify_deadlines"] is True
+    assert me["notify_app_updates"] is True  # app sem essa chave não mexe nela
+
+    api.put("/api/notifications/preferences", headers=headers, json={
+        "notify_new_matches": False, "notify_deadlines": True, "notify_app_updates": False})
+    assert api.get("/api/auth/me", headers=headers).json()["notify_app_updates"] is False
+
+
+def test_registro_guarda_a_versao_do_app(api, db_session):
+    user = make_user(db_session)
+    headers = auth_headers(db_session, user)
+
+    api.put("/api/notifications/device", headers=headers,
+            json={"token": "aparelho-1", "app_version": "1.2.5"})
+    assert db_session.query(DeviceToken).one().app_version == "1.2.5"
+
+    # Depois de atualizar, o mesmo aparelho registra a versão nova.
+    api.put("/api/notifications/device", headers=headers,
+            json={"token": "aparelho-1", "app_version": "1.2.6"})
+    db_session.expire_all()
+    assert db_session.query(DeviceToken).one().app_version == "1.2.6"
 
 
 # ── Novas para você ──────────────────────────────────────────────────────
@@ -276,6 +296,60 @@ def test_novas_e_prazos_no_mesmo_dia_sao_duas_notificacoes(db_session):
 
 # ── Envio ────────────────────────────────────────────────────────────────
 
+# ── Novas versões do app ─────────────────────────────────────────────────
+
+def test_versao_nova_avisa_quem_esta_numa_anterior_uma_vez_so(db_session):
+    user = make_user(db_session)
+    _device(db_session, user, app_version="1.2.5")
+    sender = _Sender()
+
+    assert _send(sender, latest="1.2.6")["sent"] == 1
+    _, push = sender.sent[0]
+    assert push.title == "Nova versão do MusiConnect"
+    assert "1.2.6" in push.body and push.data == {"open": "app_update"}
+    db_session.refresh(user)
+    assert user.app_update_notified == "1.2.6"
+
+    # No dia seguinte, ainda sem atualizar: não repete.
+    assert _send(sender, latest="1.2.6")["pushes"] == 0
+    # Saiu outra versão: avisa de novo.
+    assert _send(sender, latest="1.2.7")["sent"] == 1
+
+
+def test_versao_nova_nao_avisa_quem_ja_atualizou_nem_quem_desligou(db_session):
+    atualizada = make_user(db_session, email="a@example.com")
+    _device(db_session, atualizada, token="a", app_version="1.2.6")
+    desligou = make_user(db_session, email="b@example.com", notify_app_updates=False)
+    _device(db_session, desligou, token="b", app_version="1.2.5")
+
+    assert _send(_Sender(), latest="1.2.6")["pushes"] == 0
+
+
+def test_app_que_nao_informa_a_versao_conta_como_1_2_5(db_session):
+    # Até a 1.2.5 o app não enviava a versão: não é avisado da própria
+    # 1.2.5 (o servidor sobe antes do app novo), só da seguinte.
+    _device(db_session, make_user(db_session), app_version=None)
+
+    assert _send(_Sender(), latest="1.2.5")["pushes"] == 0
+    assert _send(_Sender(), latest="1.2.6")["sent"] == 1
+
+
+def test_sem_versao_conhecida_nao_avisa(db_session):
+    _device(db_session, make_user(db_session), app_version="1.2.5")
+
+    assert _send(_Sender(), latest=None)["pushes"] == 0
+
+
+def test_aviso_de_versao_nao_entregue_tenta_de_novo_no_dia_seguinte(db_session):
+    user = make_user(db_session)
+    _device(db_session, user, app_version="1.2.5")
+
+    assert _send(_Sender("error"), latest="1.2.6")["failed"] == 1
+    db_session.refresh(user)
+    assert user.app_update_notified is None
+    assert _send(_Sender(), latest="1.2.6")["sent"] == 1
+
+
 def test_aparelho_que_nao_existe_mais_e_apagado_e_nada_e_registrado(db_session):
     _device(db_session, make_user(db_session))
     _opp(db_session)
@@ -316,8 +390,9 @@ def test_sem_ninguem_para_avisar_nem_procura_a_chave(db_session, monkeypatch):
 
 
 def test_job_do_agendador(db_session, monkeypatch):
+    monkeypatch.setattr(notif, "latest_version", lambda: "1.2.5")
     monkeypatch.setattr(notif, "send_daily_notifications",
-                        lambda: {"pushes": 0, "sent": 0, "failed": 0, "invalid_tokens": 0})
+                        lambda latest: {"pushes": 0, "sent": 0, "failed": 0, "invalid_tokens": 0})
     import asyncio
     assert asyncio.run(notif.run_daily_notifications())["sent"] == 0
 
