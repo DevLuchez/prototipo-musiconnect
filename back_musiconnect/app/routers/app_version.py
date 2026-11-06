@@ -35,7 +35,9 @@ GITHUB_LATEST_RELEASE = (
 # A API do GitHub sem login aceita 60 consultas por hora por IP.
 CACHE_TTL = 10 * 60
 
-_cache: dict = {"version": None, "fetched_at": 0.0}
+# fetched_at None = nunca consultado (não dá para usar 0: o relógio
+# monotônico conta desde que a máquina ligou, e pode estar perto de 0).
+_cache: dict = {"version": None, "fetched_at": None}
 
 
 class AppVersionOut(BaseModel):
@@ -52,7 +54,8 @@ def fetch_latest_release() -> Optional[str]:
 
 
 def _latest_version() -> Optional[str]:
-    if time.monotonic() - _cache["fetched_at"] < CACHE_TTL:
+    fetched_at = _cache["fetched_at"]
+    if fetched_at is not None and time.monotonic() - fetched_at < CACHE_TTL:
         return _cache["version"]
     try:
         _cache["version"] = fetch_latest_release()

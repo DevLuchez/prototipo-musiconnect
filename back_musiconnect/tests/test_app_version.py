@@ -21,7 +21,7 @@ def github(monkeypatch):
         return state["releases"][0]
 
     monkeypatch.setattr(app_version, "fetch_latest_release", fake_fetch)
-    monkeypatch.setattr(app_version, "_cache", {"version": None, "fetched_at": 0.0})
+    monkeypatch.setattr(app_version, "_cache", {"version": None, "fetched_at": None})
     return state
 
 
