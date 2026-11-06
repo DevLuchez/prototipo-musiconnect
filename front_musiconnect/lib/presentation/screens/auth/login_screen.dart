@@ -21,6 +21,11 @@ class _LoginScreenState extends State<LoginScreen> {
   final _authService = AuthService();
   bool _loading = false;
   String? _loginError;
+  // Cadastro ainda não confirmado: mostra "Reenviar e-mail de confirmação"
+  // (sem isso, quem fechou o app antes de confirmar, ou deixou o link
+  // vencer, não teria como receber outro).
+  bool _emailNotConfirmed = false;
+  bool _resending = false;
 
   bool get _loginValid =>
       _emailController.text.isNotEmpty && _passwordController.text.isNotEmpty;
@@ -36,7 +41,10 @@ class _LoginScreenState extends State<LoginScreen> {
     // Limpa o erro assim que o usuário mexe nos campos de novo — evita
     // deixar uma mensagem de erro desatualizada na tela.
     if (_loginError != null) {
-      setState(() => _loginError = null);
+      setState(() {
+        _loginError = null;
+        _emailNotConfirmed = false;
+      });
     } else {
       setState(() {});
     }
@@ -69,10 +77,28 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     } on AuthException catch (e) {
       if (!mounted) return;
-      setState(() => _loginError = e.message);
+      setState(() {
+        _loginError = e.message;
+        _emailNotConfirmed = e.emailNotConfirmed;
+      });
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _resendConfirmation() async {
+    final email = _emailController.text.trim();
+    setState(() => _resending = true);
+    String message;
+    try {
+      await _authService.resend(email);
+      message = 'Enviamos um novo link para $email. Confira também o spam.';
+    } on AuthException catch (e) {
+      message = e.message;
+    }
+    if (!mounted) return;
+    setState(() => _resending = false);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _goSignup() {
@@ -164,6 +190,20 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ),
+                      if (_emailNotConfirmed)
+                        Center(
+                          child: TextButton(
+                            onPressed: _resending ? null : _resendConfirmation,
+                            child: const Text(
+                              'Reenviar e-mail de confirmação',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
+                                color: kAuthPink,
+                              ),
+                            ),
+                          ),
+                        ),
                     ],
                     const SizedBox(height: 12),
                     SizedBox(

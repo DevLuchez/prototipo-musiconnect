@@ -70,11 +70,19 @@ def confirm_page(token: str = ""):
 @router.post("/confirmar", response_class=HTMLResponse)
 def confirm_submit(token: str = Form(""), db: Session = Depends(get_db)):
     status, _ = confirm_by_token(db, token)
+    if status == "expired":
+        return _page(
+            "Link expirado",
+            "<p>Esse link de confirmação expirou. Entre no app com seu e-mail "
+            "e senha para receber um novo.</p>",
+            status_code=400,
+        )
     if status == "invalid":
         return _page(
             "Link inválido",
             "<p>Esse link de confirmação é inválido ou já foi usado. "
-            "Se ainda não confirmou, peça um novo e-mail no app.</p>",
+            "Se ainda não confirmou, entre no app com seu e-mail e senha "
+            "para receber um novo.</p>",
             status_code=400,
         )
     return _page(
@@ -103,6 +111,12 @@ def reset_submit(
 ):
     if password != password_confirm:
         return _reset_form(token, error="As senhas não coincidem.", status_code=400)
+    if password != password.strip():
+        return _reset_form(
+            token,
+            error="A senha não pode começar nem terminar com espaço.",
+            status_code=400,
+        )
     if not is_strong_password(password):
         return _reset_form(
             token,

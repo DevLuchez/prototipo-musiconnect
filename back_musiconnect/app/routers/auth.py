@@ -49,8 +49,11 @@ from app.schemas import (
 )
 from app.services.email_service import send_confirmation_email, send_password_reset_email
 
-# Tempo de validade do link de redefinição de senha.
-PASSWORD_RESET_EXPIRY = timedelta(minutes=30)
+# Tempo de validade dos links dos e-mails. O de confirmação é mais longo
+# porque a pessoa pode abrir o e-mail bem depois (ou achá-lo no spam), e
+# ele só confirma o e-mail — não dá acesso à conta.
+PASSWORD_RESET_EXPIRY = timedelta(minutes=15)
+CONFIRMATION_EXPIRY = timedelta(hours=24)
 
 # Versão da Política de privacidade registrada quando o app não informa qual
 # a pessoa leu: o app v1.0.0, que mostra o texto de 2026-10-30. Os apps
@@ -77,6 +80,20 @@ def _verify_password(password: str, password_hash: str) -> bool:
 
 def _generate_token() -> str:
     return secrets.token_urlsafe(32)
+
+
+def _expired(sent_at: datetime | None, expiry: timedelta) -> bool:
+    if sent_at is None:
+        return True
+    if sent_at.tzinfo is None:
+        sent_at = sent_at.replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc) - sent_at > expiry
+
+
+def _confirmation_link_valid(user: User) -> bool:
+    return bool(user.confirmation_token) and not _expired(
+        user.confirmation_sent_at, CONFIRMATION_EXPIRY
+    )
 
 
 def _record_privacy_consent(user: User, now: datetime, version: Optional[str] = None) -> None:
@@ -123,12 +140,14 @@ async def signup(data: SignupIn, db: Session = Depends(get_db)):
     são atualizados e um novo token é gerado (permite refazer o cadastro
     se o usuário desistiu no meio do fluxo antes). Se já estiver
     confirmado, recusa — já existe uma conta de verdade com esse e-mail.
+    O link de confirmação continua o mesmo (ver `resend_confirmation`).
     """
     existing = db.query(User).filter(User.email == data.email).first()
     if existing and existing.email_confirmed:
         raise HTTPException(status_code=409, detail="E-mail já cadastrado.")
 
-    token = _generate_token()
+    keep_link = existing is not None and _confirmation_link_valid(existing)
+    token = existing.confirmation_token if keep_link else _generate_token()
     now = datetime.now(timezone.utc)
 
     if existing:
@@ -158,14 +177,17 @@ async def signup(data: SignupIn, db: Session = Depends(get_db)):
 
 @router.post("/resend")
 async def resend_confirmation(data: ResendIn, db: Session = Depends(get_db)):
-    """Gera um novo token e reenvia o e-mail de confirmação."""
+    """Reenvia o e-mail de confirmação com o mesmo link (com mais 24h), se
+    ele ainda vale: um token novo invalidaria o link do e-mail anterior, e
+    a pessoa costuma tocar no primeiro e-mail que encontra."""
     user = db.query(User).filter(User.email == data.email).first()
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado.")
     if user.email_confirmed:
         raise HTTPException(status_code=409, detail="E-mail já confirmado.")
 
-    user.confirmation_token = _generate_token()
+    if not _confirmation_link_valid(user):
+        user.confirmation_token = _generate_token()
     user.confirmation_sent_at = datetime.now(timezone.utc)
     db.commit()
 
@@ -175,13 +197,15 @@ async def resend_confirmation(data: ResendIn, db: Session = Depends(get_db)):
 
 def confirm_by_token(db: Session, token: str) -> tuple[str, User | None]:
     """Confirma o cadastro dono do token. Devolve ("confirmed" |
-    "already_confirmed" | "invalid", usuário). Usada pela API (app) e pela
-    página /confirmar (navegador)."""
+    "already_confirmed" | "invalid" | "expired", usuário). Usada pela API
+    (app) e pela página /confirmar (navegador)."""
     user = db.query(User).filter(User.confirmation_token == token).first()
     if not user:
         return "invalid", None
     if user.email_confirmed:
         return "already_confirmed", user
+    if _expired(user.confirmation_sent_at, CONFIRMATION_EXPIRY):
+        return "expired", None
 
     user.email_confirmed = True
     user.confirmed_at = datetime.now(timezone.utc)
@@ -202,6 +226,12 @@ def confirm_email(data: ConfirmIn, db: Session = Depends(get_db)):
     status, user = confirm_by_token(db, data.token)
     if status == "invalid":
         raise HTTPException(status_code=400, detail="Link de confirmação inválido.")
+    if status == "expired":
+        raise HTTPException(
+            status_code=400,
+            detail="Esse link de confirmação expirou. Entre no app com seu e-mail "
+            "e senha para receber um novo.",
+        )
     return {"status": status, "email": user.email}
 
 
@@ -249,15 +279,21 @@ def login(data: LoginIn, db: Session = Depends(get_db)):
 @router.post("/forgot-password")
 async def forgot_password(data: ForgotPasswordIn, db: Session = Depends(get_db)):
     """
-    Envia o e-mail de redefinição de senha (link válido por 30min).
+    Envia o e-mail de redefinição de senha (link válido por 15min).
 
     Resposta sempre genérica, exista o e-mail ou não — revelar isso
     permitiria descobrir quais e-mails têm conta só tentando redefinir a
     senha deles (enumeração de usuários).
+
+    Pedir de novo com um link ainda válido reenvia o mesmo link (com mais
+    15min): um token novo invalidaria o do e-mail anterior, e a pessoa
+    costuma tocar no primeiro e-mail que encontra.
     """
     user = db.query(User).filter(User.email == data.email).first()
     if user:
-        user.password_reset_token = _generate_token()
+        status, _ = find_valid_reset_user(db, user.password_reset_token or "")
+        if status != "ok":
+            user.password_reset_token = _generate_token()
         user.password_reset_sent_at = datetime.now(timezone.utc)
         db.commit()
         await send_password_reset_email(
@@ -277,10 +313,7 @@ def find_valid_reset_user(db: Session, token: str) -> tuple[str, User | None]:
     if not user or user.password_reset_sent_at is None:
         return "invalid", None
 
-    sent_at = user.password_reset_sent_at
-    if sent_at.tzinfo is None:
-        sent_at = sent_at.replace(tzinfo=timezone.utc)
-    if datetime.now(timezone.utc) - sent_at > PASSWORD_RESET_EXPIRY:
+    if _expired(user.password_reset_sent_at, PASSWORD_RESET_EXPIRY):
         return "expired", None
     return "ok", user
 

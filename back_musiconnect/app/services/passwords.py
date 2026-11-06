@@ -3,8 +3,8 @@ Regra de senha forte — espelho de AuthPasswordRequirements.isValid
 (front_musiconnect/lib/presentation/widgets/auth/auth_common.dart).
 Atualizar os dois juntos se a regra mudar.
 
-Válida: 8+ caracteres e pelo menos 2 destes 3 critérios — maiúscula e
-minúscula, número, caractere especial.
+Válida: 8+ caracteres, sem espaço no começo nem no fim, e pelo menos 2
+destes 3 critérios — maiúscula e minúscula, número, caractere especial.
 """
 
 import re
@@ -13,7 +13,7 @@ _SPECIAL = re.compile(r"""[!@#$%^&*(),.?":{}|<>_\-+=/\\\[\];~`]""")
 
 
 def is_strong_password(password: str) -> bool:
-    if len(password) < 8:
+    if len(password) < 8 or password != password.strip():
         return False
     criteria = [
         bool(re.search(r"[a-z]", password)) and bool(re.search(r"[A-Z]", password)),

@@ -8,7 +8,12 @@ import '../../core/constants.dart';
 /// (o backend manda mensagens em português, sem detalhe técnico).
 class AuthException implements Exception {
   final String message;
-  const AuthException(this.message);
+
+  /// Login com e-mail e senha certos, mas cadastro ainda não confirmado —
+  /// a tela de login oferece reenviar o e-mail de confirmação.
+  final bool emailNotConfirmed;
+
+  const AuthException(this.message, {this.emailNotConfirmed = false});
 
   @override
   String toString() => message;
@@ -231,7 +236,10 @@ class AuthService {
           )
           .timeout(_timeout);
       if (response.statusCode >= 400) {
-        throw AuthException(_errorDetail(response, 'E-mail ou senha inválidos.'));
+        throw AuthException(
+          _errorDetail(response, 'E-mail ou senha inválidos.'),
+          emailNotConfirmed: response.statusCode == 403,
+        );
       }
       final body = json.decode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
       final token = body['token'] as String?;

@@ -98,7 +98,8 @@ class _MusicConnectAppState extends State<MusicConnectApp> {
         title: confirmed ? 'Cadastro concluído!' : 'Link inválido',
         message: confirmed
             ? 'Seu usuário foi cadastrado com sucesso. Faça login para continuar.'
-            : 'Esse link de confirmação não é mais válido. Tente reenviar o e-mail pelo app.',
+            : 'Esse link de confirmação não vale mais. Se você ainda não confirmou, '
+                'entre com seu e-mail e senha para receber um novo.',
         primaryLabel: confirmed ? 'Ir para o login' : 'OK',
         onPrimary: () {
           Navigator.of(context).pop();

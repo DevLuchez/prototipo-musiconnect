@@ -4,6 +4,8 @@ troca de senha, logout, esqueci a senha e exclusão de conta.
 O envio de e-mail é sempre simulado — nenhum teste manda e-mail de verdade.
 """
 
+from datetime import datetime, timedelta, timezone
+
 import pytest
 
 import app.routers.auth as auth_router
@@ -87,8 +89,27 @@ def test_reenviar_confirmacao(api, db_session, sent_emails):
 
     assert response.status_code == 200
     assert len(sent_emails) == 2
-    assert sent_emails[0][2] != sent_emails[1][2]  # token novo
+    # Mesmo link: o do primeiro e-mail continua valendo.
+    assert sent_emails[0][2] == sent_emails[1][2]
     assert api.post("/api/auth/resend", json={"email": "ninguem@example.com"}).status_code == 404
+
+
+def test_link_de_confirmacao_vale_24_horas(api, db_session, sent_emails):
+    api.post("/api/auth/signup", json=SIGNUP)
+    vencido = sent_emails[0][2]
+    user = _user_by_email(db_session, "nova@example.com")
+    user.confirmation_sent_at = datetime.now(timezone.utc) - timedelta(hours=25)
+    db_session.commit()
+
+    response = api.post("/api/auth/confirm", json={"token": vencido})
+    assert response.status_code == 400
+    assert "expirou" in response.json()["detail"]
+
+    # Reenviar com o link vencido manda um link novo, que funciona.
+    api.post("/api/auth/resend", json={"email": "nova@example.com"})
+    novo = sent_emails[1][2]
+    assert novo != vencido
+    assert api.post("/api/auth/confirm", json={"token": novo}).json()["status"] == "confirmed"
 
 
 def test_reenviar_ou_confirmar_conta_ja_confirmada(api, db_session, sent_emails):
@@ -209,6 +230,40 @@ def test_redefinir_senha_pela_api(api, db_session, sent_emails):
     login = api.post("/api/auth/login", json={"email": "aluna@example.com", "password": "NovaSenha#1"})
     assert login.status_code == 200
     assert api.post("/api/auth/reset-password", json={"token": token, "password": "Outra#123"}).status_code == 400
+
+
+def test_link_de_redefinicao_vale_15_minutos(api, db_session, sent_emails):
+    user = make_user(db_session)
+    api.post("/api/auth/forgot-password", json={"email": "aluna@example.com"})
+    user.password_reset_sent_at = datetime.now(timezone.utc) - timedelta(minutes=16)
+    db_session.commit()
+
+    response = api.post("/api/auth/reset-password", json={"token": sent_emails[0][2], "password": "NovaSenha#1"})
+
+    assert response.status_code == 400
+    assert "expirou" in response.json()["detail"]
+
+
+def test_pedir_a_redefinicao_de_novo_mantem_o_link_do_primeiro_email(api, db_session, sent_emails):
+    make_user(db_session)
+    api.post("/api/auth/forgot-password", json={"email": "aluna@example.com"})
+    api.post("/api/auth/forgot-password", json={"email": "aluna@example.com"})
+    primeiro, segundo = (token for *_, token in sent_emails)
+
+    assert primeiro == segundo
+    assert api.post("/api/auth/reset-password", json={"token": primeiro, "password": "NovaSenha#1"}).status_code == 200
+
+
+def test_link_de_redefinicao_vencido_e_trocado_no_novo_pedido(api, db_session, sent_emails):
+    user = make_user(db_session)
+    api.post("/api/auth/forgot-password", json={"email": "aluna@example.com"})
+    user.password_reset_sent_at = datetime.now(timezone.utc) - timedelta(minutes=16)
+    db_session.commit()
+    api.post("/api/auth/forgot-password", json={"email": "aluna@example.com"})
+    vencido, novo = (token for *_, token in sent_emails)
+
+    assert vencido != novo
+    assert api.post("/api/auth/reset-password", json={"token": novo, "password": "NovaSenha#1"}).status_code == 200
 
 
 # ── Exclusão de conta ────────────────────────────────────────────────────

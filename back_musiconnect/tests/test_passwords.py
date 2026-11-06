@@ -28,6 +28,8 @@ def test_senhas_fortes_sao_aceitas(password):
         "senhasenha",  # só minúsculas
         "senha1234",   # só número a mais
         "SenhaSenha",  # só maiúscula/minúscula
+        "Senha#123 ",  # espaço no fim (o teclado costuma pôr)
+        " Senha#123",  # espaço no começo
     ],
 )
 def test_senhas_fracas_sao_recusadas(password):

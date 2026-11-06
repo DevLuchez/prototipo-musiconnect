@@ -106,7 +106,14 @@ class _AuthTextFieldState extends State<AuthTextField> {
             controller: widget.controller,
             enabled: widget.enabled,
             obscureText: widget.isPassword && _obscure,
-            keyboardType: widget.keyboardType,
+            // Senha à mostra (olho aberto) não pode virar texto comum: o
+            // teclado corrigiria, poria maiúscula ou um espaço no fim, e a
+            // senha gravada não seria a que a pessoa acha que digitou.
+            autocorrect: !widget.isPassword,
+            enableSuggestions: !widget.isPassword,
+            keyboardType: widget.isPassword
+                ? TextInputType.visiblePassword
+                : widget.keyboardType,
             style: const TextStyle(fontSize: 14, color: kAuthTextDark),
             decoration: InputDecoration(
               hintText: widget.hint,
@@ -978,6 +985,10 @@ class AuthDialog extends StatelessWidget {
 /// número, caractere especial) com uma barra de progresso — cada item
 /// fica verde assim que atendido. Some por completo enquanto o campo
 /// está vazio. Usado no cadastro e na redefinição de senha.
+///
+/// Espaço no começo ou no fim invalida a senha (com aviso em vermelho):
+/// costuma ser o teclado, que acrescenta um espaço ao aceitar uma
+/// sugestão — a pessoa não vê e depois não consegue entrar.
 class AuthPasswordRequirements extends StatelessWidget {
   final String password;
   const AuthPasswordRequirements({super.key, required this.password});
@@ -991,8 +1002,12 @@ class AuthPasswordRequirements extends StatelessWidget {
 
   /// Mínimo pra contar como válida: 8+ caracteres, mais pelo menos 2 dos
   /// outros 3 critérios (maiúscula+minúscula, número, especial).
+  static bool _hasEdgeSpace(String p) => p != p.trim();
+
+  static const edgeSpaceMessage = 'A senha não pode começar nem terminar com espaço';
+
   static bool isValid(String password) {
-    if (!_hasMinLength(password)) return false;
+    if (!_hasMinLength(password) || _hasEdgeSpace(password)) return false;
     final extra = [
       _hasUpperLower(password),
       _hasNumber(password),
@@ -1059,6 +1074,18 @@ class AuthPasswordRequirements extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+        if (_hasEdgeSpace(password))
+          const Padding(
+            padding: EdgeInsets.only(top: 3),
+            child: Text(
+              edgeSpaceMessage,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                color: Colors.red,
+              ),
             ),
           ),
       ],

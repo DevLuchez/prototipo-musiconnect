@@ -96,7 +96,7 @@ async def send_confirmation_email(*, to_email: str, token: str) -> bool:
       <p>Confirme seu e-mail para concluir seu cadastro no MusiConnect.</p>
       {_button_html(link, "Confirmar e-mail")}
       <p style="color:#888;font-size:12px;">
-        Se você não criou uma conta no MusiConnect, ignore este e-mail.
+        Esse link expira em 24 horas. Se você não criou uma conta no MusiConnect, ignore este e-mail.
       </p>
     </div>
     """
@@ -106,7 +106,7 @@ async def send_confirmation_email(*, to_email: str, token: str) -> bool:
 
 
 async def send_password_reset_email(*, to_email: str, token: str) -> bool:
-    """Envia o e-mail de redefinição de senha (link válido por 30min)."""
+    """Envia o e-mail de redefinição de senha (link válido por 15min)."""
     link = build_reset_password_link(token)
     html = f"""
     <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
@@ -114,7 +114,7 @@ async def send_password_reset_email(*, to_email: str, token: str) -> bool:
       <p>Recebemos um pedido para redefinir a senha da sua conta no MusiConnect.</p>
       {_button_html(link, "Redefinir senha")}
       <p style="color:#888;font-size:12px;">
-        Esse link expira em 30 minutos. Se você não pediu essa redefinição,
+        Esse link expira em 15 minutos. Se você não pediu essa redefinição,
         ignore este e-mail — sua senha continua a mesma.
       </p>
     </div>

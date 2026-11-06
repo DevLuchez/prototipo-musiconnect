@@ -27,6 +27,30 @@ void main() {
     expect(obscured(), isFalse);
   });
 
+  testWidgets('senha à mostra: o teclado não corrige nem sugere', (tester) async {
+    await pumpField(tester, (_) => const AuthTextField(label: 'Senha', hint: 'Digite', isPassword: true));
+    await tester.tap(find.byType(IconButton));
+    await tester.pump();
+
+    final field = tester.widget<TextField>(find.byType(TextField));
+    expect(field.obscureText, isFalse);
+    expect(field.autocorrect, isFalse);
+    expect(field.enableSuggestions, isFalse);
+    expect(field.keyboardType, TextInputType.visiblePassword);
+  });
+
+  testWidgets('senha com espaço no começo ou no fim é recusada com aviso', (tester) async {
+    expect(AuthPasswordRequirements.isValid('Senha#123'), isTrue);
+    expect(AuthPasswordRequirements.isValid('Senha#123 '), isFalse);
+    expect(AuthPasswordRequirements.isValid(' Senha#123'), isFalse);
+
+    await pumpField(tester, (_) => const AuthPasswordRequirements(password: 'Senha#123 '));
+    expect(find.text(AuthPasswordRequirements.edgeSpaceMessage), findsOneWidget);
+
+    await pumpField(tester, (_) => const AuthPasswordRequirements(password: 'Senha#123'));
+    expect(find.text(AuthPasswordRequirements.edgeSpaceMessage), findsNothing);
+  });
+
   testWidgets('várias opções: remover pelo chip e abrir/fechar pela seta', (tester) async {
     var selected = ['Piano', 'Flauta'];
     await pumpField(tester, (setState) => AuthMultiSelectField(

@@ -40,7 +40,9 @@ def test_pagina_de_confirmacao_mostra_botao_sem_confirmar_ainda(api, db_session)
 
 
 def test_confirmar_pela_pagina_confirma_o_cadastro(api, db_session):
-    user = _user(db_session, confirmation_token="tok-conf")
+    user = _user(
+        db_session, confirmation_token="tok-conf", confirmation_sent_at=datetime.now(timezone.utc)
+    )
 
     response = api.post("/confirmar", data={"token": "tok-conf"})
 
@@ -56,6 +58,21 @@ def test_confirmar_com_token_invalido_mostra_erro(api, db_session):
 
     assert response.status_code == 400
     assert "inválido" in response.text.lower()
+
+
+def test_confirmar_pela_pagina_com_link_de_mais_de_24h_nao_confirma(api, db_session):
+    user = _user(
+        db_session,
+        confirmation_token="tok-conf",
+        confirmation_sent_at=datetime.now(timezone.utc) - timedelta(hours=25),
+    )
+
+    response = api.post("/confirmar", data={"token": "tok-conf"})
+
+    assert response.status_code == 400
+    assert "expirou" in response.text
+    db_session.refresh(user)
+    assert user.email_confirmed is False
 
 
 # ── Redefinição de senha ─────────────────────────────────────────────────

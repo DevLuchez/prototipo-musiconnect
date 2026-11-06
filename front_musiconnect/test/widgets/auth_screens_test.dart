@@ -102,6 +102,36 @@ void main() {
       });
     });
 
+    testWidgets('cadastro não confirmado oferece reenviar o e-mail', (tester) async {
+      final api = FakeApi((r) => r.url.path.endsWith('/resend')
+          ? jsonResponse({'status': 'sent'})
+          : detailError('Confirme seu e-mail antes de entrar.', status: 403));
+      await api.run(() async {
+        await pumpScreen(tester, const LoginScreen());
+        await fill(tester, 'Insira seu e-mail', 'aluna@example.com');
+        await fill(tester, 'Insira sua senha', _senha);
+
+        await tapText(tester, 'Entrar');
+        await tapText(tester, 'Reenviar e-mail de confirmação');
+
+        expect(api.last.url.path, endsWith('/resend'));
+        expect(api.last.body, contains('aluna@example.com'));
+        expect(find.textContaining('Enviamos um novo link'), findsOneWidget);
+      });
+    });
+
+    testWidgets('senha errada não oferece reenviar o e-mail', (tester) async {
+      await FakeApi((_) => detailError('E-mail ou senha inválidos.', status: 401)).run(() async {
+        await pumpScreen(tester, const LoginScreen());
+        await fill(tester, 'Insira seu e-mail', 'aluna@example.com');
+        await fill(tester, 'Insira sua senha', 'errada');
+
+        await tapText(tester, 'Entrar');
+
+        expect(find.text('Reenviar e-mail de confirmação'), findsNothing);
+      });
+    });
+
     testWidgets('links para esqueci a senha e cadastro', (tester) async {
       await pumpScreen(tester, const LoginScreen());
 

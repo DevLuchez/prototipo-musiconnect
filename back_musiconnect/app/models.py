@@ -228,8 +228,8 @@ class User(Base):
     confirmation_sent_at = Column(DateTime, nullable=True)
     confirmed_at = Column(DateTime, nullable=True)
 
-    # Esqueci minha senha — token de uso único que expira em 30min
-    # (diferente do de confirmação, que não expira).
+    # Esqueci minha senha — token de uso único que expira em 15min
+    # (o de confirmação expira em 24h — ver routers/auth.py).
     password_reset_token = Column(String, nullable=True, unique=True, index=True)
     password_reset_sent_at = Column(DateTime, nullable=True)
 
