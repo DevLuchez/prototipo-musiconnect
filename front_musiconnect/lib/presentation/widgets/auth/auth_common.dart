@@ -10,22 +10,19 @@ const kAuthPink = Color(0xFFDF2881);
 const kAuthPurple = Color(0xFF7C3AED);
 const kAuthTextDark = Color(0xFF111827);
 
-/// Logo "MusiConnect" com "Musi" em preto e "Connect" em rosa, como no
-/// protótipo (header das telas de onboarding).
+/// Logo "MusiConnect" estendida (rosa, fundo transparente) dos headers.
+/// [fontSize] é o tamanho que o texto antigo tinha — a altura da imagem
+/// acompanha, pra manter o mesmo peso visual em cada tela.
 class AuthLogo extends StatelessWidget {
   final double fontSize;
   const AuthLogo({super.key, this.fontSize = 20});
 
   @override
   Widget build(BuildContext context) {
-    return Text.rich(
-      TextSpan(
-        style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w800),
-        children: const [
-          TextSpan(text: 'Musi', style: TextStyle(color: kAuthTextDark)),
-          TextSpan(text: 'Connect', style: TextStyle(color: kAuthPink)),
-        ],
-      ),
+    return Image.asset(
+      'assets/images/logo-extended.png',
+      height: fontSize * 1.6,
+      semanticLabel: 'MusiConnect',
     );
   }
 }

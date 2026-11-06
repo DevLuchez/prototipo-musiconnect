@@ -173,8 +173,8 @@ def _page(title: str, body: str, status_code: int = 200) -> HTMLResponse:
            color: #1f2937; display: flex; justify-content: center; padding: 32px 16px; }}
     .card {{ background: #fff; max-width: 420px; width: 100%; border-radius: 16px;
             padding: 28px 24px; box-shadow: 0 4px 16px rgba(0,0,0,.06); }}
-    .logo {{ font-weight: 800; font-size: 22px; margin: 0 0 20px; }}
-    .logo span {{ color: #DF2881; }}
+    .logo {{ display: block; width: 180px; height: auto; margin: 0 0 20px;
+             color: #DF2881; font-weight: 800; font-size: 22px; }}
     h1 {{ font-size: 22px; margin: 0 0 12px; }}
     p {{ line-height: 1.5; color: #4b5563; }}
     label {{ display: block; font-weight: 700; font-size: 14px; margin: 16px 0 0; }}
@@ -188,7 +188,7 @@ def _page(title: str, body: str, status_code: int = 200) -> HTMLResponse:
 </head>
 <body>
   <main class="card">
-    <p class="logo">Musi<span>Connect</span></p>
+    <img class="logo" src="{settings.public_base_url}/logo-extended.png" alt="MusiConnect">
     <h1>{escape(title)}</h1>
     {body}
   </main>

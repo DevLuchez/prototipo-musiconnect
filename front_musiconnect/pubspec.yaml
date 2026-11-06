@@ -115,13 +115,14 @@ flutter:
 
 # Ícone do app (gera os arquivos de cada plataforma):
 #   dart run flutter_launcher_icons
-# Android 8+ usa o ícone adaptativo: fundo rosa + "M" branco reduzido para
-# a área que o launcher nunca corta (assets/icon/ — fora do bundle do app).
+# As duas imagens saem de assets/images/logo-icon.png (fora do bundle do
+# app). Android 8+ usa o ícone adaptativo: fundo rosa + "MC" branco reduzido
+# para a área que o launcher nunca corta.
 flutter_launcher_icons:
   android: "ic_launcher"
   ios: true
-  image_path: "assets/images/logo_1.png"
+  image_path: "assets/icon/logo-icon-square.png"
   adaptive_icon_background: "#D82674"
-  adaptive_icon_foreground: "assets/icon/logo_1_foreground.png"
+  adaptive_icon_foreground: "assets/icon/logo-icon-foreground.png"
   remove_alpha_ios: true
   min_sdk_android: 21

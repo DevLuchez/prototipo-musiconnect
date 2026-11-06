@@ -194,10 +194,17 @@ class _AuthGate extends StatelessWidget {
     return FutureBuilder<AuthUser?>(
       future: authService.getCurrentUser(),
       builder: (context, snapshot) {
+        // Continua o rosa da tela de abertura do sistema, agora com o nome.
         if (snapshot.connectionState != ConnectionState.done) {
-          return const Scaffold(
-            backgroundColor: Colors.white,
-            body: Center(child: AuthLogo(fontSize: 26)),
+          return Scaffold(
+            backgroundColor: kAuthPink,
+            body: Center(
+              child: Image.asset(
+                'assets/images/logo-cover.png',
+                width: 240,
+                semanticLabel: 'MusiConnect',
+              ),
+            ),
           );
         }
         final user = snapshot.data;
@@ -713,8 +720,7 @@ class MainNavigationState extends State<MainNavigation>
                 onPressed: () => Scaffold.of(context).openDrawer(),
               ),
             ),
-            // Logo centralizada — mesmo estilo (preto + rosa) das telas
-            // iniciais, em vez do texto em gradiente que só era usado aqui.
+            // Logo estendida centralizada — a mesma das telas iniciais.
             title: const AuthLogo(fontSize: 20),
             centerTitle: true,
             // Ícone musical animado

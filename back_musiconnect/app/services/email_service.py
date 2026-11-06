@@ -74,6 +74,19 @@ async def _send_email(*, to_email: str, subject: str, html: str) -> bool:
         return False
 
 
+def _logo_html() -> str:
+    """Logo estendida no topo, servida pela página do site (e-mail não
+    aceita imagem embutida em todos os clientes). Se as imagens estiverem
+    bloqueadas, o `alt` aparece em rosa no lugar."""
+    return f"""
+      <p style="text-align:center;margin:0 0 24px;">
+        <img src="{settings.public_base_url}/logo-extended.png" alt="MusiConnect"
+             width="180" style="display:inline-block;width:180px;height:auto;border:0;
+             color:#DF2881;font-size:22px;font-weight:bold;">
+      </p>
+    """
+
+
 def _button_html(link: str, label: str) -> str:
     return f"""
       <p>
@@ -92,7 +105,7 @@ async def send_confirmation_email(*, to_email: str, token: str) -> bool:
     link = build_confirmation_link(token)
     html = f"""
     <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-      <h2 style="color:#DF2881;">MusiConnect</h2>
+      {_logo_html()}
       <p>Confirme seu e-mail para concluir seu cadastro no MusiConnect.</p>
       {_button_html(link, "Confirmar e-mail")}
       <p style="color:#888;font-size:12px;">
@@ -110,7 +123,7 @@ async def send_password_reset_email(*, to_email: str, token: str) -> bool:
     link = build_reset_password_link(token)
     html = f"""
     <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-      <h2 style="color:#DF2881;">MusiConnect</h2>
+      {_logo_html()}
       <p>Recebemos um pedido para redefinir a senha da sua conta no MusiConnect.</p>
       {_button_html(link, "Redefinir senha")}
       <p style="color:#888;font-size:12px;">

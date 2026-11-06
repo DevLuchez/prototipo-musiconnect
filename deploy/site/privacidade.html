@@ -26,11 +26,8 @@
       line-height: 1.6;
     }
     main { max-width: 720px; margin: 0 auto; padding: 32px 20px 48px; }
-    .brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none;
-      color: var(--text); font-weight: 800; font-size: 18px; }
-    .brand img { width: 32px; height: 32px; border-radius: 8px; }
-    .brand b { font-weight: 800; }
-    .brand span { color: var(--pink); }
+    .brand { display: inline-block; }
+    .brand img { display: block; height: 36px; width: auto; }
     h1 { color: var(--text); font-size: 28px; margin: 28px 0 4px; }
     .updated { color: var(--muted); margin: 0 0 24px; font-size: 14px; }
     .summary { background: var(--soft); border-radius: 14px; padding: 16px 20px; margin-bottom: 8px; }
@@ -50,7 +47,7 @@
 </head>
 <body>
   <main>
-    <a class="brand" href="/"><img src="/logo.png" alt=""><b>Musi<span>Connect</span></b></a>
+    <a class="brand" href="/"><img src="/logo-extended.png" alt="MusiConnect"></a>
 
     <h1>Política de privacidade</h1>
     <p class="updated">Atualizada em 01/11/2026</p>

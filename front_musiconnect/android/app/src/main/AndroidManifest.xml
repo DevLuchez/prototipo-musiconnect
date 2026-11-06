@@ -23,7 +23,8 @@
             android:value="false"/>
 
         <!-- Notificações (Firebase Cloud Messaging): ícone branco da barra de
-             status, cor rosa do app e o canal criado no MainActivity. -->
+             status (forma do "MC", drawable-*dpi/ic_notification.png), cor
+             rosa do app e o canal criado no MainActivity. -->
         <meta-data android:name="com.google.firebase.messaging.default_notification_icon"
             android:resource="@drawable/ic_notification"/>
         <meta-data android:name="com.google.firebase.messaging.default_notification_color"
