@@ -37,18 +37,19 @@ Aplicativo mobile que reúne audições, concursos, bolsas, cursos e vagas para 
 7. [Fluxos de uso](#7-fluxos-de-uso)
 8. [Estrutura de navegação](#8-estrutura-de-navegação)
 9. [Arquitetura](#9-arquitetura)
-10. [Stack tecnológica](#10-stack-tecnológica)
-11. [Documentação da API](#11-documentação-da-api)
-12. [Decisões técnicas e mudanças em relação ao RFC](#12-decisões-técnicas-e-mudanças-em-relação-ao-rfc)
-13. [CI/CD, testes, qualidade, privacidade e monitoramento](#13-cicd-testes-qualidade-privacidade-e-monitoramento)
-14. [Resultados e validação com o cliente](#14-resultados-e-validação-com-o-cliente)
-15. [Aderência à linha de Aplicações Mobile](#15-aderência-à-linha-de-aplicações-mobile)
-16. [Trabalhos futuros](#16-trabalhos-futuros)
-17. [Instalação e deploy](#17-instalação-e-deploy)
-18. [Execução local](#18-execução-local)
-19. [Contribuições externas](#19-contribuições-externas)
-20. [Referências](#20-referências)
-21. [Autora](#21-autora)
+10. [Diagrama de classes](#10-diagrama-de-classes)
+11. [Stack tecnológica](#11-stack-tecnológica)
+12. [Documentação da API](#12-documentação-da-api)
+13. [Decisões técnicas e mudanças em relação ao RFC](#13-decisões-técnicas-e-mudanças-em-relação-ao-rfc)
+14. [Metodologia de desenvolvimento](#14-metodologia-de-desenvolvimento)
+15. [CI/CD, testes, qualidade, privacidade e monitoramento](#15-cicd-testes-qualidade-privacidade-e-monitoramento)
+16. [Resultados e validação com o cliente](#16-resultados-e-validação-com-o-cliente)
+17. [Aderência à linha de Aplicações Mobile](#17-aderência-à-linha-de-aplicações-mobile)
+18. [Trabalhos futuros](#18-trabalhos-futuros)
+19. [Instalação e deploy](#19-instalação-e-deploy)
+20. [Execução local](#20-execução-local)
+21. [Contribuições externas](#21-contribuições-externas)
+22. [Referências](#22-referências)
 
 ---
 
@@ -130,85 +131,88 @@ Pitch de apresentação da proposta (PAC Extensionista VII, jun/2026): [MusiConn
 
 ---
 
-## 10. Stack tecnológica
+## 10. Diagrama de classes
 
 > 🚧 Em construção.
 
 ---
 
-## 11. Documentação da API
+## 11. Stack tecnológica
 
 > 🚧 Em construção.
 
 ---
 
-## 12. Decisões técnicas e mudanças em relação ao RFC
+## 12. Documentação da API
 
 > 🚧 Em construção.
 
 ---
 
-## 13. CI/CD, testes, qualidade, privacidade e monitoramento
-
-> 🚧 Em construção.
-
-### 13.1 CI/CD
-
-### 13.2 Testes
-
-### 13.3 Qualidade e segurança do código
-
-### 13.4 Privacidade e LGPD
-
-### 13.5 Monitoramento
-
----
-
-## 14. Resultados e validação com o cliente
+## 13. Decisões técnicas e mudanças em relação ao RFC
 
 > 🚧 Em construção.
 
 ---
 
-## 15. Aderência à linha de Aplicações Mobile
+## 14. Metodologia de desenvolvimento
 
 > 🚧 Em construção.
 
 ---
 
-## 16. Trabalhos futuros
+## 15. CI/CD, testes, qualidade, privacidade e monitoramento
+
+> 🚧 Em construção.
+
+### 15.1 CI/CD
+
+### 15.2 Testes
+
+### 15.3 Qualidade e segurança do código
+
+### 15.4 Privacidade e LGPD
+
+### 15.5 Monitoramento
+
+---
+
+## 16. Resultados e validação com o cliente
 
 > 🚧 Em construção.
 
 ---
 
-## 17. Instalação e deploy
+## 17. Aderência à linha de Aplicações Mobile
 
 > 🚧 Em construção.
 
 ---
 
-## 18. Execução local
+## 18. Trabalhos futuros
 
 > 🚧 Em construção.
 
 ---
 
-## 19. Contribuições externas
+## 19. Instalação e deploy
 
 > 🚧 Em construção.
 
 ---
 
-## 20. Referências
+## 20. Execução local
 
 > 🚧 Em construção.
 
 ---
 
-## 21. Autora
+## 21. Contribuições externas
 
-**Laura Heloísa Luchez**
-Estudante de Engenharia de Software · Centro Universitário Católica de Santa Catarina
+> 🚧 Em construção.
 
-[![Email](https://img.shields.io/badge/Email-laura.luchez@catolicasc.edu.br-D14836?style=flat&logo=gmail&logoColor=white)](mailto:laura.luchez@catolicasc.edu.br)
+---
+
+## 22. Referências
+
+> 🚧 Em construção.
