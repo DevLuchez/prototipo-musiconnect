@@ -19,6 +19,9 @@ musiconnect.app.br {
 	}
 
 	handle {
+		# O navegador sempre confere com o servidor (ETag) antes de reusar a
+		# cópia guardada — uma logo ou página trocada aparece no próximo acesso.
+		header Cache-Control "no-cache"
 		root * /srv/site
 		try_files {path} {path}.html {path}/index.html
 		file_server
