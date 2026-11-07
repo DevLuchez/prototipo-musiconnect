@@ -492,119 +492,122 @@ class _AuthMultiSelectFieldState extends State<AuthMultiSelectField> {
     final available =
         widget.options.where((o) => !widget.selected.contains(o)).toList();
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (widget.label != null) ...[
-              Text(
-                widget.label!,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: kAuthTextDark,
+    return CloseListOnBack(
+      focusNode: _focusNode,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (widget.label != null) ...[
+                Text(
+                  widget.label!,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: kAuthTextDark,
+                  ),
                 ),
+                const SizedBox(height: 6),
+              ],
+              if (widget.selected.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: widget.selected
+                        .map((v) => _RemovableChip(
+                              label: v,
+                              onRemove: () => _toggle(v),
+                            ))
+                        .toList(),
+                  ),
+                ),
+              RawAutocomplete<String>(
+                textEditingController: _controller,
+                focusNode: _focusNode,
+                displayStringForOption: (o) => o,
+                optionsBuilder: (textEditingValue) {
+                  final query = normalizeForSearch(textEditingValue.text);
+                  if (query.isEmpty) return available;
+                  return available
+                      .where((o) => normalizeForSearch(o).contains(query));
+                },
+                onSelected: (selection) {
+                  _toggle(selection);
+                  _controller.clear();
+                  _focusNode.unfocus();
+                },
+                fieldViewBuilder: (context, controller, focusNode, _) {
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF9FAFB),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFE5E7EB)),
+                    ),
+                    child: TextField(
+                      onTapOutside: unfocusOnTapOutside,
+                      controller: controller,
+                      focusNode: focusNode,
+                      style: const TextStyle(fontSize: 14, color: kAuthTextDark),
+                      decoration: InputDecoration(
+                        hintText: widget.hint,
+                        hintStyle:
+                            TextStyle(fontSize: 13.5, color: Colors.grey[400]),
+                        suffixIcon: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () {
+                            if (focusNode.hasFocus) {
+                              focusNode.unfocus();
+                            } else {
+                              focusNode.requestFocus();
+                            }
+                          },
+                          child: Icon(Icons.keyboard_arrow_down_rounded,
+                              color: Colors.grey[500]),
+                        ),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 13),
+                      ),
+                    ),
+                  );
+                },
+                optionsViewBuilder: (context, onSelectedCb, opts) {
+                  final list = opts.toList();
+                  return Align(
+                    alignment: Alignment.topLeft,
+                    child: Material(
+                      color: Colors.white,
+                      elevation: 4,
+                      borderRadius: BorderRadius.circular(10),
+                      child: SizedBox(
+                        width: constraints.maxWidth,
+                        height: list.length > 5 ? 220 : list.length * 44.0,
+                        child: ListView.builder(
+                          padding: EdgeInsets.zero,
+                          itemCount: list.length,
+                          itemBuilder: (context, index) {
+                            final option = list[index];
+                            return ListTile(
+                              dense: true,
+                              title: Text(option,
+                                  style: const TextStyle(fontSize: 13)),
+                              onTap: () => onSelectedCb(option),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
-              const SizedBox(height: 6),
             ],
-            if (widget.selected.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: widget.selected
-                      .map((v) => _RemovableChip(
-                            label: v,
-                            onRemove: () => _toggle(v),
-                          ))
-                      .toList(),
-                ),
-              ),
-            RawAutocomplete<String>(
-              textEditingController: _controller,
-              focusNode: _focusNode,
-              displayStringForOption: (o) => o,
-              optionsBuilder: (textEditingValue) {
-                final query = normalizeForSearch(textEditingValue.text);
-                if (query.isEmpty) return available;
-                return available
-                    .where((o) => normalizeForSearch(o).contains(query));
-              },
-              onSelected: (selection) {
-                _toggle(selection);
-                _controller.clear();
-                _focusNode.unfocus();
-              },
-              fieldViewBuilder: (context, controller, focusNode, _) {
-                return Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF9FAFB),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFE5E7EB)),
-                  ),
-                  child: TextField(
-                    onTapOutside: unfocusOnTapOutside,
-                    controller: controller,
-                    focusNode: focusNode,
-                    style: const TextStyle(fontSize: 14, color: kAuthTextDark),
-                    decoration: InputDecoration(
-                      hintText: widget.hint,
-                      hintStyle:
-                          TextStyle(fontSize: 13.5, color: Colors.grey[400]),
-                      suffixIcon: GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () {
-                          if (focusNode.hasFocus) {
-                            focusNode.unfocus();
-                          } else {
-                            focusNode.requestFocus();
-                          }
-                        },
-                        child: Icon(Icons.keyboard_arrow_down_rounded,
-                            color: Colors.grey[500]),
-                      ),
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 13),
-                    ),
-                  ),
-                );
-              },
-              optionsViewBuilder: (context, onSelectedCb, opts) {
-                final list = opts.toList();
-                return Align(
-                  alignment: Alignment.topLeft,
-                  child: Material(
-                    color: Colors.white,
-                    elevation: 4,
-                    borderRadius: BorderRadius.circular(10),
-                    child: SizedBox(
-                      width: constraints.maxWidth,
-                      height: list.length > 5 ? 220 : list.length * 44.0,
-                      child: ListView.builder(
-                        padding: EdgeInsets.zero,
-                        itemCount: list.length,
-                        itemBuilder: (context, index) {
-                          final option = list[index];
-                          return ListTile(
-                            dense: true,
-                            title: Text(option,
-                                style: const TextStyle(fontSize: 13)),
-                            onTap: () => onSelectedCb(option),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ],
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
@@ -753,124 +756,138 @@ class _AuthSingleSelectFieldState<T extends Object> extends State<AuthSingleSele
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  widget.label,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: kAuthTextDark,
-                  ),
-                ),
-                if (widget.required) ...[
-                  const SizedBox(width: 3),
-                  const Text(
-                    '*',
-                    style: TextStyle(
-                      fontSize: 14,
+    return CloseListOnBack(
+      focusNode: _focusNode,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    widget.label,
+                    style: const TextStyle(
+                      fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: kAuthPink,
+                      color: kAuthTextDark,
                     ),
                   ),
+                  if (widget.required) ...[
+                    const SizedBox(width: 3),
+                    const Text(
+                      '*',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: kAuthPink,
+                      ),
+                    ),
+                  ],
                 ],
-              ],
-            ),
-            const SizedBox(height: 6),
-            IgnorePointer(
-              ignoring: !widget.enabled,
-              child: Opacity(
-                opacity: widget.enabled ? 1 : 0.55,
-                child: RawAutocomplete<T>(
-                  textEditingController: _controller,
-                  focusNode: _focusNode,
-                  displayStringForOption: widget.displayString,
-                  optionsBuilder: (textEditingValue) {
-                    final query = normalizeForSearch(textEditingValue.text);
-                    if (query.isEmpty) return widget.options;
-                    return widget.options.where((o) =>
-                        normalizeForSearch(widget.displayString(o)).contains(query));
-                  },
-                  onSelected: (selection) {
-                    widget.onChanged(selection);
-                    _focusNode.unfocus();
-                  },
-                  fieldViewBuilder: (context, controller, focusNode, _) {
-                    return Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF9FAFB),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFFE5E7EB)),
-                      ),
-                      child: TextField(
-                        onTapOutside: unfocusOnTapOutside,
-                        controller: controller,
-                        focusNode: focusNode,
-                        style: const TextStyle(fontSize: 14, color: kAuthTextDark),
-                        decoration: InputDecoration(
-                          hintText: widget.loading ? 'Carregando...' : widget.hint,
-                          hintStyle: TextStyle(fontSize: 13.5, color: Colors.grey[400]),
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 13),
-                          suffixIcon: widget.loading
-                              ? const Padding(
-                                  padding: EdgeInsets.all(14),
-                                  child: AppLoadingIndicator(size: 16),
-                                )
-                              : (widget.selected != null
-                                  ? IconButton(
-                                      icon: Icon(Icons.close_rounded,
-                                          size: 18, color: Colors.grey[500]),
-                                      onPressed: _clear,
-                                      tooltip: 'Limpar',
-                                    )
-                                  : Icon(Icons.keyboard_arrow_down_rounded,
-                                      color: Colors.grey[500])),
+              ),
+              const SizedBox(height: 6),
+              IgnorePointer(
+                ignoring: !widget.enabled,
+                child: Opacity(
+                  opacity: widget.enabled ? 1 : 0.55,
+                  child: RawAutocomplete<T>(
+                    textEditingController: _controller,
+                    focusNode: _focusNode,
+                    displayStringForOption: widget.displayString,
+                    optionsBuilder: (textEditingValue) {
+                      final query = normalizeForSearch(textEditingValue.text);
+                      if (query.isEmpty) return widget.options;
+                      return widget.options.where((o) =>
+                          normalizeForSearch(widget.displayString(o)).contains(query));
+                    },
+                    onSelected: (selection) {
+                      widget.onChanged(selection);
+                      _focusNode.unfocus();
+                    },
+                    fieldViewBuilder: (context, controller, focusNode, _) {
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF9FAFB),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFE5E7EB)),
                         ),
-                      ),
-                    );
-                  },
-                  optionsViewBuilder: (context, onSelectedCb, opts) {
-                    final list = opts.toList();
-                    return Align(
-                      alignment: Alignment.topLeft,
-                      child: Material(
-                        color: Colors.white,
-                        elevation: 4,
-                        borderRadius: BorderRadius.circular(10),
-                        child: SizedBox(
-                          width: constraints.maxWidth,
-                          height: list.length > 5 ? 220 : list.length * 44.0,
-                          child: ListView.builder(
-                            padding: EdgeInsets.zero,
-                            itemCount: list.length,
-                            itemBuilder: (context, index) {
-                              final option = list[index];
-                              return ListTile(
-                                dense: true,
-                                title: Text(widget.displayString(option),
-                                    style: const TextStyle(fontSize: 13)),
-                                onTap: () => onSelectedCb(option),
-                              );
-                            },
+                        child: TextField(
+                          onTapOutside: unfocusOnTapOutside,
+                          controller: controller,
+                          focusNode: focusNode,
+                          style: const TextStyle(fontSize: 14, color: kAuthTextDark),
+                          decoration: InputDecoration(
+                            hintText: widget.loading ? 'Carregando...' : widget.hint,
+                            hintStyle: TextStyle(fontSize: 13.5, color: Colors.grey[400]),
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 13),
+                            suffixIcon: widget.loading
+                                ? const Padding(
+                                    padding: EdgeInsets.all(14),
+                                    child: AppLoadingIndicator(size: 16),
+                                  )
+                                : (widget.selected != null
+                                    ? IconButton(
+                                        icon: Icon(Icons.close_rounded,
+                                            size: 18, color: Colors.grey[500]),
+                                        onPressed: _clear,
+                                        tooltip: 'Limpar',
+                                      )
+                                    // A setinha abre e fecha a lista.
+                                    : GestureDetector(
+                                        behavior: HitTestBehavior.opaque,
+                                        onTap: () {
+                                          if (focusNode.hasFocus) {
+                                            focusNode.unfocus();
+                                          } else {
+                                            focusNode.requestFocus();
+                                          }
+                                        },
+                                        child: Icon(Icons.keyboard_arrow_down_rounded,
+                                            color: Colors.grey[500]),
+                                      )),
                           ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                    optionsViewBuilder: (context, onSelectedCb, opts) {
+                      final list = opts.toList();
+                      return Align(
+                        alignment: Alignment.topLeft,
+                        child: Material(
+                          color: Colors.white,
+                          elevation: 4,
+                          borderRadius: BorderRadius.circular(10),
+                          child: SizedBox(
+                            width: constraints.maxWidth,
+                            height: list.length > 5 ? 220 : list.length * 44.0,
+                            child: ListView.builder(
+                              padding: EdgeInsets.zero,
+                              itemCount: list.length,
+                              itemBuilder: (context, index) {
+                                final option = list[index];
+                                return ListTile(
+                                  dense: true,
+                                  title: Text(widget.displayString(option),
+                                      style: const TextStyle(fontSize: 13)),
+                                  onTap: () => onSelectedCb(option),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
-            ),
-          ],
-        );
-      },
+            ],
+          );
+        },
+      ),
     );
   }
 }

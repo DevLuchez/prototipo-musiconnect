@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import '../../../core/constants.dart';
+import '../../../core/keyboard_focus.dart';
 import '../../../core/monitoring.dart';
 import '../../../data/services/auth_service.dart';
 import '../../../data/services/geo_service.dart';
@@ -288,49 +289,58 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      AuthBackButton(onTap: _backToWelcome),
-                      const Expanded(child: Center(child: AuthLogo(fontSize: 17))),
-                      const SizedBox(width: 36),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  const Text(
-                    'Cadastre-se',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      color: kAuthTextDark,
+    return PopScope(
+      // O voltar do Android volta um passo, como o "Voltar" do rodapé (sem
+      // isso, saía do cadastro e perdia o que foi preenchido). Com a lista
+      // de um campo aberta, ele só fecha a lista (ver CloseListOnBack).
+      canPop: _page == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && !CloseListOnBack.listOpen) _back();
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        AuthBackButton(onTap: _backToWelcome),
+                        const Expanded(child: Center(child: AuthLogo(fontSize: 17))),
+                        const SizedBox(width: 36),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 14),
-                  _SignupStepper(currentStep: _stepIndicatorIndex),
-                ],
+                    const SizedBox(height: 14),
+                    const Text(
+                      'Cadastre-se',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        color: kAuthTextDark,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    _SignupStepper(currentStep: _stepIndicatorIndex),
+                  ],
+                ),
               ),
-            ),
-            Expanded(
-              child: PageView(
-                controller: _pageController,
-                physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  _buildInterestsStep(),
-                  _buildLocationStep(),
-                  _buildCredentialsStep(),
-                  _buildEmailConfirmStep(),
-                ],
+              Expanded(
+                child: PageView(
+                  controller: _pageController,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    _buildInterestsStep(),
+                    _buildLocationStep(),
+                    _buildCredentialsStep(),
+                    _buildEmailConfirmStep(),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

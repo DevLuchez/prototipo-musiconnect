@@ -53,3 +53,33 @@ class _KeyboardFocusGuardState extends State<KeyboardFocusGuard> with WidgetsBin
   @override
   Widget build(BuildContext context) => widget.child;
 }
+
+/// Em volta de um campo com lista de sugestões: com a lista aberta, o
+/// voltar do Android só fecha a lista (sem isso, saía da tela e perdia o
+/// que foi preenchido). O primeiro voltar abaixa o teclado; a lista continua
+/// aberta (ver [KeepsFocusWithoutKeyboard]).
+class CloseListOnBack extends StatelessWidget {
+  const CloseListOnBack({super.key, required this.focusNode, required this.child});
+
+  final FocusNode focusNode;
+  final Widget child;
+
+  /// A lista de algum campo está aberta — quem também trata o voltar (ex:
+  /// os passos do cadastro) deixa este voltar só para fechar a lista.
+  static bool get listOpen => FocusManager.instance.primaryFocus is KeepsFocusWithoutKeyboard;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: focusNode,
+      builder: (context, child) => PopScope(
+        canPop: !focusNode.hasFocus,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) focusNode.unfocus();
+        },
+        child: child!,
+      ),
+      child: child,
+    );
+  }
+}

@@ -365,5 +365,32 @@ void main() {
         expect(find.byType(WelcomeScreen), findsOneWidget);
       });
     });
+
+    testWidgets('voltar do Android fecha a lista aberta e volta um passo', (tester) async {
+      Future<void> androidBack() async {
+        await tester.binding.handlePopRoute();
+        await tester.pumpAndSettle();
+      }
+
+      await FakeApi(geoNames).run(() async {
+        await fillUntilCredentials(tester);
+
+        await androidBack();
+        expect(find.text('Sua localização'), findsOneWidget);
+
+        // Com a lista do Estado aberta, o voltar só fecha a lista.
+        await tester.tap(find.widgetWithText(TextField, 'Santa Catarina'));
+        await tester.pumpAndSettle();
+        expect(find.widgetWithText(ListTile, 'Santa Catarina'), findsOneWidget);
+        await androidBack();
+        expect(find.byType(ListTile), findsNothing);
+        expect(find.text('Sua localização'), findsOneWidget);
+        expect(find.widgetWithText(TextField, 'Jaraguá do Sul'), findsOneWidget);
+
+        await androidBack();
+        expect(find.text('Seus interesses na música'), findsOneWidget);
+        expect(find.text('Clarinete'), findsOneWidget);
+      });
+    });
   });
 }

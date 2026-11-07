@@ -313,6 +313,30 @@ void main() {
       });
     });
 
+    testWidgets('ao dar a permissão, as chaves não tocadas não piscam ligadas', (tester) async {
+      // O servidor guarda as três ligadas (ex: "Quero" no convite e depois
+      // negou o Android): ao permitir, só a tocada liga — as outras não
+      // aparecem ligadas nem por um instante.
+      backend.permissionDialog = Completer<void>();
+      await api.run(() async {
+        final vm = await pumpProfile(tester);
+        final shown = <List<bool>>[];
+        vm.addListener(() => shown.add([vm.notifyNewMatches, vm.notifyDeadlines, vm.notifyAppUpdates]));
+
+        await tester.tap(switchOf('Novas oportunidades para você'));
+        await tester.pump();
+        backend.permissionDialog!.complete();
+        await tester.pumpAndSettle();
+
+        expect(prefsSent, {'notify_new_matches': true, 'notify_deadlines': false, 'notify_app_updates': false});
+        expect(shown, isNotEmpty);
+        expect(shown.where((s) => s[1] || s[2]), isEmpty);
+        expect(tester.widget<Switch>(switchOf('Novas oportunidades para você')).value, isTrue);
+        expect(tester.widget<Switch>(switchOf('Prazos dos favoritos')).value, isFalse);
+        expect(tester.widget<Switch>(switchOf('Novas versões do app')).value, isFalse);
+      });
+    });
+
     testWidgets('ligar com a permissão negada explica onde permitir', (tester) async {
       backend.allowOnRequest = false;
       await api.run(() async {

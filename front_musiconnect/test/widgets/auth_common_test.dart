@@ -95,6 +95,27 @@ void main() {
     expect(find.widgetWithText(TextField, 'Selecione o país'), findsOneWidget);
   });
 
+  testWidgets('uma opção: a setinha abre e fecha a lista', (tester) async {
+    String? selected;
+    await pumpField(tester, (setState) => AuthSingleSelectField<String>(
+          label: 'País',
+          hint: 'Selecione o país',
+          options: const ['Brasil', 'Chile'],
+          selected: selected,
+          displayString: (o) => o,
+          onChanged: (v) => setState(() => selected = v),
+        ));
+
+    final arrow = find.byIcon(Icons.keyboard_arrow_down_rounded);
+    await tester.tap(arrow);
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(ListTile, 'Chile'), findsOneWidget);
+    await tester.tap(arrow);
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(ListTile, 'Chile'), findsNothing);
+    expect(selected, isNull);
+  });
+
   testWidgets('caixa de seleção também responde ao toque na própria caixa', (tester) async {
     var value = false;
     await pumpField(tester, (setState) => CheckRow(

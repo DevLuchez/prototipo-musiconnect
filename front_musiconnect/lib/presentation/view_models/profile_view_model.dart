@@ -107,9 +107,17 @@ class ProfileViewModel extends ViewModel {
 
   /// Chave ligada = a pessoa quer E o Android permite (sem a permissão,
   /// nada chega — mostrar ligada seria enganoso).
-  bool get notifyNewMatches => _notificationsPermitted && _user.notifyNewMatches;
-  bool get notifyDeadlines => _notificationsPermitted && _user.notifyDeadlines;
-  bool get notifyAppUpdates => _notificationsPermitted && _user.notifyAppUpdates;
+  bool get notifyNewMatches =>
+      _notificationsPermitted && (_saving?.newMatches ?? _user.notifyNewMatches);
+  bool get notifyDeadlines =>
+      _notificationsPermitted && (_saving?.deadlines ?? _user.notifyDeadlines);
+  bool get notifyAppUpdates =>
+      _notificationsPermitted && (_saving?.appUpdates ?? _user.notifyAppUpdates);
+
+  /// Chaves sendo gravadas: a tela já mostra o que vai ser salvo. Sem isso,
+  /// ao dar a permissão as chaves voltavam a mostrar o que o servidor tinha
+  /// guardado (ligadas) e, com a resposta, as não tocadas desligavam.
+  ({bool newMatches, bool deadlines, bool appUpdates})? _saving;
 
   /// Liga/desliga um tipo de notificação. Ligar sem a permissão do Android
   /// pede a permissão antes. Devolve a mensagem de erro para exibir, ou null.
@@ -130,24 +138,33 @@ class ProfileViewModel extends ViewModel {
     final shownNewMatches = notifyNewMatches;
     final shownDeadlines = notifyDeadlines;
     final shownAppUpdates = notifyAppUpdates;
-    final turningOn = newMatches == true || deadlines == true || appUpdates == true;
-    if (turningOn && !_notificationsPermitted) {
-      if (!await _push.enable()) {
-        return 'Permita as notificações do MusiConnect nas configurações do Android.';
-      }
-    }
+    final saving = (
+      newMatches: newMatches ?? shownNewMatches,
+      deadlines: deadlines ?? shownDeadlines,
+      appUpdates: appUpdates ?? shownAppUpdates,
+    );
+    _saving = saving;
+    notifyListeners();
     try {
+      final turningOn = newMatches == true || deadlines == true || appUpdates == true;
+      if (turningOn && !_notificationsPermitted) {
+        if (!await _push.enable()) {
+          return 'Permita as notificações do MusiConnect nas configurações do Android.';
+        }
+      }
       final updated = await _notificationsService.updatePreferences(
-        newMatches: newMatches ?? shownNewMatches,
-        deadlines: deadlines ?? shownDeadlines,
-        appUpdates: appUpdates ?? shownAppUpdates,
+        newMatches: saving.newMatches,
+        deadlines: saving.deadlines,
+        appUpdates: saving.appUpdates,
       );
       _user = updated;
-      notifyListeners();
       onUserUpdated?.call(updated);
       return null;
     } on AuthException catch (e) {
       return e.message;
+    } finally {
+      _saving = null;
+      notifyListeners();
     }
   }
 
