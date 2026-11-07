@@ -1,0 +1,134 @@
+' Diagramas de casos de uso do MusiConnect (seção 6 do README), divididos
+' por grupo de atores. Para regenerar os SVGs: extensão PlantUML do VS Code
+' ("Export Current File Diagrams") ou plantuml -charset UTF-8 -tsvg casos-de-uso.puml
+
+@startuml casos-de-uso-1-usuario
+!pragma layout smetana
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam actorStyle awesome
+skinparam usecase {
+  BackgroundColor #FCE4EF
+  BorderColor #D81B60
+  ArrowColor #555555
+}
+skinparam rectangle {
+  BorderColor #D81B60
+  FontStyle bold
+}
+
+actor "Qualquer usuário\n(visitante ou cadastrado)" as Usuario
+actor "Visitante" as Visitante
+actor "Resend" as Resend <<sistema>>
+Visitante -|> Usuario
+
+rectangle "MusiConnect" {
+  usecase "UC01 Explorar o mapa de instituições" as UC01
+  usecase "UC02 Consultar oportunidades" as UC02
+  usecase "UC03 Consultar detalhe da oportunidade" as UC03
+  usecase "UC04 Acessar o edital original" as UC04
+  usecase "UC05 Consultar ajuda e tutorial" as UC05
+  usecase "UC06 Entrar sem cadastro" as UC06
+  usecase "UC07 Aceitar a política de privacidade" as UC07
+  usecase "UC08 Criar conta" as UC08
+}
+
+Usuario --> UC01
+Usuario --> UC02
+Usuario --> UC03
+Usuario --> UC05
+UC04 .> UC03 : <<extend>>
+Visitante --> UC06
+Visitante --> UC08
+UC06 .> UC07 : <<include>>
+UC08 .> UC07 : <<include>>
+UC08 --> Resend
+@enduml
+
+@startuml casos-de-uso-2-cadastrado
+!pragma layout smetana
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam actorStyle awesome
+skinparam usecase {
+  BackgroundColor #FCE4EF
+  BorderColor #D81B60
+  ArrowColor #555555
+}
+skinparam rectangle {
+  BorderColor #D81B60
+  FontStyle bold
+}
+
+actor "Qualquer usuário\n(visitante ou cadastrado)" as Usuario
+actor "Usuário\ncadastrado" as Cadastrado
+actor "Resend" as Resend <<sistema>>
+Cadastrado -|> Usuario
+
+rectangle "MusiConnect" {
+  usecase "UC07 Aceitar a política de privacidade" as UC07
+  usecase "UC09 Entrar na conta" as UC09
+  usecase "UC10 Redefinir senha" as UC10
+  usecase "UC11 Ver oportunidades compatíveis (match)" as UC11
+  usecase "UC12 Favoritar oportunidades e instituições" as UC12
+  usecase "UC13 Gerenciar perfil e preferências" as UC13
+  usecase "UC14 Sair da conta" as UC14
+  usecase "UC15 Excluir conta" as UC15
+}
+
+Cadastrado --> UC09
+Cadastrado --> UC11
+Cadastrado --> UC12
+Cadastrado --> UC13
+Cadastrado --> UC14
+Cadastrado --> UC15
+UC10 .> UC09 : <<extend>>
+UC07 .> UC09 : <<extend>>\n[política atualizada]
+UC10 --> Resend
+@enduml
+
+@startuml casos-de-uso-3-sistema
+!pragma layout smetana
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam actorStyle awesome
+skinparam usecase {
+  BackgroundColor #FCE4EF
+  BorderColor #D81B60
+  ArrowColor #555555
+}
+skinparam rectangle {
+  BorderColor #D81B60
+  FontStyle bold
+}
+
+actor "Agendador" as Agendador <<sistema>>
+actor "Fontes de\noportunidades" as Fontes <<sistema>>
+actor "Gemini" as Gemini <<sistema>>
+actor "OpenStreetMap\n(QLever)" as OSM <<sistema>>
+actor "Firebase" as Firebase <<sistema>>
+actor "Usuário\ncadastrado" as Cadastrado
+
+rectangle "MusiConnect" {
+  usecase "UC16 Coletar oportunidades" as UC16
+  usecase "UC17 Interpretar editais com IA" as UC17
+  usecase "UC18 Atualizar instituições do mapa" as UC18
+  usecase "UC19 Notificar o usuário\n[se autorizou as notificações]" as UC19
+}
+
+Agendador --> UC16
+Agendador --> UC18
+Agendador --> UC19
+UC16 .> UC17 : <<include>>
+UC16 --> Fontes
+UC17 --> Gemini
+UC18 --> OSM
+UC19 --> Firebase
+UC19 --> Cadastrado
+@enduml
