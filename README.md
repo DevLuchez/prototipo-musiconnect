@@ -2,9 +2,9 @@
 
 <div align="center">
 
-# 🎵 MusiConnect
+<img src="front_musiconnect/assets/images/logo-extended.png" width="420" alt="MusiConnect">
 
-### Sistema Inteligente de Dados para Gestão de Oportunidades Musicais
+### MusiConnect — Conectando músicos a oportunidades no mundo todo
 
 Aplicativo mobile que reúne audições, concursos, bolsas, cursos e vagas para músicos, mostra o quanto cada oportunidade combina com o perfil de quem usa e localiza no mapa as instituições musicais do mundo inteiro.
 
