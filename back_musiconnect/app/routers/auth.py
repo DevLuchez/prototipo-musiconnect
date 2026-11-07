@@ -33,6 +33,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import DeviceToken, User
+from app.openapi_docs import UNAUTHORIZED, error
 from app.schemas import (
     ChangePasswordIn,
     ConfirmIn,
@@ -45,6 +46,7 @@ from app.schemas import (
     ResendIn,
     ResetPasswordIn,
     SignupIn,
+    StatusOut,
     UserOut,
 )
 from app.services.email_service import send_confirmation_email, send_password_reset_email
@@ -65,7 +67,7 @@ LEGACY_PRIVACY_POLICY_VERSION = "2026-10-30"
 
 logger = logging.getLogger("routers.auth")
 
-router = APIRouter(prefix="/api/auth", tags=["auth"])
+router = APIRouter(prefix="/api/auth", tags=["Autenticação"])
 
 _bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -130,7 +132,13 @@ def get_current_user_optional(
     return db.query(User).filter(User.session_token == credentials.credentials).first()
 
 
-@router.post("/signup", status_code=201)
+@router.post(
+    "/signup",
+    status_code=201,
+    summary="Criar conta",
+    description="Cadastra o usuário e envia o e-mail de confirmação (link válido por 24 horas). Exige o aceite da política de privacidade. O login só é liberado após a confirmação.",
+    responses={201: {"model": StatusOut, "description": "Conta criada e e-mail de confirmação enviado."}, 409: error("E-mail já cadastrado."), 422: error("Dados inválidos (ex.: senha fraca ou política não aceita).")},
+)
 async def signup(data: SignupIn, db: Session = Depends(get_db)):
     """
     Cria o usuário como pendente de confirmação (email_confirmed=False) e
@@ -175,7 +183,12 @@ async def signup(data: SignupIn, db: Session = Depends(get_db)):
     return {"status": "sent" if sent else "user_created_email_failed", "email": data.email}
 
 
-@router.post("/resend")
+@router.post(
+    "/resend",
+    summary="Reenviar o e-mail de confirmação",
+    description="Gera um novo link de confirmação e o envia ao e-mail informado.",
+    responses={200: {"model": StatusOut, "description": "E-mail reenviado."}, 404: error("Usuário não encontrado."), 409: error("E-mail já confirmado.")},
+)
 async def resend_confirmation(data: ResendIn, db: Session = Depends(get_db)):
     """Reenvia o e-mail de confirmação com o mesmo link (com mais 24h), se
     ele ainda vale: um token novo invalidaria o link do e-mail anterior, e
@@ -217,7 +230,12 @@ def confirm_by_token(db: Session, token: str) -> tuple[str, User | None]:
     return "confirmed", user
 
 
-@router.post("/confirm")
+@router.post(
+    "/confirm",
+    summary="Confirmar o e-mail",
+    description="Confirma o e-mail a partir do código recebido no link.",
+    responses={200: {"model": StatusOut, "description": "E-mail confirmado."}, 400: error("Link de confirmação inválido ou expirado.")},
+)
 def confirm_email(data: ConfirmIn, db: Session = Depends(get_db)):
     """
     Confirma o e-mail a partir do token do link (chamado pelo app assim
@@ -235,7 +253,14 @@ def confirm_email(data: ConfirmIn, db: Session = Depends(get_db)):
     return {"status": status, "email": user.email}
 
 
-@router.get("/status", response_model=ConfirmStatusOut)
+@router.get(
+    "/status",
+    response_model=ConfirmStatusOut,
+    summary="Consultar a confirmação do e-mail",
+    response_description="Situação da confirmação.",
+    description="Informa se o e-mail já foi confirmado. Usada pelo aplicativo enquanto aguarda a confirmação.",
+    responses={404: error("Usuário não encontrado.")},
+)
 def confirmation_status(email: str, db: Session = Depends(get_db)):
     """
     Consulta se um e-mail já foi confirmado — usado pelo botão "Já
@@ -248,7 +273,14 @@ def confirmation_status(email: str, db: Session = Depends(get_db)):
     return ConfirmStatusOut(confirmed=user.email_confirmed)
 
 
-@router.post("/login", response_model=UserOut)
+@router.post(
+    "/login",
+    response_model=UserOut,
+    summary="Entrar na conta",
+    response_description="Dados do usuário, com o token de sessão.",
+    description="Autentica o usuário e retorna os seus dados com o token de sessão, que deve ser enviado nas demais rotas no cabeçalho `Authorization: Bearer <token>`.",
+    responses={401: error("E-mail ou senha inválidos."), 403: error("E-mail ainda não confirmado.")},
+)
 def login(data: LoginIn, db: Session = Depends(get_db)):
     """
     Autentica um usuário e devolve um token de sessão (o app guarda esse
@@ -276,7 +308,12 @@ def login(data: LoginIn, db: Session = Depends(get_db)):
     return result
 
 
-@router.post("/forgot-password")
+@router.post(
+    "/forgot-password",
+    summary="Solicitar a redefinição de senha",
+    description="Envia um link de redefinição (válido por 15 minutos), se o e-mail estiver cadastrado. A resposta é sempre a mesma, para não revelar quais e-mails existem.",
+    responses={200: {"model": StatusOut, "description": "Pedido recebido."}},
+)
 async def forgot_password(data: ForgotPasswordIn, db: Session = Depends(get_db)):
     """
     Envia o e-mail de redefinição de senha (link válido por 15min).
@@ -339,7 +376,12 @@ def reset_by_token(db: Session, token: str, new_password: str) -> str:
     return "reset"
 
 
-@router.post("/reset-password")
+@router.post(
+    "/reset-password",
+    summary="Redefinir a senha",
+    description="Define uma nova senha a partir do código recebido no link e encerra as sessões abertas.",
+    responses={200: {"model": StatusOut, "description": "Senha redefinida."}, 400: error("Link de redefinição inválido ou expirado."), 422: error("Senha fraca.")},
+)
 def reset_password(data: ResetPasswordIn, db: Session = Depends(get_db)):
     """
     Efetiva a nova senha a partir do token do link (chamado pela tela de
@@ -356,14 +398,28 @@ def reset_password(data: ResetPasswordIn, db: Session = Depends(get_db)):
     return {"status": "reset"}
 
 
-@router.get("/me", response_model=UserOut)
+@router.get(
+    "/me",
+    response_model=UserOut,
+    summary="Consultar o perfil",
+    response_description="Dados do usuário.",
+    description="Retorna os dados do usuário autenticado.",
+    responses=UNAUTHORIZED,
+)
 def get_me(user: User = Depends(get_current_user)):
     """Dados do usuário logado — chamado na abertura do app pra validar o
     token salvo localmente e carregar o perfil atual."""
     return user
 
 
-@router.patch("/me", response_model=UserOut)
+@router.patch(
+    "/me",
+    response_model=UserOut,
+    summary="Editar o perfil",
+    response_description="Perfil atualizado.",
+    description="Atualiza nome, instrumentos, ramo de atuação e localização do usuário autenticado.",
+    responses=UNAUTHORIZED,
+)
 def update_me(
     data: ProfileUpdateIn,
     user: User = Depends(get_current_user),
@@ -381,7 +437,14 @@ def update_me(
     return user
 
 
-@router.post("/change-password", response_model=UserOut)
+@router.post(
+    "/change-password",
+    response_model=UserOut,
+    summary="Trocar a senha",
+    response_description="Senha trocada; dados do usuário com o novo token de sessão.",
+    description="Troca a senha do usuário autenticado, mediante a senha atual. Gera um novo token de sessão, retornado na resposta.",
+    responses={401: error("Sessão inválida ou senha atual incorreta."), 422: error("Nova senha fraca.")},
+)
 def change_password(
     data: ChangePasswordIn,
     user: User = Depends(get_current_user),
@@ -407,7 +470,14 @@ def change_password(
     return result
 
 
-@router.post("/accept-privacy", response_model=UserOut)
+@router.post(
+    "/accept-privacy",
+    response_model=UserOut,
+    summary="Aceitar a política de privacidade atualizada",
+    response_description="Aceite registrado.",
+    description="Registra o aceite de uma nova versão da política de privacidade.",
+    responses=UNAUTHORIZED,
+)
 def accept_privacy(
     data: Optional[PrivacyAcceptIn] = None,
     user: User = Depends(get_current_user),
@@ -422,7 +492,12 @@ def accept_privacy(
     return user
 
 
-@router.post("/logout")
+@router.post(
+    "/logout",
+    summary="Sair da conta",
+    description="Invalida o token de sessão e desvincula o aparelho das notificações.",
+    responses={200: {"model": StatusOut, "description": "Sessão encerrada."}, **UNAUTHORIZED},
+)
 def logout(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Invalida o token de sessão no servidor e para as notificações do
     aparelho — quem saiu não recebe mais (num celular compartilhado, a
@@ -433,7 +508,12 @@ def logout(user: User = Depends(get_current_user), db: Session = Depends(get_db)
     return {"status": "logged_out"}
 
 
-@router.delete("/me")
+@router.delete(
+    "/me",
+    summary="Excluir a conta",
+    description="Exclui a conta e todos os dados do usuário (favoritos, aparelhos e histórico de notificações), mediante a senha. A ação é irreversível.",
+    responses={200: {"model": StatusOut, "description": "Conta excluída."}, 401: error("Sessão inválida ou senha incorreta.")},
+)
 def delete_account(
     data: DeleteAccountIn,
     user: User = Depends(get_current_user),

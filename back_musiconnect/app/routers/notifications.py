@@ -17,12 +17,20 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import DeviceToken, User
 from app.routers.auth import get_current_user
+from app.openapi_docs import UNAUTHORIZED
 from app.schemas import DeviceTokenIn, NotificationPreferencesIn, UserOut
 
-router = APIRouter(prefix="/api/notifications", tags=["notifications"])
+router = APIRouter(prefix="/api/notifications", tags=["Notificações"])
 
 
-@router.put("/device", status_code=204)
+@router.put(
+    "/device",
+    status_code=204,
+    summary="Registrar o aparelho",
+    response_description="Aparelho registrado.",
+    description="Vincula o token do Firebase Cloud Messaging do aparelho ao usuário autenticado, para o envio de notificações.",
+    responses=UNAUTHORIZED,
+)
 def register_device(
     data: DeviceTokenIn,
     user: User = Depends(get_current_user),
@@ -54,7 +62,14 @@ def register_device(
     return Response(status_code=204)
 
 
-@router.put("/preferences", response_model=UserOut)
+@router.put(
+    "/preferences",
+    response_model=UserOut,
+    summary="Atualizar as preferências de notificação",
+    response_description="Preferências atualizadas; dados do usuário.",
+    description="Ativa ou desativa cada tipo de aviso: novas oportunidades compatíveis, prazos dos favoritos e nova versão do aplicativo.",
+    responses=UNAUTHORIZED,
+)
 def update_preferences(
     data: NotificationPreferencesIn,
     user: User = Depends(get_current_user),

@@ -5,12 +5,13 @@ from typing import List, Optional
 
 from app.database import get_db
 from app.models import Institution, Opportunity, User
-from app.schemas import InstitutionOut, OpportunityOut
+from app.openapi_docs import error
+from app.schemas import InstitutionOut, InstitutionStatsOut, OpportunityOut
 from app.routers.auth import get_current_user_optional
 from app.routers.opportunities import _apply_filters, _only_open
 from app.services.matching import compute_match_breakdown
 
-router = APIRouter(prefix="/api/institutions", tags=["institutions"])
+router = APIRouter(prefix="/api/institutions", tags=["Instituições"])
 
 # Oportunidades visíveis no app (mesmo critério da aba Matcher: ativa,
 # confiança >= 0.80 e prazo vigente), contadas por pino do mapa.
@@ -33,7 +34,13 @@ _INSTITUTION_COLUMNS = """
 """
 
 
-@router.get("/nearby", response_model=List[InstitutionOut])
+@router.get(
+    "/nearby",
+    response_model=List[InstitutionOut],
+    summary="Buscar instituições próximas",
+    response_description="Instituições dentro do raio.",
+    description="Retorna as instituições dentro de um raio, em metros, a partir de uma coordenada. Usada pelo mapa conforme o usuário navega.",
+)
 def get_nearby_institutions(
     lat: float = Query(..., description="Latitude do centro da busca"),
     lng: float = Query(..., description="Longitude do centro da busca"),
@@ -67,7 +74,13 @@ def get_nearby_institutions(
     return [InstitutionOut(**row) for row in rows.mappings()]
 
 
-@router.get("/all", response_model=List[InstitutionOut])
+@router.get(
+    "/all",
+    response_model=List[InstitutionOut],
+    summary="Listar instituições",
+    response_description="Lista de instituições.",
+    description="Retorna instituições do mapa, até o limite informado.",
+)
 def get_all_institutions(
     limit: int = Query(10000, ge=1, le=100000, description="Máximo de resultados (padrão: 10000)"),
     db: Session = Depends(get_db),
@@ -91,7 +104,12 @@ def get_all_institutions(
     return [InstitutionOut(**row) for row in rows.mappings()]
 
 
-@router.get("/stats")
+@router.get(
+    "/stats",
+    summary="Consultar as estatísticas do mapa",
+    description="Retorna o total de instituições, a quantidade por categoria, quantas têm oportunidades abertas e a data da última atualização do mapa.",
+    responses={200: {"model": InstitutionStatsOut, "description": "Estatísticas do mapa."}},
+)
 def get_stats(db: Session = Depends(get_db)) -> dict:
     """Retorna estatísticas do banco (total, por categoria, com oportunidades, última atualização)."""
     total = db.query(Institution).count()
@@ -113,7 +131,13 @@ def get_stats(db: Session = Depends(get_db)) -> dict:
     }
 
 
-@router.get("/search", response_model=List[InstitutionOut])
+@router.get(
+    "/search",
+    response_model=List[InstitutionOut],
+    summary="Buscar instituições",
+    response_description="Instituições encontradas.",
+    description="Busca instituições pelo nome ou endereço, sem diferenciar acentos e maiúsculas.",
+)
 def search_institutions(
     q: str = Query(..., min_length=2, description="Trecho do nome ou do endereço"),
     limit: int = Query(8, ge=1, le=50),
@@ -152,7 +176,14 @@ def search_institutions(
     return [InstitutionOut(**row) for row in rows.mappings()]
 
 
-@router.get("/{osm_id}", response_model=InstitutionOut)
+@router.get(
+    "/{osm_id}",
+    response_model=InstitutionOut,
+    summary="Consultar uma instituição",
+    response_description="Dados da instituição.",
+    description="Retorna os dados de uma instituição pelo identificador do OpenStreetMap.",
+    responses={404: error("Instituição não encontrada.")},
+)
 def get_institution(osm_id: str, db: Session = Depends(get_db)) -> InstitutionOut:
     """
     Uma instituição pelo osm_id — usado pelo botão "Ver no mapa" da
@@ -175,7 +206,13 @@ def get_institution(osm_id: str, db: Session = Depends(get_db)) -> InstitutionOu
     return InstitutionOut(**row)
 
 
-@router.get("/{osm_id}/opportunities", response_model=List[OpportunityOut])
+@router.get(
+    "/{osm_id}/opportunities",
+    response_model=List[OpportunityOut],
+    summary="Listar as oportunidades de uma instituição",
+    response_description="Oportunidades abertas da instituição.",
+    description="Retorna as oportunidades abertas vinculadas à instituição, com o percentual de match quando autenticado.",
+)
 def get_institution_opportunities(
     osm_id: str,
     db: Session = Depends(get_db),

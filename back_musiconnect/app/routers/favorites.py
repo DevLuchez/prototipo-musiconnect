@@ -31,10 +31,11 @@ from app.models import FavoriteInstitution, FavoriteOpportunity, Institution, Op
 from app.routers.auth import get_current_user
 from app.routers.institutions import _ACTIVE_OPPORTUNITIES_JOIN, _INSTITUTION_COLUMNS
 from app.routers.opportunities import _apply_filters, _only_open
+from app.openapi_docs import UNAUTHORIZED, error
 from app.schemas import FavoriteIdsOut, InstitutionOut, OpportunityOut
 from app.services.matching import compute_match_breakdown
 
-router = APIRouter(prefix="/api/favorites", tags=["favorites"])
+router = APIRouter(prefix="/api/favorites", tags=["Favoritos"])
 
 
 def _saved_opportunities_query(db: Session, user: User):
@@ -48,7 +49,14 @@ def _saved_opportunities_query(db: Session, user: User):
     ))
 
 
-@router.get("/ids", response_model=FavoriteIdsOut)
+@router.get(
+    "/ids",
+    response_model=FavoriteIdsOut,
+    summary="Listar os identificadores dos favoritos",
+    response_description="Identificadores dos favoritos.",
+    description="Retorna apenas os identificadores das oportunidades e instituições favoritas, usados pelo aplicativo para marcar os corações.",
+    responses=UNAUTHORIZED,
+)
 def get_favorite_ids(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -70,7 +78,14 @@ def get_favorite_ids(
 
 # ── Oportunidades ────────────────────────────────────────────────────────────
 
-@router.get("/opportunities", response_model=List[OpportunityOut])
+@router.get(
+    "/opportunities",
+    response_model=List[OpportunityOut],
+    summary="Listar as oportunidades favoritas",
+    response_description="Lista de oportunidades favoritas.",
+    description="Retorna as oportunidades favoritas que continuam disponíveis, com o percentual de match.",
+    responses=UNAUTHORIZED,
+)
 def list_favorite_opportunities(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -93,7 +108,14 @@ def list_favorite_opportunities(
     return items
 
 
-@router.put("/opportunities/{opportunity_id}", status_code=204)
+@router.put(
+    "/opportunities/{opportunity_id}",
+    status_code=204,
+    summary="Favoritar uma oportunidade",
+    response_description="Oportunidade adicionada aos favoritos.",
+    description="Adiciona a oportunidade aos favoritos. Repetir a chamada não gera duplicidade.",
+    responses={**UNAUTHORIZED, 404: error("Oportunidade não encontrada.")},
+)
 def add_favorite_opportunity(
     opportunity_id: int,
     user: User = Depends(get_current_user),
@@ -110,7 +132,14 @@ def add_favorite_opportunity(
     return Response(status_code=204)
 
 
-@router.delete("/opportunities/{opportunity_id}", status_code=204)
+@router.delete(
+    "/opportunities/{opportunity_id}",
+    status_code=204,
+    summary="Remover uma oportunidade dos favoritos",
+    response_description="Oportunidade removida dos favoritos.",
+    description="Remove a oportunidade dos favoritos. Não retorna erro se ela não estava favoritada.",
+    responses=UNAUTHORIZED,
+)
 def remove_favorite_opportunity(
     opportunity_id: int,
     user: User = Depends(get_current_user),
@@ -126,7 +155,14 @@ def remove_favorite_opportunity(
 
 # ── Instituições ─────────────────────────────────────────────────────────────
 
-@router.get("/institutions", response_model=List[InstitutionOut])
+@router.get(
+    "/institutions",
+    response_model=List[InstitutionOut],
+    summary="Listar as instituições favoritas",
+    response_description="Lista de instituições favoritas.",
+    description="Retorna as instituições favoritas, com a quantidade de oportunidades abertas de cada uma.",
+    responses=UNAUTHORIZED,
+)
 def list_favorite_institutions(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -147,7 +183,14 @@ def list_favorite_institutions(
     return [InstitutionOut(**row) for row in rows.mappings()]
 
 
-@router.put("/institutions/{osm_id}", status_code=204)
+@router.put(
+    "/institutions/{osm_id}",
+    status_code=204,
+    summary="Favoritar uma instituição",
+    response_description="Instituição adicionada aos favoritos.",
+    description="Adiciona a instituição aos favoritos. Repetir a chamada não gera duplicidade.",
+    responses={**UNAUTHORIZED, 404: error("Instituição não encontrada.")},
+)
 def add_favorite_institution(
     osm_id: str,
     user: User = Depends(get_current_user),
@@ -164,7 +207,14 @@ def add_favorite_institution(
     return Response(status_code=204)
 
 
-@router.delete("/institutions/{osm_id}", status_code=204)
+@router.delete(
+    "/institutions/{osm_id}",
+    status_code=204,
+    summary="Remover uma instituição dos favoritos",
+    response_description="Instituição removida dos favoritos.",
+    description="Remove a instituição dos favoritos. Não retorna erro se ela não estava favoritada.",
+    responses=UNAUTHORIZED,
+)
 def remove_favorite_institution(
     osm_id: str,
     user: User = Depends(get_current_user),

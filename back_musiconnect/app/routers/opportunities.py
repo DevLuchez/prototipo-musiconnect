@@ -25,7 +25,14 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.database import get_db, SessionLocal
 from app.models import CityLocation, Opportunity, User
-from app.schemas import CityOpportunitiesOut, OpportunityOut
+from app.openapi_docs import ADMIN_ONLY, UNAUTHORIZED, error
+from app.schemas import (
+    AdminTaskOut,
+    CityOpportunitiesOut,
+    FilterOptionsOut,
+    MatchCountOut,
+    OpportunityOut,
+)
 from app.routers.auth import get_current_user, get_current_user_optional
 from app.security import require_admin_key
 from app.services.matching import (
@@ -38,7 +45,7 @@ from app.services.llm_enricher import enrich_opportunities
 
 logger = logging.getLogger("routers.opportunities")
 
-router = APIRouter(prefix="/api/opportunities", tags=["opportunities"])
+router = APIRouter(prefix="/api/opportunities", tags=["Oportunidades"])
 
 
 # ── Nome de estado/província por extenso ──────────────────────────────────────
@@ -143,7 +150,13 @@ async def _run_full_scrape() -> dict:
 
 # ── Endpoints ────────────────────────────────────────────────────────────────
 
-@router.get("/", response_model=List[OpportunityOut])
+@router.get(
+    "/",
+    response_model=List[OpportunityOut],
+    summary="Listar oportunidades",
+    response_description="Lista de oportunidades.",
+    description="Lista as oportunidades abertas, com busca livre e filtros por tipo, fonte, instrumento, localização (país, estado e cidade), modalidade remota e marcador de cidade. O total de resultados é retornado no cabeçalho `X-Total-Count`. Com autenticação, cada oportunidade traz o percentual de match.",
+)
 def list_opportunities(
     response: Response,
     q: Optional[str] = Query(
@@ -287,7 +300,12 @@ def _apply_filters(
     return query
 
 
-@router.get("/filter-options")
+@router.get(
+    "/filter-options",
+    summary="Consultar as opções dos filtros",
+    description="Retorna os instrumentos, países, estados e cidades disponíveis nos filtros. Cada lista considera os filtros já escolhidos nos demais campos.",
+    responses={200: {"model": FilterOptionsOut, "description": "Opções dos filtros."}},
+)
 def get_filter_options(
     q: Optional[str] = Query(None, description="Busca livre já digitada no Matcher"),
     instrument: Optional[List[str]] = Query(None),
@@ -353,7 +371,12 @@ def get_filter_options(
     }
 
 
-@router.get("/matches/count")
+@router.get(
+    "/matches/count",
+    summary="Contar as oportunidades compatíveis",
+    description="Retorna quantas oportunidades abertas têm match a partir de 85% com o usuário autenticado.",
+    responses={200: {"model": MatchCountOut, "description": "Contagem de oportunidades compatíveis."}, **UNAUTHORIZED},
+)
 def count_matches(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
@@ -375,7 +398,13 @@ def count_matches(
     return {"count": count, "threshold": HIGH_MATCH_THRESHOLD}
 
 
-@router.get("/cities", response_model=List[CityOpportunitiesOut])
+@router.get(
+    "/cities",
+    response_model=List[CityOpportunitiesOut],
+    summary="Listar os marcadores de cidade",
+    response_description="Lista de marcadores de cidade.",
+    description="Retorna as cidades com oportunidades abertas cuja instituição não possui endereço exato, exibidas no mapa como marcadores no centro da cidade.",
+)
 def get_opportunities_by_city(db: Session = Depends(get_db)):
     """
     Marcadores "oportunidades por cidade" do mapa: uma entrada por cidade
@@ -409,7 +438,14 @@ def get_opportunities_by_city(db: Session = Depends(get_db)):
     ]
 
 
-@router.get("/{opportunity_id}", response_model=OpportunityOut)
+@router.get(
+    "/{opportunity_id}",
+    response_model=OpportunityOut,
+    summary="Consultar uma oportunidade",
+    response_description="Dados da oportunidade.",
+    description="Retorna os dados de uma oportunidade, com o detalhamento do match quando autenticado. Usada, por exemplo, ao abrir uma notificação.",
+    responses={404: error("Oportunidade não encontrada.")},
+)
 def get_opportunity(
     opportunity_id: int,
     db: Session = Depends(get_db),
@@ -426,7 +462,14 @@ def get_opportunity(
     return opp
 
 
-@router.post("/scrape", dependencies=[Depends(require_admin_key)])
+@router.post(
+    "/scrape",
+    dependencies=[Depends(require_admin_key)],
+    tags=["Administração"],
+    summary="Disparar a coleta de oportunidades",
+    description="Inicia em segundo plano a coleta de todas as fontes, sem aguardar o horário agendado.",
+    responses={200: {"model": AdminTaskOut, "description": "Coleta iniciada."}, **ADMIN_ONLY},
+)
 async def trigger_scrape(background_tasks: BackgroundTasks):
     """
     Dispara o scraping manual de todas as fontes em background.
@@ -440,7 +483,14 @@ async def trigger_scrape(background_tasks: BackgroundTasks):
     }
 
 
-@router.post("/enrich", dependencies=[Depends(require_admin_key)])
+@router.post(
+    "/enrich",
+    dependencies=[Depends(require_admin_key)],
+    tags=["Administração"],
+    summary="Disparar a interpretação dos editais",
+    description="Inicia em segundo plano a interpretação, pelo Gemini, dos editais ainda não processados.",
+    responses={200: {"model": AdminTaskOut, "description": "Interpretação iniciada."}, **ADMIN_ONLY},
+)
 async def trigger_enrich(background_tasks: BackgroundTasks):
     """
     Enriquece via Gemini todas as oportunidades brutas ainda não processadas.

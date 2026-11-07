@@ -10,19 +10,26 @@ Endpoints (todos exigem o header X-Admin-Key — ver app/security.py):
 import logging
 from fastapi import APIRouter, Depends
 from app.background import run_in_background
+from app.openapi_docs import ADMIN_ONLY
 from app.scheduler import scheduler
+from app.schemas import AdminTaskOut, SchedulerStatusOut
 from app.security import require_admin_key
 
 logger = logging.getLogger("routers.scheduler")
 
 router = APIRouter(
     prefix="/scheduler",
-    tags=["scheduler"],
+    tags=["Administração"],
     dependencies=[Depends(require_admin_key)],
 )
 
 
-@router.get("/status")
+@router.get(
+    "/status",
+    summary="Consultar o agendador",
+    description="Retorna a situação do agendador e a próxima execução de cada rotina.",
+    responses={200: {"model": SchedulerStatusOut, "description": "Situação do agendador."}, **ADMIN_ONLY},
+)
 def scheduler_status():
     """
     Retorna o status do scheduler e os jobs agendados com suas próximas execuções.
@@ -49,7 +56,12 @@ def scheduler_status():
     }
 
 
-@router.post("/run-etl")
+@router.post(
+    "/run-etl",
+    summary="Disparar a atualização do mapa",
+    description="Inicia em segundo plano a atualização das instituições a partir do OpenStreetMap, sem aguardar o horário agendado.",
+    responses={200: {"model": AdminTaskOut, "description": "Atualização iniciada."}, **ADMIN_ONLY},
+)
 async def run_etl_now():
     """
     Dispara o ETL imediatamente em background, sem esperar o horário agendado.
@@ -65,7 +77,12 @@ async def run_etl_now():
     }
 
 
-@router.post("/resolve-institutions")
+@router.post(
+    "/resolve-institutions",
+    summary="Vincular as oportunidades ao mapa",
+    description="Inicia em segundo plano a vinculação das oportunidades às instituições do mapa ou ao centro da cidade.",
+    responses={200: {"model": AdminTaskOut, "description": "Vinculação iniciada."}, **ADMIN_ONLY},
+)
 async def resolve_institutions_now():
     """
     Vincula ao mapa as oportunidades ainda sem institution_id, sem esperar o

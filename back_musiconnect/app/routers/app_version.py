@@ -27,7 +27,7 @@ from app.config import settings
 
 logger = logging.getLogger("routers.app_version")
 
-router = APIRouter(prefix="/api/app", tags=["app"])
+router = APIRouter(prefix="/api/app", tags=["Aplicativo"])
 
 GITHUB_LATEST_RELEASE = (
     "https://api.github.com/repos/DevLuchez/prototipo-musiconnect/releases/latest"
@@ -41,9 +41,16 @@ _cache: dict = {"version": None, "fetched_at": None}
 
 
 class AppVersionOut(BaseModel):
+    """Versão mais recente do aplicativo."""
+
     latest: Optional[str] = None
+    """Versão mais recente publicada (ex.: `1.2.6`)."""
     minimum: Optional[str] = None
+    """Versão mínima suportada, quando houver."""
     download_url: str
+    """Endereço para baixar o APK."""
+
+    model_config = {"use_attribute_docstrings": True}
 
 
 def fetch_latest_release() -> Optional[str]:
@@ -85,7 +92,13 @@ def latest_version() -> Optional[str]:
     return _cache["version"]
 
 
-@router.get("/version", response_model=AppVersionOut)
+@router.get(
+    "/version",
+    response_model=AppVersionOut,
+    summary="Consultar a versão mais recente do aplicativo",
+    response_description="Versão mais recente e endereço de download.",
+    description="Retorna a versão mais recente publicada e o endereço de download. Usada pelo aplicativo para avisar sobre atualizações.",
+)
 def app_version():
     return AppVersionOut(
         latest=latest_version(),

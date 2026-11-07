@@ -39,7 +39,7 @@ from app.services.matching import (
     compute_match_breakdown,
 )
 
-router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
+router = APIRouter(prefix="/api/dashboard", tags=["Início"])
 
 # Quantos cards em cada carrossel do Início.
 _CAROUSEL_LIMIT = 10
@@ -48,15 +48,30 @@ _NEW_WINDOW = timedelta(days=7)
 
 
 class DashboardOut(BaseModel):
+    """Resumo da tela inicial."""
+
     match_count: int
+    """Oportunidades abertas com match a partir de 85%."""
     urgent_saved: List[OpportunityOut]
+    """Oportunidades favoritas com menos de 7 dias até o encerramento do prazo."""
     top_matches: List[OpportunityOut]
+    """Oportunidades de maior match (a primeira é o "Seu melhor match")."""
     new_matches: List[OpportunityOut]
+    """Oportunidades compatíveis que entraram no aplicativo nos últimos 7 dias."""
     # {"audicao": 52, "competicao": 44, ...} — todas as abertas, não só matches.
     type_counts: Dict[str, int]
+    """Quantidade de oportunidades abertas por tipo (bloco "Explorar")."""
+
+    model_config = {"use_attribute_docstrings": True}
 
 
-@router.get("", response_model=DashboardOut)
+@router.get(
+    "",
+    response_model=DashboardOut,
+    summary="Consultar o resumo da tela inicial",
+    response_description="Resumo da tela inicial.",
+    description="Retorna, em uma chamada, os dados da tela inicial: melhores matches, favoritas com prazo nos próximos 7 dias, novas oportunidades compatíveis e a quantidade de oportunidades abertas por tipo. Sem autenticação (modo visitante), apenas a contagem por tipo é preenchida.",
+)
 def get_dashboard(
     user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db),

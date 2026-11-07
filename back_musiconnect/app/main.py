@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine
 from app.migrations import run_migrations
 from app.models import Base
+from app.openapi_docs import API_DESCRIPTION, API_VERSION, OPENAPI_TAGS
 from app.routers import app_version
 from app.routers import auth
 from app.routers import dashboard
@@ -24,6 +25,7 @@ from app.routers import opportunities
 from app.routers import scheduler as scheduler_router
 from app.routers import web_links
 from app.scheduler import setup_scheduler
+from app.schemas import HealthOut
 
 logging.basicConfig(
     level=logging.INFO,
@@ -66,8 +68,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="MusiConnect API",
-    description="Backend para descoberta global de instituições musicais e oportunidades.",
-    version="0.2.0",
+    description=API_DESCRIPTION,
+    version=API_VERSION,
+    openapi_tags=OPENAPI_TAGS,
     lifespan=lifespan,
 )
 
@@ -93,6 +96,13 @@ app.include_router(scheduler_router.router)
 app.include_router(web_links.router)
 
 
-@app.get("/")
+@app.get(
+    "/",
+    tags=["Sistema"],
+    summary="Verificar a disponibilidade da API",
+    response_description="Situação da API.",
+    description="Retorna `status: ok` quando a API está no ar. Usada pelo monitoramento de disponibilidade.",
+    response_model=HealthOut,
+)
 def health_check():
-    return {"status": "ok", "service": "MusiConnect API", "version": "0.2.0"}
+    return {"status": "ok", "service": "MusiConnect API", "version": API_VERSION}
