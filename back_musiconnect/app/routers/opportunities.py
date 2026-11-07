@@ -45,7 +45,9 @@ from app.services.llm_enricher import enrich_opportunities
 
 logger = logging.getLogger("routers.opportunities")
 
-router = APIRouter(prefix="/api/opportunities", tags=["Oportunidades"])
+# Grupo do Swagger definido rota a rota: as de administração ficam só em
+# "Administração" (tags do router seriam somadas às da rota).
+router = APIRouter(prefix="/api/opportunities")
 
 
 # ── Nome de estado/província por extenso ──────────────────────────────────────
@@ -152,6 +154,7 @@ async def _run_full_scrape() -> dict:
 
 @router.get(
     "/",
+    tags=["Oportunidades"],
     response_model=List[OpportunityOut],
     summary="Listar oportunidades",
     response_description="Lista de oportunidades.",
@@ -302,6 +305,7 @@ def _apply_filters(
 
 @router.get(
     "/filter-options",
+    tags=["Oportunidades"],
     summary="Consultar as opções dos filtros",
     description="Retorna os instrumentos, países, estados e cidades disponíveis nos filtros. Cada lista considera os filtros já escolhidos nos demais campos.",
     responses={200: {"model": FilterOptionsOut, "description": "Opções dos filtros."}},
@@ -373,6 +377,7 @@ def get_filter_options(
 
 @router.get(
     "/matches/count",
+    tags=["Oportunidades"],
     summary="Contar as oportunidades compatíveis",
     description="Retorna quantas oportunidades abertas têm match a partir de 85% com o usuário autenticado.",
     responses={200: {"model": MatchCountOut, "description": "Contagem de oportunidades compatíveis."}, **UNAUTHORIZED},
@@ -400,6 +405,7 @@ def count_matches(
 
 @router.get(
     "/cities",
+    tags=["Oportunidades"],
     response_model=List[CityOpportunitiesOut],
     summary="Listar os marcadores de cidade",
     response_description="Lista de marcadores de cidade.",
@@ -440,6 +446,7 @@ def get_opportunities_by_city(db: Session = Depends(get_db)):
 
 @router.get(
     "/{opportunity_id}",
+    tags=["Oportunidades"],
     response_model=OpportunityOut,
     summary="Consultar uma oportunidade",
     response_description="Dados da oportunidade.",
