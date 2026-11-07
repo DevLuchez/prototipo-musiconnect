@@ -1,3 +1,5 @@
+<img width=100% src="https://capsule-render.vercel.app/api?type=waving&color=E02A83&height=120&section=header"/>
+
 <div align="center">
 
 # 🎵 MusiConnect
@@ -1392,3 +1394,5 @@ POSTGIS PROJECT. **PostGIS documentation**. [*S. l.*], 2026. Disponível em: htt
 QLEVER. **QLever: SPARQL engine — OpenStreetMap Planet**. Freiburg: University of Freiburg, 2026. Disponível em: https://qlever.dev/osm-planet. Acesso em: 7 nov. 2026.
 
 SEMANTIC VERSIONING. **Semantic Versioning 2.0.0**. [*S. l.*], 2026. Disponível em: https://semver.org/lang/pt-BR/. Acesso em: 7 nov. 2026.
+
+<img width=100% src="https://capsule-render.vercel.app/api?type=waving&color=E02A83&height=120&section=footer"/>
