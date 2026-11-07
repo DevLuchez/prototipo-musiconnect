@@ -187,9 +187,16 @@ class AuthPrimaryButton extends StatelessWidget {
           : Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(label,
-                    style:
-                        const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                // Em botões estreitos (dois lado a lado numa janela), o
+                // texto encolhe um pouco em vez de ser cortado.
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(label,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 14)),
+                  ),
+                ),
                 if (trailingIcon != null) ...[
                   const SizedBox(width: 4),
                   Icon(trailingIcon, size: 17),
@@ -241,8 +248,14 @@ class AuthOutlineButton extends StatelessWidget {
             Icon(leadingIcon, size: 17),
             const SizedBox(width: 6),
           ],
-          Text(label,
-              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+          // Mesmo cuidado do AuthPrimaryButton: encolhe em vez de cortar.
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(label,
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+            ),
+          ),
           if (trailingIcon != null) ...[
             const SizedBox(width: 4),
             Icon(trailingIcon, size: 17),
