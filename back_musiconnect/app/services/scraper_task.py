@@ -33,8 +33,6 @@ from app.services.scrapers.wordpress_scraper import (
 from app.services.llm_enricher import enrich_opportunities
 from app.services.institution_resolver import resolve_opportunity_institutions
 from app.services.favorites_cleanup import cleanup_favorite_opportunities
-from app.services.deduplication import report_cross_source_duplicates
-from app.database import SessionLocal
 
 logger = logging.getLogger("scheduler.scrapers")
 
@@ -150,16 +148,6 @@ async def run_all_scrapers() -> None:
         )
     except Exception as exc:
         logger.error(f"[Scrapers] Erro na resolução de instituições: {exc}", exc_info=True)
-
-    # ── Observação de repetidas entre fontes (só log, até a decisão de 07/11) ─
-    try:
-        db = SessionLocal()
-        try:
-            report_cross_source_duplicates(db)
-        finally:
-            db.close()
-    except Exception as exc:
-        logger.error(f"[Scrapers] Erro na observação de repetidas: {exc}", exc_info=True)
 
     # ── Etapa 4: Limpeza dos salvos ───────────────────────────────────────────
     try:
