@@ -19,8 +19,8 @@ from datetime import date
 import pycountry
 from babel import Locale
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks, Response
-from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy import and_, func, or_, select
+from sqlalchemy.orm import Session, aliased
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.database import get_db, SessionLocal
@@ -243,22 +243,51 @@ def _apply_search(query, q: str):
     parte do título, descrição, instituição organizadora, instrumentos,
     cidade, estado ou país — sem diferenciar maiúsculas nem acentos
     (mesma regra da busca de instituições do mapa).
+
+    Exceção: se o termo for o nome de um instrumento que aparece em algum
+    edital (ex: "piano"), a busca olha só os instrumentos e o título — senão
+    um edital de violino que cita "ensaios com piano" na descrição aparecia
+    como se pedisse piano.
     """
+    raw = q.strip()
     # Escapa curingas do LIKE digitados pelo usuário
-    term = q.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-    searchable = func.concat_ws(  # concat_ws pula os campos NULL
-        " ",
-        Opportunity.title,
-        Opportunity.description,
-        Opportunity.institution,
-        func.array_to_string(Opportunity.instruments, " "),
-        Opportunity.city,
-        Opportunity.state,
-        Opportunity.country,
+    term = raw.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    pattern = func.unaccent(func.lower(f"%{term}%"))
+
+    def matches(*fields):
+        searchable = func.concat_ws(" ", *fields)  # concat_ws pula os campos NULL
+        return func.unaccent(func.lower(searchable)).like(pattern, escape="\\")
+
+    instruments = func.array_to_string(Opportunity.instruments, " ")
+    # Alias: a subconsulta olha todos os editais, não só o da linha externa
+    other = aliased(Opportunity)
+    # "|Violino|Piano|" contém "|piano|"? (comparação por nome inteiro)
+    other_instruments = func.concat("|", func.array_to_string(other.instruments, "|"), "|")
+    is_instrument = (
+        select(1)
+        .where(
+            func.strpos(
+                func.unaccent(func.lower(other_instruments)),
+                func.unaccent(func.lower(f"|{raw}|")),
+            ) > 0
+        )
+        .exists()
     )
     return query.filter(
-        func.unaccent(func.lower(searchable)).like(
-            func.unaccent(func.lower(f"%{term}%")), escape="\\"
+        or_(
+            and_(is_instrument, matches(Opportunity.title, instruments)),
+            and_(
+                ~is_instrument,
+                matches(
+                    Opportunity.title,
+                    Opportunity.description,
+                    Opportunity.institution,
+                    instruments,
+                    Opportunity.city,
+                    Opportunity.state,
+                    Opportunity.country,
+                ),
+            ),
         )
     )
 

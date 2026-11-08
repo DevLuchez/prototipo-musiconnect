@@ -69,6 +69,35 @@ def test_busca_livre_ignora_acentos_e_maiusculas(api, db_session):
     assert _titles(response) == ["Audição"]
 
 
+def test_busca_por_instrumento_ignora_quem_so_cita_na_descricao(api, db_session):
+    make_opportunity(db_session, title="Curso de piano", instruments=["Piano"])
+    make_opportunity(db_session, title="Masterclass de Piano", instruments=[])
+    make_opportunity(
+        db_session,
+        title="Concurso de violino",
+        instruments=["Violino"],
+        description="Repertório solo e com piano.",
+    )
+
+    response = api.get("/api/opportunities/", params={"q": "PIANO"})
+
+    assert _titles(response) == ["Curso de piano", "Masterclass de Piano"]
+
+
+def test_busca_que_nao_e_instrumento_ainda_olha_a_descricao(api, db_session):
+    make_opportunity(
+        db_session,
+        title="Academia",
+        instruments=["Violino"],
+        description="Curso de verão em Saitama.",
+    )
+    make_opportunity(db_session, title="Outra", instruments=["Piano"])
+
+    response = api.get("/api/opportunities/", params={"q": "saitama"})
+
+    assert _titles(response) == ["Academia"]
+
+
 def test_match_so_aparece_para_quem_esta_logado(api, db_session):
     make_opportunity(db_session, llm_confidence=1.0)
     user = make_user(db_session)
