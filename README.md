@@ -587,6 +587,7 @@ flowchart TB
     api -- "HTTPS (e-mails)" --> externos
     agendador -- "Envia notificações" --> firebase
     firebase -. "Notificações" .-> app
+    externos -. "E-mails (Resend)" .-> musico
     app -- "Métricas e falhas" --> firebase
     app -- "Mapa e localidades" --> maps
 
@@ -935,13 +936,13 @@ flowchart LR
     conferir --> planejar
 ```
 
-Cada mudança passa pelos testes automatizados do backend (372) e do aplicativo (266), executados localmente e, de novo, pelo pipeline de integração contínua a cada envio ao repositório. Na maior parte das funcionalidades, os testes foram escritos junto com o código ou logo após a implementação; nas correções de defeitos, adotou-se a prática do TDD: primeiro, um teste que reproduz o erro e falha; em seguida, a correção que o faz passar. Os detalhes do pipeline e dos testes estão na seção [15](#15-cicd-testes-qualidade-privacidade-e-monitoramento).
+Cada mudança passa pelos testes automatizados do backend (374) e do aplicativo (267), executados localmente e, de novo, pelo pipeline de integração contínua a cada envio ao repositório. Na maior parte das funcionalidades, os testes foram escritos junto com o código ou logo após a implementação; nas correções de defeitos, adotou-se a prática do TDD: primeiro, um teste que reproduz o erro e falha; em seguida, a correção que o faz passar. Os detalhes do pipeline e dos testes estão na seção [15](#15-cicd-testes-qualidade-privacidade-e-monitoramento).
 
 ### 14.2 Controle de versão
 
 - **Ramo único (*trunk-based development*):** todo o desenvolvimento ocorre diretamente na `main`, protegida pela integração contínua; cada *push* aprovado pelo pipeline é implantado automaticamente.
 - **Conventional Commits:** as mensagens seguem um padrão que identifica o tipo de cada alteração. Até 07/11/2026, o histórico soma 117 *commits*, dos quais 56 de novas funcionalidades (`feat`), 24 de correções (`fix`), 11 de testes (`test`), 8 de refatorações (`refactor`) e os demais de documentação, configuração e pipeline (`docs`, `chore`, `ci`, `build`).
-- **Versionamento semântico do aplicativo:** cada versão publicada recebe uma *tag* (`v1.0.0` a `v1.2.6`), que gera automaticamente o APK assinado disponível para download.
+- **Versionamento semântico do aplicativo:** cada versão publicada recebe uma *tag* (`v1.0.0` a `v1.2.8`), que gera automaticamente o APK assinado disponível para download.
 
 <p align="center">
   <a href="https://github.com/DevLuchez/prototipo-musiconnect"><img src="docs/img/plataformas/github-repositorio.png" width="800" alt="Repositório do MusiConnect no GitHub"></a><br>
@@ -982,8 +983,8 @@ As credenciais utilizadas pelos *workflows* (chave de assinatura, configuração
 
 | Camada | Quantidade | Tipos de teste | Cobertura (SonarCloud) |
 |---|:---:|---|:---:|
-| Backend (pytest) | 372 | Testes de unidade das regras de negócio (match, senhas, interpretação de textos e coletores, com as fontes simuladas) e testes de integração das rotas da API sobre um banco PostgreSQL/PostGIS real, separado do banco de desenvolvimento | 99,8% |
-| Aplicativo (flutter_test) | 266 | Testes de unidade dos modelos, serviços e ViewModels (com serviços simulados) e testes de *widget* das telas e componentes | 89,3% |
+| Backend (pytest) | 374 | Testes de unidade das regras de negócio (match, senhas, interpretação de textos e coletores, com as fontes simuladas) e testes de integração das rotas da API sobre um banco PostgreSQL/PostGIS real, separado do banco de desenvolvimento | 99,8% |
+| Aplicativo (flutter_test) | 267 | Testes de unidade dos modelos, serviços e ViewModels (com serviços simulados) e testes de *widget* das telas e componentes | 89,3% |
 | Aplicativo, instrumentados (integration_test) | 3 | Executados no aplicativo real, em um dispositivo Android, contra a API pública: o visitante entra e navega pelas quatro abas; abre uma oportunidade e recebe o convite ao favoritar; e o login com credenciais inválidas exibe o erro | — |
 
 Os testes priorizam as regras de negócio: o cálculo do match, a filtragem das oportunidades visíveis, a interpretação e o descarte de editais, o aceite da política de privacidade, a autenticação e as notificações. Nas correções de defeitos, um teste que reproduz o erro é escrito antes da correção, de modo que o defeito não volte a ocorrer. Os testes instrumentados, por dependerem de um aparelho, são executados manualmente antes de cada versão; na primeira execução, revelaram um texto de botão cortado em janelas estreitas, corrigido em seguida. Além dos testes automatizados, cada funcionalidade é conferida em um dispositivo Android real antes da publicação.
@@ -1070,12 +1071,12 @@ O MusiConnect está em produção, com o aplicativo Android disponível para dow
 | Fontes de oportunidades | 5, coletadas diariamente: Musical Chairs (347), WFIMC (62), Revista CONCERTO (17), SCAR (7) e FEMUSC (1) |
 | Instituições no mapa | 82.641 instituições musicais, das quais 30 com oportunidades abertas |
 | Atualização dos dados | Automática e diária: mapa às 00h, oportunidades às 06h e notificações às 09h, sem intervenção manual |
-| Versões publicadas | 9 versões do aplicativo (v1.0.0 a v1.2.6) |
+| Versões publicadas | 11 versões do aplicativo (v1.0.0 a v1.2.8) |
 | Uso do aplicativo | 13 instalações ativas nos últimos 30 dias, incluindo as de teste da desenvolvedora e o modo visitante (Firebase Analytics, que contabiliza aparelhos, e não contas) |
 | Estabilidade | 92,31% dos usuários e 98,59% das sessões sem falhas nos últimos 7 dias (Firebase Crashlytics) |
 | Disponibilidade | 99,648% da API e 100% do site nas últimas 24 horas (UptimeRobot) |
 | Qualidade do código | Quality Gate aprovado na API e no aplicativo, sem bugs, vulnerabilidades ou *code smells* (SonarCloud) |
-| Testes automatizados | 372 no backend (99,8% de cobertura) e 266 no aplicativo (89,3% de cobertura) |
+| Testes automatizados | 374 no backend (99,8% de cobertura) e 267 no aplicativo (89,3% de cobertura) |
 
 Em termos de entrega ao público beneficiado, o aplicativo reúne em um único lugar, em português e ordenadas pela compatibilidade com o perfil de cada músico, oportunidades que antes precisavam ser procuradas manualmente em portais dispersos e, na maioria, em outros idiomas. Cada edital é apresentado com um resumo objetivo e os dados essenciais (tipo, instrumentos, local e prazo), e o usuário é avisado das oportunidades mais compatíveis e dos prazos dos seus favoritos.
 
