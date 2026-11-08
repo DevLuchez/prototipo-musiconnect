@@ -1196,11 +1196,11 @@ Quando uma nova versão é publicada, o aplicativo exibe um aviso de atualizaç�
 
 ### 19.2 Publicação de uma nova versão do aplicativo
 
-A versão do aplicativo é publicada a partir de uma *tag* no repositório:
+A versão do aplicativo é publicada a partir de uma *tag* no repositório, no formato `vX.Y.Z` (versionamento semântico):
 
 ```bash
-git tag v1.2.7
-git push origin v1.2.7
+git tag vX.Y.Z
+git push origin vX.Y.Z
 ```
 
 O *workflow* `release.yml` compila o APK com o número da versão e a chave de assinatura de *release* (armazenada nos *secrets* do repositório) e o publica no GitHub Releases. A página de download aponta sempre para o APK da versão mais recente, e os aplicativos instalados passam a avisar sobre a atualização.
