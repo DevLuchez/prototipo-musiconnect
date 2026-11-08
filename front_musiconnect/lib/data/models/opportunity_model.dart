@@ -197,6 +197,15 @@ class OpportunityModel {
     return parts.join(', ');
   }
 
+  /// Igual a [locationLabel], mas uma remota com endereço vira
+  /// "Remoto (cidade, estado, país)" — no card da lista e na aba Matcher,
+  /// onde o endereço sozinho fazia parecer que era presencial.
+  String get modalityLocationLabel {
+    final label = locationLabel;
+    if (!isRemote || label == 'Remoto') return label;
+    return 'Remoto ($label)';
+  }
+
   String _capitalize(String s) =>
       s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 }

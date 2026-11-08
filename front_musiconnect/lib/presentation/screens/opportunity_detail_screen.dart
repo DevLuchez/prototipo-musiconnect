@@ -438,6 +438,7 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen>
           const SizedBox(height: 8),
           Text(
             opp.description!,
+            textAlign: TextAlign.justify,
             style: const TextStyle(
               fontSize: 14,
               color: Color(0xFF374151),
@@ -747,7 +748,7 @@ class _OpportunityDetailScreenState extends State<OpportunityDetailScreen>
           yourLabel: 'SUA LOCALIZAÇÃO',
           yourValue: _bulletText([_userLocationLabel]),
           edictLabel: 'EDITAL',
-          edictValue: _bulletText([opp.locationLabel]),
+          edictValue: _bulletText([opp.modalityLocationLabel]),
         ),
         const SizedBox(height: 12),
 

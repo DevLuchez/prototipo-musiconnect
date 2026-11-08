@@ -223,7 +223,7 @@ class OpportunityCard extends StatelessWidget {
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
-                                opportunity.locationLabel,
+                                opportunity.modalityLocationLabel,
                                 style: TextStyle(
                                     fontSize: 11.5, color: Colors.grey[500]),
                                 overflow: TextOverflow.ellipsis,

@@ -91,6 +91,14 @@ void main() {
       expect(opp().locationLabel, 'Endereço não informado');
     });
 
+    test('remota com endereço mostra o endereço entre parênteses', () {
+      expect(opp(city: 'Saitama', country: 'Japão', remote: true).modalityLocationLabel,
+          'Remoto (Saitama, Japão)');
+      expect(opp(remote: true).modalityLocationLabel, 'Remoto');
+      expect(opp(city: 'Joinville', state: 'SC').modalityLocationLabel, 'Joinville, SC');
+      expect(opp().modalityLocationLabel, 'Endereço não informado');
+    });
+
     test('aparece no mapa se tem pino ou cidade e não é remota', () {
       expect(opp(institutionId: 'node_1').isOnMap, isTrue);
       expect(opp(cityId: 2).isOnMap, isTrue);

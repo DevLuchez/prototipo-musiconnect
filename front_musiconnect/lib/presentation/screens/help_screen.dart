@@ -204,6 +204,7 @@ class _FaqCard extends StatelessWidget {
               alignment: Alignment.centerLeft,
               child: Text(
                 faq.answer,
+                textAlign: TextAlign.justify,
                 style: TextStyle(fontSize: 13.5, color: Colors.grey[700], height: 1.45),
               ),
             ),
