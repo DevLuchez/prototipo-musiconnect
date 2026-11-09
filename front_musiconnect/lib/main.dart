@@ -442,6 +442,8 @@ class MainNavigationState extends State<MainNavigation>
   }
 
   /// Aviso do tutorial; "Ajuda e suporte" é um link para a tela de ajuda.
+  /// O aviso fica no ScaffoldMessenger do app e pode sobreviver a esta tela
+  /// (sair da conta nos 6 s): aí o link só fecha o aviso.
   void _showTutorialMessage(String text) {
     final messenger = ScaffoldMessenger.of(context);
     messenger.showSnackBar(SnackBar(
@@ -449,7 +451,7 @@ class MainNavigationState extends State<MainNavigation>
         text: text,
         onOpenHelp: () {
           messenger.hideCurrentSnackBar();
-          _openHelp();
+          if (mounted) _openHelp();
         },
       ),
       duration: const Duration(seconds: 6),

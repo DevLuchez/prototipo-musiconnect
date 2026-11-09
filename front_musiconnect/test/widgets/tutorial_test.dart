@@ -200,4 +200,37 @@ void main() {
       await tester.pumpWidget(const SizedBox());
     });
   });
+
+  // Falha do Crashlytics (v1.2.1): o aviso fica no ScaffoldMessenger do app
+  // por 6 s; se a navegação fecha antes (sair da conta, "Voltar ao menu
+  // inicial"), tocar no link usava o context de uma tela já descartada.
+  testWidgets('"Ajuda e suporte" no aviso não quebra se a navegação já fechou',
+      (tester) async {
+    await FakeApi(_api).run(() async {
+      SharedPreferences.setMockInitialValues({});
+      useTallScreen(tester);
+      final showNav = ValueNotifier(true);
+      await tester.pumpWidget(MaterialApp(
+        home: ValueListenableBuilder<bool>(
+          valueListenable: showNav,
+          builder: (_, nav, __) => nav
+              ? MainNavigation(user: _user())
+              : const Scaffold(body: Text('Boas-vindas')),
+        ),
+      ));
+      await settle(tester);
+      await tester.tap(find.text('Agora não'));
+      await settle(tester);
+
+      showNav.value = false;
+      await settle(tester);
+      expect(find.text('Boas-vindas'), findsOneWidget);
+
+      await tapLink(tester, 'Ajuda e suporte');
+      await settle(tester);
+      expect(tester.takeException(), isNull);
+      expect(find.byType(HelpScreen), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+    });
+  });
 }
