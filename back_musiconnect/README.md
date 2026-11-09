@@ -1,106 +1,61 @@
-# MusicOnnect — Backend
+<img width="100%" src="../docs/img/faixa-topo.svg" alt="">
 
-Backend em **Python + FastAPI + PostgreSQL/PostGIS** para descoberta global de instituições musicais.
+# MusiConnect — API (backend)
 
-## Pré-requisitos
+API REST do MusiConnect, em **Python 3.12 + FastAPI**, com banco **PostgreSQL 16 + PostGIS**. Concentra as regras de negócio (autenticação, oportunidades, cálculo do match, mapa, favoritos e notificações) e o pipeline de dados diário (coleta de editais, interpretação pelo Gemini e atualização das instituições do OpenStreetMap).
 
-- Python 3.11+
-- PostgreSQL 15+ com extensão **PostGIS** instalada
+A documentação completa do projeto (arquitetura, decisões, testes e deploy) está no [README principal](../README.md). Este arquivo resume apenas o que é específico desta pasta.
 
-## Setup inicial
+## Estrutura
 
-### 1. Instale o PostGIS no PostgreSQL
+| Pasta / arquivo | Conteúdo |
+|---|---|
+| `app/main.py` | Criação da aplicação FastAPI, rotas e inicialização do agendador |
+| `app/routers/` | Rotas da API: autenticação, oportunidades, instituições, favoritos, notificações, painel inicial, versão do app, links dos e-mails e tarefas administrativas |
+| `app/services/` | Regras de negócio e pipeline: match (`matching.py`), coletores (`scrapers/`), interpretação pelo Gemini (`llm_enricher.py`), ETL do OpenStreetMap via QLever (`osm_etl.py`), validação no MusicBrainz e no Wikidata, e-mails (Resend) e notificações (Firebase) |
+| `app/scheduler.py` | Rotinas diárias (APScheduler): ETL às 00h, coleta às 06h e notificações às 09h |
+| `app/models.py`, `app/schemas.py` | Modelos do banco (SQLAlchemy) e esquemas de entrada e saída (Pydantic) |
+| `app/migrations.py` | Ajustes de esquema aplicados na inicialização, além do `create_all` |
+| `scripts/` | Scripts de manutenção executados manualmente (tabela abaixo) |
+| `tests/` | Testes automatizados (pytest) |
 
-Se ainda não tiver o PostGIS, após criar o banco rode:
-```sql
-CREATE EXTENSION IF NOT EXISTS postgis;
-```
+## Execução local
 
-### 2. Crie o banco de dados
-
-```sql
-CREATE DATABASE musiconnect;
-\c musiconnect
-CREATE EXTENSION postgis;
-```
-
-### 3. Configure o ambiente
-
-```bash
-# No diretório back_musiconnect/
-cp .env.example .env
-# Edite .env com sua string de conexão:
-# DATABASE_URL=postgresql://usuario:senha@localhost:5432/musiconnect
-```
-
-### 4. Instale as dependências
+Os passos completos (banco no Docker, variáveis do `.env` e execução da API) estão na seção [20. Execução local](../README.md#20-execução-local) do README principal. Em resumo, com o banco em execução (`docker compose up -d db`, na raiz):
 
 ```bash
 python -m venv venv
-venv\Scripts\activate        # Windows
-pip install -r requirements.txt
+venv\Scripts\activate            # Windows (no Linux/macOS: source venv/bin/activate)
+pip install -r requirements-dev.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### 5. Suba o servidor
+A documentação interativa da API (Swagger) fica em `http://localhost:8000/docs`; a de produção, em https://api.musiconnect.app.br/docs.
+
+## Scripts de manutenção
+
+Executados a partir desta pasta (`back_musiconnect/`):
+
+| Comando | O que faz |
+|---|---|
+| `python -m scripts.run_etl` | Importa as instituições musicais do OpenStreetMap (QLever); com `--validate`, valida em seguida no MusicBrainz e no Wikidata |
+| `python -m scripts.run_validation` | Apenas a validação no MusicBrainz e no Wikidata, sobre as instituições já gravadas (`--skip-mb` ou `--skip-wd` para pular uma delas) |
+| `python -m scripts.backfill_opportunity_details` | Completa instituição, prazo e descrição das oportunidades do Musical Chairs gravadas antes de o coletor visitar a página de cada anúncio (`--dry-run` mostra sem salvar) |
+| `python -m scripts.backfill_osm_contacts` | Completa site e e-mail das instituições já gravadas, a partir das informações do OpenStreetMap (`--dry-run` mostra sem salvar) |
+
+A coleta e a interpretação das oportunidades não têm script próprio: rodam pelo agendador ou pelas rotas administrativas `POST /api/opportunities/scrape` e `POST /api/opportunities/enrich` (com a chave `X-Admin-Key`).
+
+## Testes
 
 ```bash
-uvicorn app.main:app --reload
+pytest                 # exige o banco do Docker em execução (usa o banco musiconnect_test)
+pytest --cov=app       # com relatório de cobertura
 ```
 
-A API estará disponível em: http://localhost:8000  
-Documentação automática: http://localhost:8000/docs
+Os tipos de teste e a cobertura estão na seção [15.2 Testes](../README.md#152-testes) do README principal.
 
----
+## Deploy
 
-## Executar o ETL (coleta global)
+A API roda em contêiner Docker no servidor de produção e é atualizada automaticamente a cada envio para a `main`. Ver a seção [19.3 Deploy do servidor](../README.md#193-deploy-do-servidor).
 
-O ETL busca todas as instituições musicais do OpenStreetMap e salva no banco.
-
-```bash
-# Coleta global (~5-10 min, depende da conexão)
-python -m scripts.run_etl
-
-# Com mais paralelismo (cuidado para não sobrecarregar o Overpass público)
-python -m scripts.run_etl --concurrency 6
-```
-
----
-
-## Endpoints principais
-
-| Método | Rota | Descrição |
-|--------|------|-----------|
-| `GET` | `/api/institutions/nearby?lat=X&lng=Y&radius_m=Z` | Busca por proximidade (sem depender de zoom) |
-| `GET` | `/api/institutions/stats` | Estatísticas do banco |
-| `GET` | `/docs` | Documentação interativa (Swagger) |
-
-### Exemplo de chamada
-
-```
-GET /api/institutions/nearby?lat=-23.5505&lng=-46.6333&radius_m=50000&limit=200
-```
-
----
-
-## Arquitetura
-
-```
-Flutter App
-    │
-    ▼ HTTP
-FastAPI (app/main.py)
-    │
-    ├── GET /nearby  ──►  PostGIS ST_DWithin  ──►  PostgreSQL
-    │                      (índice GIST)
-    │
-    └── ETL (scripts/run_etl.py)
-             │
-             ▼ HTTP assíncrono
-        Overpass API (OpenStreetMap)
-             │
-             ▼ upsert por osm_id
-        PostgreSQL + PostGIS
-```
-
-**Por que não depende de zoom?**  
-O Flutter passa apenas `lat/lng/raio`. O banco retorna tudo dentro daquele raio usando o índice espacial — o zoom do mapa não influencia em nada.
+<img width="100%" src="../docs/img/faixa-rodape.svg" alt="">

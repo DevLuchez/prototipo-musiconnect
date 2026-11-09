@@ -6,7 +6,7 @@
 
 ### MusiConnect — Conectando músicos a oportunidades no mundo todo
 
-Aplicativo mobile que reúne audições, concursos, bolsas, cursos e vagas para músicos, mostra o quanto cada oportunidade combina com o perfil de quem usa e localiza no mapa as instituições musicais do mundo inteiro.
+Aplicativo mobile que reúne audições, competições, cursos e vagas de emprego para músicos, mostra o quanto cada oportunidade combina com o perfil de quem usa e localiza no mapa as instituições musicais do mundo inteiro.
 
 [![CI](https://github.com/DevLuchez/prototipo-musiconnect/actions/workflows/ci.yml/badge.svg)](https://github.com/DevLuchez/prototipo-musiconnect/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/DevLuchez/prototipo-musiconnect?label=app)](https://github.com/DevLuchez/prototipo-musiconnect/releases/latest)
@@ -107,7 +107,7 @@ Desenvolver um aplicativo mobile que integre curadoria inteligente de dados e re
 
 ### 2.1 O que está no escopo
 
-- **Oportunidades:** audições, concursos, vagas de emprego, bolsas, cursos, festivais e master classes, coletados diariamente de cinco fontes (Musical Chairs, WFIMC, Revista CONCERTO, SCAR e FEMUSC), interpretados pelo modelo Gemini e apresentados em português, com link para o edital original.
+- **Oportunidades:** organizadas em quatro tipos — audições, competições, cursos e vagas de emprego —, que abrangem também bolsas, festivais e master classes, coletadas diariamente de cinco fontes (Musical Chairs, WFIMC, Revista CONCERTO, SCAR e FEMUSC), interpretados pelo modelo Gemini e apresentados em português, com link para o edital original.
 - **Match:** percentual de compatibilidade entre o perfil do usuário e cada oportunidade, acompanhado do detalhamento de cada fator considerado (instrumento, afinidade com o tipo de oportunidade, localização e confiança da extração).
 - **Mapa:** marcadores das instituições musicais registradas no OpenStreetMap (escolas de música e conservatórios, centros culturais, teatros e casas de ópera, locais de música ao vivo, orquestras e festivais), em escala global, com busca, filtros e a exibição do site, do e-mail, do endereço (quando disponíveis) e das oportunidades abertas de cada instituição.
 - **Conta e perfil:** cadastro com confirmação de e-mail, login, recuperação de senha, perfil (instrumentos, ramo de atuação e localização), favoritos (oportunidades e instituições), exclusão da conta e modo visitante (uso sem cadastro).
@@ -145,7 +145,7 @@ O aplicativo é organizado em quatro abas principais — **Início**, **Mapa**, 
 - **Cadastro e acesso:** na tela inicial, o usuário pode criar uma conta, entrar com uma conta existente ou utilizar o aplicativo sem cadastro (modo visitante). Ambas as formas de acesso exigem o aceite da política de privacidade; o cadastro exige, ainda, a confirmação do e-mail por meio de um link enviado à caixa de entrada, válido por 24 horas. O login é realizado com e-mail e senha, e a opção "Esqueci minha senha" envia por e-mail um link de redefinição, válido por 15 minutos.
 - **Início:** apresenta um resumo personalizado do dia, com a oportunidade de maior compatibilidade ("Seu melhor match"), atalhos para explorar as oportunidades por tipo (audições, competições, cursos e empregos) e a seção "Última chance para seus favoritos", exibida somente quando há oportunidades favoritas com menos de 7 dias até o encerramento do prazo.
 - **Mapa:** exibe as instituições musicais do OpenStreetMap (OSM) em escala global, com marcadores coloridos por categoria e destaque (estrela) para as instituições com oportunidades abertas. Permite buscar cidades e instituições, filtrar por tipo de instituição e consultar, para cada uma, o endereço, o site e o e-mail (quando disponíveis) e as oportunidades vinculadas. As oportunidades cuja instituição não pôde ser localizada com precisão são agrupadas em marcadores circulares posicionados no centro da respectiva cidade.
-- **Matcher:** lista as oportunidades em duas abas: "Minhas oportunidades", restrita às de alta compatibilidade com o perfil (match a partir de 85%), e "Todas as oportunidades". Ambas oferecem busca e filtros por tipo, instrumento, localização e escala de match; na primeira aba, a escala é limitada ao intervalo de 85% a 100%, enquanto na segunda abrange de 0% a 100%.
+- **Matcher:** lista as oportunidades em duas abas: "Minhas oportunidades", restrita às de alta compatibilidade com o perfil (match a partir de 85%), e "Todas as oportunidades". Ambas oferecem busca e filtros por tipo, instrumento, instrumentos do perfil, localização, proximidade e escala de match; na primeira aba, a escala é limitada ao intervalo de 85% a 100%, enquanto na segunda abrange de 0% a 100%.
 - **Detalhe da oportunidade:** organiza-se em duas abas. A aba "Sobre o Edital" reúne a descrição gerada pela IA em português e os destaques da oportunidade (instrumentos solicitados, tipo, instituição, localização, modalidade remota, quando for o caso, e prazo), além do conteúdo original completo, quando este for mais extenso que a descrição. A aba "Matcher" explica o percentual de compatibilidade, comparando o perfil do usuário com os requisitos da oportunidade e detalhando a pontuação obtida em cada fator (ver [Cálculo do match](#cálculo-do-match)). A tela também permite favoritar a oportunidade e acessar o edital original pelo botão "Saiba mais".
 - **Perfil:** permite editar instrumentos, ramo de atuação (estudante e/ou profissional) e localização, gerenciar as notificações e a coleta de dados de uso, alterar a senha e excluir a conta.
 - **Favoritos:** reúne as oportunidades e as instituições favoritas, com busca e ordenação (mais recentes, mais antigas e prazo mais próximo).
@@ -221,7 +221,7 @@ No entanto, nenhuma das plataformas analisadas reúne, em um único aplicativo g
 
 - **Curadoria ativa e automatizada:** em vez de exigir buscas manuais em portais dispersos, o sistema coleta diariamente oportunidades de fontes nacionais e internacionais e as apresenta ao usuário.
 - **Acessibilidade cognitiva por meio de IA:** editais extensos, frequentemente redigidos em outros idiomas, são convertidos em resumos objetivos em português, com os dados essenciais (tipo, instrumentos, localização e prazo) destacados.
-- **Match explicável:** além do percentual de compatibilidade (Match), o aplicativo mostra quanto cada fator contribuiu para o resultado, permitindo que o usuário compreenda porquê uma oportunidade foi recomendada ou não.
+- **Match explicável:** além do percentual de compatibilidade (Match), o aplicativo mostra quanto cada fator contribuiu para o resultado, permitindo que o usuário compreenda por que uma oportunidade foi recomendada ou não.
 - **Integração entre oportunidades e território:** o mapa relaciona as oportunidades às instituições e às cidades onde ocorrem, facilitando a exploração de novos polos artísticos.
 - **Acesso gratuito e inclusivo:** o modelo gratuito, sem anúncios, e o modo visitante ampliam o alcance da ferramenta para além da SCAR, em consonância com o propósito de reduzir a evasão de talentos e ampliar a permanência de estudantes e profissionais na carreira musical.
 
@@ -483,7 +483,7 @@ O diagrama de atividade deste fluxo está em [docs/diagramas/fluxos-de-uso.md](d
 A navegação do aplicativo combina cinco padrões:
 
 - **Barra de navegação inferior:** quatro abas principais — Início, Mapa, Matcher e Perfil —, sempre visíveis após o acesso.
-- **Menu lateral (☰):** atalhos para as oportunidades e instituições favoritas, a política de privacidade, a ajuda e suporte, e a saída da conta - para o visitante, a saída é substituída por "Voltar ao menu inicial".
+- **Menu lateral (☰):** atalhos para as oportunidades e instituições favoritas, a política de privacidade, a ajuda e suporte, e a saída da conta; para o visitante, a saída é substituída por "Voltar ao menu inicial".
 - **Telas empilhadas/secundárias:** detalhe da oportunidade, listas por tipo de oportunidade, favoritos, edição de perfil e telas de apoio abrem sobre a tela atual e retornam pelo botão "voltar".
 - **Painéis inferiores e janelas:** no mapa, a instituição, a cidade, os filtros e a legenda abrem em painéis deslizantes; confirmações, convites e avisos abrem em janelas sobre a tela (pop-up).
 - **Entradas externas:** os links enviados por e-mail (confirmação de cadastro e redefinição de senha) e as notificações abrem o aplicativo diretamente na tela correspondente.
@@ -515,7 +515,7 @@ No modo visitante, a navegação é a mesma, com três diferenças: a aba Perfil
 
 ## 9. Arquitetura
 
-O MusiConnect adota uma arquitetura cliente-servidor: um aplicativo Android em Flutter consome uma API REST em FastAPI, que concentra as regras de negócio, o cálculo do match e o pipeline de dados (coleta, interpretação por IA e atualização do mapa). A arquitetura é descrita a seguir pelo modelo C4, nos níveis de contexto e de contêineres, complementado pela arquitetura interna do aplicativo, pela modelagem de dados e pelo pipeline de dados.
+O MusiConnect adota uma arquitetura cliente-servidor: um aplicativo Android em Flutter consome uma API REST em FastAPI, que concentra as regras de negócio, o cálculo do match e o pipeline de dados (coleta, interpretação por IA e atualização do mapa). A arquitetura é descrita a seguir pelo modelo C4 (BROWN, 2026), nos níveis de contexto e de contêineres, complementado pela arquitetura interna do aplicativo, pela modelagem de dados e pelo pipeline de dados.
 
 ### 9.1 Visão geral (modelo C4)
 
@@ -819,7 +819,7 @@ No backend, a organização segue módulos: os *routers* expõem os endpoints da
 | UptimeRobot | Monitoramento da disponibilidade da API e do site |
 | Registro.br | Registro do domínio `musiconnect.app.br` e configuração do DNS (registros A de `musiconnect.app.br` e `api.musiconnect.app.br` apontando para o servidor) |
 
->**UptimeRobot:** indisponibilidades temporárias são previstas nas rotinas de atualização diárias (00h e 6h), no backup diário do banco e no deploy automático executado a cada push na branch *main*, visto que o CI reconstrói e reinicia o contêinerda API.
+>**UptimeRobot:** indisponibilidades temporárias são previstas nas rotinas de atualização diárias (00h e 06h), no backup diário do banco e no deploy automático executado a cada push na branch *main*, visto que o CI reconstrói e reinicia o contêiner da API.
 
 ### 11.5 Ferramentas de desenvolvimento
 
@@ -829,9 +829,9 @@ No backend, a organização segue módulos: os *routers* expõem os endpoints da
 | Android Studio | Instalação do Android SDK (assistente de configuração inicial), das *Command-line Tools* (SDK Manager) e aceite das licenças do SDK, necessários à compilação pelo Flutter |
 | Android SDK e JDK 17 | Compilação do aplicativo Android |
 | Mermaid e PlantUML | Diagramas desta documentação |
-| Claude Code | Assistente de programação com IA, utilizadas na elaboração dos tópicas da documentação e de sua revisão, bem como no apoio a estruturação de texto, revisão de clareza e sugestões de melhoria no projeto. |
+| Claude Code | Assistente de programação com IA, utilizado na elaboração dos tópicos da documentação e de sua revisão, bem como no apoio à estruturação de texto, revisão de clareza e sugestões de melhoria no projeto. |
 
->**Claude Code:** Todos os programas, a arquitetura de software e de dados, a estrura e os demais tópicos do projeto foram <u>revisados e validados pela autora</u>, que assume integral responsabilidade pelo trabalho.
+>**Claude Code:** Todos os programas, a arquitetura de software e de dados, a estrutura e os demais tópicos do projeto foram <u>revisados e validados pela autora</u>, que assume integral responsabilidade pelo trabalho.
 
 ---
 
@@ -899,7 +899,7 @@ Ao longo do desenvolvimento, parte do que foi previsto na proposta original (RFC
 
 | Previsto no RFC | Decisão | Motivo | Trade-off |
 |---|---|---|---|
-| Arquitetura RAG com banco vetorial (pgvector) | Interpretação dos editais por **extração direta com o Gemini** | Os editais são textos curtos, que cabem inteiros na requisição ao modelo; não há base documental extensa a ser recuperada por similaridade, que é o problema que o RAG resolve | **Ganho:** simplicidade, menor custo e menos componentes a manter; **Perda:** busca semântica por *embeddings*, que não era necessária para o problema |
+| Arquitetura RAG com banco vetorial (pgvector) | Interpretação dos editais por **extração direta com o Gemini** | Os editais são textos curtos, que cabem inteiros na requisição ao modelo; não há base documental extensa a ser recuperada por similaridade, que é o problema que o RAG resolve (LEWIS *et al.*, 2020) | **Ganho:** simplicidade, menor custo e menos componentes a manter; **Perda:** busca semântica por *embeddings*, que não era necessária para o problema |
 | Recomendação por *Machine Learning* (*clustering* e *matching*) | **Match por regras ponderadas** (instrumento 45, afinidade 20, localização 20, confiança 15) | Um modelo de agrupamento exigiria uma base grande de usuários e de interações, inexistente no lançamento; as regras são explicáveis ao usuário, que vê a pontuação de cada fator | **Ganho:** transparência, previsibilidade e funcionamento desde o primeiro usuário; **Perda:** ajuste automático dos pesos com o uso |
 | Perfil com instrumento, nível técnico, repertório e objetivos (RF.2 e RF.3) | **Nível técnico, repertório e objetivos de carreira fora do perfil** | A maioria dos editais não informa o nível nem o repertório exigido; os critérios resultariam majoritariamente em "Não informado" e não diferenciariam as oportunidades | **Ganho:** cadastro mais curto e match baseado em dados que existem; **Perda:** possibilidade de diferenciar oportunidades por nível |
 | Clean Architecture | **Arquitetura MVVM** no aplicativo | É o padrão recomendado pela documentação oficial do Flutter e separa interface, estado e dados; a camada de casos de uso seria redundante, pois as regras de negócio estão no backend | **Ganho:** menos camadas e código mais direto; **Perda:** a independência total das regras em relação ao framework, que no projeto residem no servidor |
@@ -936,13 +936,13 @@ flowchart LR
     conferir --> planejar
 ```
 
-Cada mudança passa pelos testes automatizados do backend (374) e do aplicativo (267), executados localmente e, de novo, pelo pipeline de integração contínua a cada envio ao repositório. Na maior parte das funcionalidades, os testes foram escritos junto com o código ou logo após a implementação; nas correções de defeitos, adotou-se a prática do TDD: primeiro, um teste que reproduz o erro e falha; em seguida, a correção que o faz passar. Os detalhes do pipeline e dos testes estão na seção [15](#15-cicd-testes-qualidade-privacidade-e-monitoramento).
+Cada mudança passa pelos testes automatizados do backend (374) e do aplicativo (268), executados localmente e, de novo, pelo pipeline de integração contínua a cada envio ao repositório. Na maior parte das funcionalidades, os testes foram escritos junto com o código ou logo após a implementação; nas correções de defeitos, adotou-se a prática do TDD: primeiro, um teste que reproduz o erro e falha; em seguida, a correção que o faz passar. Os detalhes do pipeline e dos testes estão na seção [15](#15-cicd-testes-qualidade-privacidade-e-monitoramento).
 
 ### 14.2 Controle de versão
 
 - **Ramo único (*trunk-based development*):** todo o desenvolvimento ocorre diretamente na `main`, protegida pela integração contínua; cada *push* aprovado pelo pipeline é implantado automaticamente.
 - **Conventional Commits:** as mensagens seguem um padrão que identifica o tipo de cada alteração. Até 07/11/2026, o histórico soma 117 *commits*, dos quais 56 de novas funcionalidades (`feat`), 24 de correções (`fix`), 11 de testes (`test`), 8 de refatorações (`refactor`) e os demais de documentação, configuração e pipeline (`docs`, `chore`, `ci`, `build`).
-- **Versionamento semântico do aplicativo:** cada versão publicada recebe uma *tag* (`v1.0.0` a `v1.2.8`), que gera automaticamente o APK assinado disponível para download.
+- **Versionamento semântico do aplicativo:** cada versão publicada recebe uma *tag* (`v1.0.0` a `v1.2.9`), que gera automaticamente o APK assinado disponível para download.
 
 <p align="center">
   <a href="https://github.com/DevLuchez/prototipo-musiconnect"><img src="docs/img/plataformas/github-repositorio.png" width="800" alt="Repositório do MusiConnect no GitHub"></a><br>
@@ -984,7 +984,7 @@ As credenciais utilizadas pelos *workflows* (chave de assinatura, configuração
 | Camada | Quantidade | Tipos de teste | Cobertura (SonarCloud) |
 |---|:---:|---|:---:|
 | Backend (pytest) | 374 | Testes de unidade das regras de negócio (match, senhas, interpretação de textos e coletores, com as fontes simuladas) e testes de integração das rotas da API sobre um banco PostgreSQL/PostGIS real, separado do banco de desenvolvimento | 99,8% |
-| Aplicativo (flutter_test) | 267 | Testes de unidade dos modelos, serviços e ViewModels (com serviços simulados) e testes de *widget* das telas e componentes | 89,3% |
+| Aplicativo (flutter_test) | 268 | Testes de unidade dos modelos, serviços e ViewModels (com serviços simulados) e testes de *widget* das telas e componentes | 89,3% |
 | Aplicativo, instrumentados (integration_test) | 3 | Executados no aplicativo real, em um dispositivo Android, contra a API pública: o visitante entra e navega pelas quatro abas; abre uma oportunidade e recebe o convite ao favoritar; e o login com credenciais inválidas exibe o erro | — |
 
 Os testes priorizam as regras de negócio: o cálculo do match, a filtragem das oportunidades visíveis, a interpretação e o descarte de editais, o aceite da política de privacidade, a autenticação e as notificações. Nas correções de defeitos, um teste que reproduz o erro é escrito antes da correção, de modo que o defeito não volte a ocorrer. Os testes instrumentados, por dependerem de um aparelho, são executados manualmente antes de cada versão; na primeira execução, revelaram um texto de botão cortado em janelas estreitas, corrigido em seguida. Além dos testes automatizados, cada funcionalidade é conferida em um dispositivo Android real antes da publicação.
@@ -1062,7 +1062,7 @@ Em segurança, destacam-se:
 
 ### 16.1 Resultados
 
-O MusiConnect está em produção, com o aplicativo Android disponível para download em [musiconnect.app.br](https://musiconnect.app.br) (em breve, disponível na Play Store) e a API pública em funcionamento contínuo. Em 07/11/2026, o sistema apresentava os seguintes resultados:
+O MusiConnect está em produção, com o aplicativo Android disponível para download em [musiconnect.app.br](https://musiconnect.app.br) (em breve, também no Google Play) e a API pública em funcionamento contínuo. Em 07/11/2026, o sistema apresentava os seguintes resultados:
 
 | Indicador | Resultado |
 |---|---|
@@ -1071,12 +1071,12 @@ O MusiConnect está em produção, com o aplicativo Android disponível para dow
 | Fontes de oportunidades | 5, coletadas diariamente: Musical Chairs (347), WFIMC (62), Revista CONCERTO (17), SCAR (7) e FEMUSC (1) |
 | Instituições no mapa | 82.641 instituições musicais, das quais 30 com oportunidades abertas |
 | Atualização dos dados | Automática e diária: mapa às 00h, oportunidades às 06h e notificações às 09h, sem intervenção manual |
-| Versões publicadas | 11 versões do aplicativo (v1.0.0 a v1.2.8) |
+| Versões publicadas | 12 versões do aplicativo (v1.0.0 a v1.2.9) |
 | Uso do aplicativo | 13 instalações ativas nos últimos 30 dias, incluindo as de teste da desenvolvedora e o modo visitante (Firebase Analytics, que contabiliza aparelhos, e não contas) |
 | Estabilidade | 92,31% dos usuários e 98,59% das sessões sem falhas nos últimos 7 dias (Firebase Crashlytics) |
 | Disponibilidade | 99,648% da API e 100% do site nas últimas 24 horas (UptimeRobot) |
 | Qualidade do código | Quality Gate aprovado na API e no aplicativo, sem bugs, vulnerabilidades ou *code smells* (SonarCloud) |
-| Testes automatizados | 374 no backend (99,8% de cobertura) e 267 no aplicativo (89,3% de cobertura) |
+| Testes automatizados | 374 no backend (99,8% de cobertura) e 268 no aplicativo (89,3% de cobertura) |
 
 Em termos de entrega ao público beneficiado, o aplicativo reúne em um único lugar, em português e ordenadas pela compatibilidade com o perfil de cada músico, oportunidades que antes precisavam ser procuradas manualmente em portais dispersos e, na maioria, em outros idiomas. Cada edital é apresentado com um resumo objetivo e os dados essenciais (tipo, instrumentos, local e prazo), e o usuário é avisado das oportunidades mais compatíveis e dos prazos dos seus favoritos.
 
@@ -1360,19 +1360,15 @@ Para contribuir com o MusiConnect ou para uso do código em outro projeto, entre
 
 ### 22.1 Referências bibliográficas
 
-BROWN, Simon. **The C4 model for visualising software architecture**. [S. l.], 2026. Disponível em: https://c4model.com. Acesso em: 7 nov. 2026.
-
 BRASIL. **Lei nº 13.709, de 14 de agosto de 2018**. Lei Geral de Proteção de Dados Pessoais (LGPD). Brasília, DF: Presidência da República, 2018. Disponível em: https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm. Acesso em: 7 nov. 2026.
 
-CATÓLICA SC. **Linha de Projeto – Aplicações Mobile**. The Portfolio Playbook. Jaraguá do Sul: Centro Universitário Católica de Santa Catarina, 2026. Disponível em: https://github.com/CatolicaSC-Portfolio/The-Portfolio-Playbook/blob/main/directions/portfolio-directions-mobile.md. Acesso em: 7 nov. 2026.
+BROWN, Simon. **The C4 model for visualising software architecture**. [S. l.], 2026. Disponível em: https://c4model.com. Acesso em: 7 nov. 2026.
 
-GUERRERO, Benjamin J. *et al*. Artificial Intelligence and Music Creativity: The Human Element and an Exploration of Possibilities. **Journal of the Association for Technology in Music Instruction**, Knoxville, v. 6, n. 1, 2026. Disponível em: https://utk.exodar.janeway.systems/jatmi/article/id/1076/. Acesso em: 7 nov. 2026.
+CATÓLICA SC. **Linha de Projeto – Aplicações Mobile**. The Portfolio Playbook. Jaraguá do Sul: Centro Universitário Católica de Santa Catarina, 2026. Disponível em: https://github.com/CatolicaSC-Portfolio/The-Portfolio-Playbook/blob/main/directions/portfolio-directions-mobile.md. Acesso em: 7 nov. 2026.
 
 LEWIS, Patrick *et al*. Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks. *In*: ADVANCES IN NEURAL INFORMATION PROCESSING SYSTEMS (NeurIPS), 33., 2020, [*S. l.*]. **Proceedings** [...]. [*S. l.*: *s. n.*], 2020. p. 9459-9474. Disponível em: https://arxiv.org/abs/2005.11401. Acesso em: 7 nov. 2026.
 
 LUCHEZ, Laura Heloísa. **Relatório Final – PAC Extensionista VII**: MusiConnect. 2026. Relatório (Graduação em Engenharia de Software) – Centro Universitário Católica de Santa Catarina, Jaraguá do Sul, 2026.
-
-MITCHELL, Ryan. **Web Scraping com Python**: coletando mais dados da web moderna. 2. ed. São Paulo: Novatec, 2019.
 
 ### 22.2 Documentação técnica consultada
 
