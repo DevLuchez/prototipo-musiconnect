@@ -54,11 +54,11 @@ class Institution(Base):
     # True se confirmada por MusicBrainz ou Wikidata
     verified = Column(Boolean, nullable=False, default=False)
 
-    # Site oficial — tag website do OSM (ETL / backfill_osm_contacts) ou,
+    # Site oficial — tag website do OSM (ETL) ou,
     # na falta dela, MusicBrainz/Wikidata. O primeiro preenchido é mantido.
     website = Column(String, nullable=True)
 
-    # E-mail de contato — tag email do OSM (ETL / backfill_osm_contacts)
+    # E-mail de contato — tag email do OSM (ETL)
     email = Column(String, nullable=True)
 
     # ID único no MusicBrainz (ex: "a2d3f7e0-...")

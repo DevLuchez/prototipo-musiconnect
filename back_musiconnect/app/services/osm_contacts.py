@@ -1,13 +1,12 @@
 """
 Site e e-mail das instituições, a partir das tags do OpenStreetMap.
 
-Ponto único usado pelos três caminhos que gravam contatos:
+Ponto único usado pelos dois caminhos que gravam contatos:
   - ETL noturno (osm_etl.run_etl)
-  - backfill das instituições já existentes (scripts/backfill_osm_contacts.py)
   - resolvedor de oportunidades, ao criar a instituição
     (institution_factory.get_or_create_institution, via extratags do Nominatim)
 
-Regras (as mesmas nos três caminhos):
+Regras (as mesmas nos dois caminhos):
   - Site só é gravado se a instituição ainda não tem um (preserva o que veio
     do Wikidata/MusicBrainz) E se o link responde — o OSM tem muitos links
     antigos de domínios expirados (~20% numa amostra de 2026-09). Bloqueio de

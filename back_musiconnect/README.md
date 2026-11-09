@@ -40,8 +40,6 @@ Executados a partir desta pasta (`back_musiconnect/`):
 |---|---|
 | `python -m scripts.run_etl` | Importa as instituições musicais do OpenStreetMap (QLever); com `--validate`, valida em seguida no MusicBrainz e no Wikidata |
 | `python -m scripts.run_validation` | Apenas a validação no MusicBrainz e no Wikidata, sobre as instituições já gravadas (`--skip-mb` ou `--skip-wd` para pular uma delas) |
-| `python -m scripts.backfill_opportunity_details` | Completa instituição, prazo e descrição das oportunidades do Musical Chairs gravadas antes de o coletor visitar a página de cada anúncio (`--dry-run` mostra sem salvar) |
-| `python -m scripts.backfill_osm_contacts` | Completa site e e-mail das instituições já gravadas, a partir das informações do OpenStreetMap (`--dry-run` mostra sem salvar) |
 
 A coleta e a interpretação das oportunidades não têm script próprio: rodam pelo agendador ou pelas rotas administrativas `POST /api/opportunities/scrape` e `POST /api/opportunities/enrich` (com a chave `X-Admin-Key`).
 
