@@ -936,7 +936,7 @@ flowchart LR
     conferir --> planejar
 ```
 
-Cada mudança passa pelos testes automatizados do backend (374) e do aplicativo (268), executados localmente e, de novo, pelo pipeline de integração contínua a cada envio ao repositório. Na maior parte das funcionalidades, os testes foram escritos junto com o código ou logo após a implementação; nas correções de defeitos, adotou-se a prática do TDD: primeiro, um teste que reproduz o erro e falha; em seguida, a correção que o faz passar. Os detalhes do pipeline e dos testes estão na seção [15](#15-cicd-testes-qualidade-privacidade-e-monitoramento).
+Cada mudança passa pelos testes automatizados do backend (375) e do aplicativo (268), executados localmente e, de novo, pelo pipeline de integração contínua a cada envio ao repositório. Na maior parte das funcionalidades, os testes foram escritos junto com o código ou logo após a implementação; nas correções de defeitos, adotou-se a prática do TDD: primeiro, um teste que reproduz o erro e falha; em seguida, a correção que o faz passar. Os detalhes do pipeline e dos testes estão na seção [15](#15-cicd-testes-qualidade-privacidade-e-monitoramento).
 
 ### 14.2 Controle de versão
 
@@ -983,7 +983,7 @@ As credenciais utilizadas pelos *workflows* (chave de assinatura, configuração
 
 | Camada | Quantidade | Tipos de teste | Cobertura (SonarCloud) |
 |---|:---:|---|:---:|
-| Backend (pytest) | 374 | Testes de unidade das regras de negócio (match, senhas, interpretação de textos e coletores, com as fontes simuladas) e testes de integração das rotas da API sobre um banco PostgreSQL/PostGIS real, separado do banco de desenvolvimento | 99,8% |
+| Backend (pytest) | 375 | Testes de unidade das regras de negócio (match, senhas, interpretação de textos e coletores, com as fontes simuladas) e testes de integração das rotas da API sobre um banco PostgreSQL/PostGIS real, separado do banco de desenvolvimento | 99,8% |
 | Aplicativo (flutter_test) | 268 | Testes de unidade dos modelos, serviços e ViewModels (com serviços simulados) e testes de *widget* das telas e componentes | 89,3% |
 | Aplicativo, instrumentados (integration_test) | 3 | Executados no aplicativo real, em um dispositivo Android, contra a API pública: o visitante entra e navega pelas quatro abas; abre uma oportunidade e recebe o convite ao favoritar; e o login com credenciais inválidas exibe o erro | — |
 
@@ -1076,7 +1076,7 @@ O MusiConnect está em produção, com o aplicativo Android disponível para dow
 | Estabilidade | 92,31% dos usuários e 98,59% das sessões sem falhas nos últimos 7 dias (Firebase Crashlytics) |
 | Disponibilidade | 99,648% da API e 100% do site nas últimas 24 horas (UptimeRobot) |
 | Qualidade do código | Quality Gate aprovado na API e no aplicativo, sem bugs, vulnerabilidades ou *code smells* (SonarCloud) |
-| Testes automatizados | 374 no backend (99,8% de cobertura) e 268 no aplicativo (89,3% de cobertura) |
+| Testes automatizados | 375 no backend (99,8% de cobertura) e 268 no aplicativo (89,3% de cobertura) |
 
 Em termos de entrega ao público beneficiado, o aplicativo reúne em um único lugar, em português e ordenadas pela compatibilidade com o perfil de cada músico, oportunidades que antes precisavam ser procuradas manualmente em portais dispersos e, na maioria, em outros idiomas. Cada edital é apresentado com um resumo objetivo e os dados essenciais (tipo, instrumentos, local e prazo), e o usuário é avisado das oportunidades mais compatíveis e dos prazos dos seus favoritos.
 

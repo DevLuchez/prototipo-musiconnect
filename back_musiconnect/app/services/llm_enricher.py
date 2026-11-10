@@ -42,6 +42,10 @@ GEMINI_MODELS = ["gemini-3.5-flash", "gemini-3.5-flash-lite"]
 # Aguarda entre chamadas para respeitar o limite por minuto do free tier
 RATE_LIMIT_SLEEP = 7  # segundos → ~8 req/min (com margem de segurança)
 
+# Tempo máximo de uma chamada (as normais levam 10–30s). Sem ele, uma conexão
+# que nunca responde deixava a coleta parada para sempre.
+GEMINI_TIMEOUT = 120  # segundos
+
 
 # Nomes oficiais dos instrumentos — os que aparecem no filtro do app. O
 # prompt pede ao Gemini para usar exatamente um destes; o que vier fora da
@@ -341,7 +345,12 @@ async def enrich_opportunities() -> dict:
             while True:
                 model = GEMINI_MODELS[model_index]
                 try:
-                    return client.models.generate_content(model=model, contents=contents)
+                    # Versão assíncrona do SDK: a síncrona bloqueava o servidor
+                    # inteiro (login, mapa...) enquanto esperava o Gemini.
+                    return await asyncio.wait_for(
+                        client.aio.models.generate_content(model=model, contents=contents),
+                        timeout=GEMINI_TIMEOUT,
+                    )
                 except Exception as api_err:
                     err_str = str(api_err)
                     if _is_daily_quota(err_str):

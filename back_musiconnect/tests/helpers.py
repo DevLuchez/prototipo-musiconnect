@@ -1,11 +1,17 @@
 """Construtores de dados para os testes que usam o banco de teste."""
 
 from datetime import date, timedelta
+from itertools import count
 
 from app.models import Institution, Opportunity, User
 from app.routers.auth import _hash_password
 
 SENHA = "Senha#123"
+
+# Número único para a URL de cada oportunidade. O id(fields) usado antes era o
+# endereço de memória do dicionário, que o Python reaproveita depois de
+# liberá-lo: duas oportunidades do mesmo teste às vezes saíam com a mesma URL.
+_opp_seq = count(1)
 
 
 def make_user(db, **fields) -> User:
@@ -38,7 +44,7 @@ def make_opportunity(db, **fields) -> Opportunity:
     data = {
         "title": "Audição de violino",
         "type": "audicao",
-        "source_url": f"https://example.com/opp/{fields.get('title', 'x')}-{id(fields)}",
+        "source_url": f"https://example.com/opp/{fields.get('title', 'x')}-{next(_opp_seq)}",
         "source_name": "Musical Chairs",
         "instruments": ["Violino"],
         "country": "Brasil",

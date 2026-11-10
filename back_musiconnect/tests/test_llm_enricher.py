@@ -147,21 +147,28 @@ class _FakeResponse:
 
 
 class _FakeGemini:
-    """Responde em ordem a fila `replies`: texto vira resposta, exceção é levantada."""
+    """Responde em ordem a fila `replies`: texto vira resposta, exceção é levantada
+    e `_HANG` nunca responde."""
 
     def __init__(self, replies):
         self.replies = list(replies)
         self.calls = 0
         self.used_models = []
+        self.aio = self
         self.models = self
 
-    def generate_content(self, model, contents):
+    async def generate_content(self, model, contents):
         self.calls += 1
         self.used_models.append(model)
         reply = self.replies.pop(0)
+        if reply is _HANG:
+            await asyncio.Event().wait()
         if isinstance(reply, Exception):
             raise reply
         return _FakeResponse(reply)
+
+
+_HANG = object()
 
 
 @pytest.fixture
@@ -357,6 +364,19 @@ def test_outro_erro_conta_como_falha(db_session, gemini):
     gemini([ValueError("erro inesperado")])
 
     assert _run()["failed"] == 1
+
+
+def test_chamada_que_nao_responde_desiste_e_deixa_para_depois(db_session, gemini, monkeypatch):
+    monkeypatch.setattr(enricher, "GEMINI_TIMEOUT", 0.01)
+    travada = make_opportunity(db_session, title="A", raw_text="texto").id
+    make_opportunity(db_session, title="B", raw_text="texto")
+    gemini([_HANG, _ok()])
+
+    stats = _run()
+
+    assert stats["failed"] == 1 and stats["success"] == 1
+    # Continua pendente: será tentada na próxima execução
+    assert db_session.get(Opportunity, travada).enriched_at is None
 
 
 def test_quem_so_ouve_estuda_ou_debate_sai_do_app():
