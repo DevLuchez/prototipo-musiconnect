@@ -18,7 +18,7 @@ Aplicativo mobile que reúne audições, competições, cursos e vagas de empreg
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL+PostGIS-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://postgis.net)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 
-**[📲 Baixar o app](https://musiconnect.app.br)** · **[📖 API](https://api.musiconnect.app.br/docs)** · **[🔒 Política de privacidade](https://musiconnect.app.br/privacidade)**
+**[📲 Baixar o app](https://musiconnect.app.br)** · **[🎬 Vídeo](https://youtu.be/NZR6LDNfiSg)** · **[📖 API](https://api.musiconnect.app.br/docs)** · **[🔒 Política de privacidade](https://musiconnect.app.br/privacidade)**
 
 **Portfólio de TCC · Engenharia de Software · Centro Universitário Católica de Santa Catarina**
 
@@ -229,7 +229,26 @@ No entanto, nenhuma das plataformas analisadas reúne, em um único aplicativo g
 
 ## 4. Vídeo da aplicação
 
-> 🚧 Em construção — o vídeo de demonstração do app final entra aqui.
+Demonstração do aplicativo em funcionamento, no ambiente de produção (11 min): [MusiConnect — Demonstração do aplicativo](https://youtu.be/NZR6LDNfiSg)
+
+O vídeo segue o uso real do app: a instalação pelo site, a tela inicial, o mapa de instituições, o matcher de oportunidades, os favoritos, a política de privacidade e o modo visitante. O cadastro de uma nova conta, a confirmação de e-mail e a recuperação de senha ficam no final; quem quiser ver o fluxo na ordem do primeiro acesso pode começar por [8:37](https://youtu.be/NZR6LDNfiSg?t=517).
+
+| Tempo | Capítulo |
+|---|---|
+| [0:00](https://youtu.be/NZR6LDNfiSg?t=0) | Instalação do aplicativo pelo site |
+| [0:37](https://youtu.be/NZR6LDNfiSg?t=37) | Abertura do app e login |
+| [1:11](https://youtu.be/NZR6LDNfiSg?t=71) | Início: ajuda e suporte |
+| [1:35](https://youtu.be/NZR6LDNfiSg?t=95) | Início: detalhes da oportunidade |
+| [1:59](https://youtu.be/NZR6LDNfiSg?t=119) | Início: explorar categorias de oportunidades |
+| [2:31](https://youtu.be/NZR6LDNfiSg?t=151) | Mapa de instituições |
+| [4:44](https://youtu.be/NZR6LDNfiSg?t=284) | Matcher de oportunidades |
+| [5:40](https://youtu.be/NZR6LDNfiSg?t=340) | Perfil: oportunidades favoritas |
+| [6:06](https://youtu.be/NZR6LDNfiSg?t=366) | Perfil: instituições favoritas |
+| [7:06](https://youtu.be/NZR6LDNfiSg?t=426) | Política de privacidade |
+| [7:38](https://youtu.be/NZR6LDNfiSg?t=458) | Entrar sem cadastro (modo visitante) |
+| [8:37](https://youtu.be/NZR6LDNfiSg?t=517) | Cadastro de usuário |
+| [10:08](https://youtu.be/NZR6LDNfiSg?t=608) | Confirmação de e-mail |
+| [10:52](https://youtu.be/NZR6LDNfiSg?t=652) | Esqueci minha senha |
 
 Pitch de apresentação da proposta (PAC Extensionista VII, jun/2026): [MusiConnect – Sua motivação para seguir a carreira da música](https://youtu.be/iI1wommzjRY)
 

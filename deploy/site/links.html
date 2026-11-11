@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MusiConnect — Links</title>
+  <meta name="description" content="Baixe o MusiConnect, assista à demonstração e veja o código e a documentação.">
+  <link rel="icon" href="/favicon.png">
+  <style>
+    :root {
+      --pink: #DF2881;
+      --text: #111827;
+      --muted: #6B7280;
+      --bg: #FFFFFF;
+      --soft: #FDF2F8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.5;
+    }
+    main { max-width: 560px; margin: 0 auto; padding: 48px 20px 32px; }
+    header { text-align: center; }
+    h1 { margin: 8px 0 16px; line-height: 0; }
+    h1 img { width: 300px; max-width: 100%; height: auto; }
+    .tagline { color: var(--muted); margin: 0 0 32px; font-size: 17px; }
+    .links { display: flex; flex-direction: column; gap: 14px; }
+    .links a {
+      display: block; text-align: center; text-decoration: none;
+      padding: 16px; border-radius: 28px; font-weight: 700; font-size: 18px;
+      background: var(--soft); color: var(--pink); border: 2px solid var(--pink);
+    }
+    .links a.main {
+      background: linear-gradient(90deg, var(--pink), #EC4899);
+      color: #fff; border-color: transparent;
+    }
+    .links small { display: block; font-weight: 400; font-size: 14px; opacity: .85; }
+    footer { text-align: center; color: var(--muted); font-size: 13px; padding: 24px 20px 40px; }
+    footer a { color: var(--pink); }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1><img src="/logo-extended.png" alt="MusiConnect"></h1>
+      <p class="tagline">Conectando músicos a oportunidades no mundo todo.</p>
+    </header>
+
+    <nav class="links">
+      <a class="main" href="/">Baixar o app<small>Android, gratuito</small></a>
+      <a href="https://youtu.be/NZR6LDNfiSg">Vídeo de demonstração<small>11 min, no YouTube</small></a>
+      <a href="https://github.com/DevLuchez/prototipo-musiconnect">Código e documentação<small>Repositório no GitHub</small></a>
+    </nav>
+  </main>
+
+  <footer>
+    Trabalho de Conclusão de Curso de Engenharia de Software — Católica SC.<br>
+    <a href="/privacidade">Política de privacidade</a>
+  </footer>
+</body>
+</html>
