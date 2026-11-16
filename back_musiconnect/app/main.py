@@ -58,12 +58,13 @@ async def lifespan(app: FastAPI):
     scheduler.start()
     logger.info("Scheduler iniciado.")
 
-    yield  # A API fica disponível aqui
-
-    # ── Shutdown ─────────────────────────────────────────────────
-    logger.info("MusiConnect API encerrando...")
-    scheduler.shutdown(wait=False)
-    logger.info("Scheduler encerrado.")
+    try:
+        yield  # A API fica disponível aqui
+    finally:
+        # ── Shutdown (também quando a API encerra com erro) ──────────
+        logger.info("MusiConnect API encerrando...")
+        scheduler.shutdown(wait=False)
+        logger.info("Scheduler encerrado.")
 
 
 app = FastAPI(
