@@ -6,6 +6,8 @@
 
 ### MusiConnect — Conectando músicos a oportunidades no mundo todo
 
+**Tema:** tecnologia para a inserção profissional de músicos, com uma plataforma que reúne oportunidades musicais e calcula a compatibilidade de cada uma com o perfil do músico.
+
 Aplicativo mobile que reúne audições, competições, cursos e vagas de emprego para músicos, mostra o quanto cada oportunidade combina com o perfil de quem usa e localiza no mapa as instituições musicais do mundo inteiro.
 
 [![CI](https://github.com/DevLuchez/prototipo-musiconnect/actions/workflows/ci.yml/badge.svg)](https://github.com/DevLuchez/prototipo-musiconnect/actions/workflows/ci.yml)
@@ -22,7 +24,7 @@ Aplicativo mobile que reúne audições, competições, cursos e vagas de empreg
 
 **Portfólio de TCC · Engenharia de Software · Centro Universitário Católica de Santa Catarina**
 
-*Laura Heloísa Luchez · Jaraguá do Sul/SC – 2026*
+*Laura Heloísa Luchez (laura.luchez@catolicasc.edu.br) · Jaraguá do Sul/SC – 2026*
 
 </div>
 
