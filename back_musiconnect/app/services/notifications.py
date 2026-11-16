@@ -1,22 +1,8 @@
 """
-Notificações diárias (09h, depois da coleta das 06h) pelo Firebase Cloud
-Messaging. Três avisos, cada um com sua chave no Perfil:
-
-  - Novas para você: oportunidades que entraram nos últimos dias com match
-    >= HIGH_MATCH_THRESHOLD (o mesmo corte de "Minhas oportunidades"). Uma
-    só → abre a oportunidade; várias → abre "Minhas oportunidades".
-  - Prazos dos favoritos: favorita a menos de URGENT_DEADLINE_DAYS do prazo
-    (mesma regra do "Última chance" do Início e da data vermelha no card) e
-    no último dia. Várias no mesmo dia → uma notificação só, que abre os
-    favoritos.
-  - Novas versões do app: o aparelho está numa versão anterior à mais
-    recente publicada. Uma vez por versão (User.app_update_notified) — e
-    só às 09h: várias publicações no mesmo dia viram um aviso só, da
-    última. Ao tocar, o app abre e exige a atualização.
-
-No máximo uma notificação de cada tipo por dia, e cada aviso uma única vez
-por oportunidade (NotificationLog). Só recebe quem está conectado num
-aparelho que permitiu as notificações (DeviceToken).
+Notificações diárias (09h, pelo Firebase Cloud Messaging), cada uma com sua
+chave no Perfil: novas oportunidades com match alto, prazos dos favoritos e
+nova versão do app. No máximo uma de cada tipo por dia e um aviso por
+oportunidade (NotificationLog).
 """
 
 import logging

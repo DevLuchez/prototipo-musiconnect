@@ -1,28 +1,10 @@
 """
-Resolvedor oportunidade → mapa.
-
-Roda como Etapa 3 do pipeline diário (scraper_task.py) e sob demanda via
-POST /scheduler/resolve-institutions (backfill), em duas passadas:
-
-Passada 1 — pino da instituição (`opportunities.institution_id`), a partir
-do texto livre `opportunities.institution` (a organizadora extraída pelo
-scraper/LLM). Regra de correspondência (decisão D1 — "nome igual + mesma
-cidade"):
-  1. Procura no banco uma instituição com o MESMO nome normalizado
-     (sem acentos/maiúsculas/pontuação) a até 50 km da cidade da
-     oportunidade. Nome parecido não conta: preferimos um pino duplicado
-     a levar o usuário à instituição errada.
-  2. Não achou → geocodifica "organizadora, cidade, país" no Nominatim e
-     reaproveita/cria o pino (institution_factory.get_or_create_institution).
-  3. Não localizou → deixa NULL e tenta de novo na próxima execução.
-
-Passada 2 — centro da cidade (`opportunities.city_location_id`), para as
-que ficaram sem pino de instituição: alimenta o marcador "oportunidades por
-cidade" do mapa. A maioria das organizadoras (orquestras, concursos) não
-existe como lugar no OpenStreetMap, mas a cidade quase sempre vem no edital.
-
-Oportunidades remotas ou invisíveis no app (inativas / confiança < 0.80)
-não são processadas — nunca aparecem no mapa.
+Liga cada oportunidade ao mapa (etapa 3 da coleta diária), em duas passadas:
+1. Pino da instituição: mesmo nome normalizado a até 50 km da cidade; senão,
+   geocodifica no Nominatim. Nome só parecido não conta (melhor um pino
+   duplicado que a instituição errada). Sem resultado, tenta na próxima vez.
+2. Sem pino: liga ao centro da cidade.
+Remotas e oportunidades não visíveis no app ficam de fora.
 """
 
 import logging

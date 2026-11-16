@@ -1,28 +1,9 @@
 """
-Cálculo do percentual de compatibilidade (match) entre um usuário e uma
-oportunidade, exibido na aba Matcher do Flutter.
-
-Heurística de filtragem baseada em conteúdo (não é ML de verdade — é o
-placeholder pragmático pro "Score de Compatibilidade" idealizado no TCC,
-usando só os campos que já existem hoje nos dois lados):
-
-  - Instrumento (peso 45%): sobreposição entre os instrumentos do usuário
-    e os exigidos pela oportunidade.
-  - Ramo de atuação x tipo (peso 20%): afinidade entre profissional/
-    estudante e o tipo do evento (emprego, curso, audição, competição).
-  - Localização (peso 20%): cidade/estado/país em comum, ou remoto.
-  - Confiança da extração (peso 15%): `llm_confidence` da oportunidade —
-    os três fatores acima dependem de instrumento/tipo/local terem sido
-    extraídos corretamente pela LLM; quando essa extração é pouco
-    confiável, o match pesa menos, mesmo que os campos "batam" no papel.
-
-Fica de fora, deliberadamente, o campo `level` da oportunidade (extraído
-por LLM, não confiável) — não há dado equivalente no perfil do usuário.
-
-Cada fator é arredondado pra pontos inteiros ANTES de somar (não a soma
-bruta arredondada no final) — assim o detalhamento mostrado na UI (ex:
-"45% instrumento + 20% localização") sempre soma exatamente o total
-exibido, sem sobra por arredondamento.
+Percentual de match entre usuário e oportunidade, por regras simples:
+instrumento (45%), ramo x tipo (20%), localização (20%) e confiança da IA
+(15%). O nível técnico fica de fora (extração pouco confiável e sem campo
+no perfil). Cada fator é arredondado antes da soma, para o detalhamento no
+app bater com o total.
 """
 
 from dataclasses import dataclass

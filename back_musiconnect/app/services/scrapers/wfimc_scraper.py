@@ -1,19 +1,8 @@
 """
-Scraper da WFIMC — World Federation of International Music Competitions
-(wfimc.org), a federação dos grandes concursos internacionais de música
-(Queen Elisabeth, Van Cliburn, Paganini, ARD...).
-
-A página de prazos (/member-competitions/application-deadlines) lista, num
-cartão por concurso: prazo de inscrição (<time datetime>, às vezes um
-intervalo — vale a data final), disciplinas, "Cidade - Nome", país e o link
-da página do concurso. Os dados do cartão já vêm estruturados; a página do
-concurso (lida só uma vez, quando ele aparece) traz o texto que o Gemini
-usa para descrição, instrumentos e local.
-
-O mesmo concurso pode aparecer duas vezes, com prazos de edições
-diferentes: source_url = link + "#" + prazo. Concurso que também está no
-Musical Chairs (mesmo prazo e mesmo nome) não entra de novo. Cartão que sai
-da página sai do app.
+Scraper da WFIMC (wfimc.org), a federação dos grandes concursos
+internacionais. A página de prazos já traz os dados estruturados; a página
+de cada concurso (lida uma vez) dá o texto para o Gemini. source_url = link
++ "#" + prazo; concurso já vindo do Musical Chairs não entra de novo.
 """
 
 import logging

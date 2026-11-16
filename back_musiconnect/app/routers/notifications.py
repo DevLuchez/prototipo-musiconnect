@@ -37,15 +37,8 @@ def register_device(
     db: Session = Depends(get_db),
 ):
     """
-    Registra o aparelho em que a pessoa está conectada. Idempotente.
-
-    A sessão é uma só por conta (entrar em outro celular derruba a
-    anterior), então o aparelho novo substitui os antigos da conta. E o
-    mesmo aparelho só pertence a uma conta: num celular compartilhado, ele
-    passa para quem entrou por último.
-
-    O app pode registrar o mesmo aparelho duas vezes quase juntas (logo
-    depois do login): o ON CONFLICT faz a segunda só confirmar a primeira.
+    Registra o aparelho conectado (idempotente). O aparelho novo substitui os
+    antigos da conta, e cada aparelho fica só com a última conta que entrou.
     """
     db.query(DeviceToken).filter(
         DeviceToken.user_id == user.id, DeviceToken.token != data.token

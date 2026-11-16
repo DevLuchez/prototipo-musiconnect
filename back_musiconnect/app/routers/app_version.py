@@ -1,18 +1,7 @@
 """
-Router da versão do app — o app consulta ao abrir (e a cada volta a ele)
-e, se houver versão mais nova que a instalada, só segue depois de
-atualizar (toda versão nova é obrigatória — decisão da Laura, 06/11/2026).
-
-Endpoint:
-  GET /api/app/version → {"latest", "minimum", "download_url"}
-
-- latest: versão mais recente publicada — a tag do último release do
-  GitHub (o mesmo que o link de download baixa), sem o "v". Publicar uma
-  tag já atualiza o aviso, sem mexer no servidor. Guardada por
-  CACHE_TTL; se o GitHub não responder, vale a última conhecida (ou null:
-  o app não avisa nada).
-- minimum: versão mínima aceita (APP_MINIMUM_VERSION no .env, vazia por
-  padrão) — reserva para quando o GitHub não responder (latest null).
+Versão do app (GET /api/app/version): o app consulta ao abrir e só segue
+depois de atualizar. `latest` vem da tag do último release do GitHub (em
+cache); `minimum` (APP_MINIMUM_VERSION) é a reserva se o GitHub não responder.
 """
 
 import logging

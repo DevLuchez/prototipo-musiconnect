@@ -1,22 +1,7 @@
 """
-Router de favoritos — oportunidades salvas (Matcher) e instituições
-favoritas (mapa) do usuário logado.
-
-Endpoints:
-  GET    /api/favorites/ids                        — IDs salvos (estado dos corações no app)
-  GET    /api/favorites/opportunities              — oportunidades salvas
-  PUT    /api/favorites/opportunities/{id}         — salva uma oportunidade
-  DELETE /api/favorites/opportunities/{id}         — remove dos salvos
-  GET    /api/favorites/institutions               — instituições favoritas
-  PUT    /api/favorites/institutions/{osm_id}      — favorita uma instituição
-  DELETE /api/favorites/institutions/{osm_id}      — remove dos favoritos
-
-PUT/DELETE são idempotentes (salvar duas vezes ou remover o que não está
-salvo não dá erro) — o app pode repetir a chamada sem se preocupar.
-
-Oportunidades salvas seguem o mesmo critério de visibilidade da aba
-Matcher (ativa, confiança >= 0.80, prazo vigente): a que vence some da
-lista no mesmo dia, e a limpeza diária apaga o registro depois.
+Favoritos do usuário logado: oportunidades salvas e instituições favoritas.
+PUT e DELETE são idempotentes; as salvas seguem a regra de visibilidade do
+Matcher (a que vence some da lista).
 """
 
 from typing import List

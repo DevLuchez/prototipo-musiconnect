@@ -1,20 +1,8 @@
 """
-Destinos dos links dos e-mails (https://musiconnect.app.br/...).
-
-Com o app instalado, o Android abre o app direto nesses links (App Links,
-verificados por /.well-known/assetlinks.json) e estas páginas nem chegam a
-aparecer. Sem o app (ex: e-mail lido no computador), elas resolvem tudo no
-navegador:
-
-  GET  /.well-known/assetlinks.json — autoriza o app Android a abrir os links
-  GET  /confirmar?token=...         — página com o botão "Confirmar e-mail"
-  POST /confirmar                   — confirma o cadastro
-  GET  /redefinir-senha?token=...   — formulário de nova senha
-  POST /redefinir-senha             — troca a senha
-
-Abrir o link (GET) nunca muda nada: confirmar/trocar exige o envio do
-formulário (POST) — leitores de e-mail e antivírus às vezes "visitam" os
-links sozinhos.
+Páginas dos links dos e-mails (musiconnect.app.br). Com o app instalado, o
+Android abre o app direto (App Links); sem ele, a confirmação e a troca de
+senha acontecem aqui. O GET só mostra a página e a ação exige o POST, porque
+leitores de e-mail e antivírus às vezes abrem os links sozinhos.
 """
 
 from html import escape

@@ -1,17 +1,8 @@
 """
-Site e e-mail das instituições, a partir das tags do OpenStreetMap.
-
-Ponto único usado pelos dois caminhos que gravam contatos:
-  - ETL noturno (osm_etl.run_etl)
-  - resolvedor de oportunidades, ao criar a instituição
-    (institution_factory.get_or_create_institution, via extratags do Nominatim)
-
-Regras (as mesmas nos dois caminhos):
-  - Site só é gravado se a instituição ainda não tem um (preserva o que veio
-    do Wikidata/MusicBrainz) E se o link responde — o OSM tem muitos links
-    antigos de domínios expirados (~20% numa amostra de 2026-09). Bloqueio de
-    robô (401/403/429/503) conta como válido: abre normalmente no celular.
-  - E-mail é gravado se tiver formato válido (não dá para testar sem enviar).
+Site e e-mail das instituições a partir das tags do OSM (usado pelo ETL e
+pelo resolvedor). O site só é gravado se a instituição ainda não tem um e se
+o link responde (bloqueio de robô conta como válido); o e-mail, se tiver
+formato válido.
 """
 
 import asyncio

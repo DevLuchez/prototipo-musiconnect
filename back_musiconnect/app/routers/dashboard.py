@@ -1,23 +1,7 @@
 """
-Router da aba Início do app — resumo do que importa hoje para o usuário
-logado, numa chamada só.
-
-Endpoint:
-  GET /api/dashboard
-
-Seções (todas com o mesmo critério de visibilidade do Matcher: ativa,
-confiança >= 0.80, prazo vigente):
-  - urgent_saved: oportunidades SALVAS com prazo nos próximos
-    URGENT_DEADLINE_DAYS dias (mesma regra da data vermelha no card).
-  - top_matches: as de maior match, só as >= HIGH_MATCH_THRESHOLD (as
-    mesmas de "Minhas oportunidades").
-  - new_matches: compatíveis que entraram no app nos últimos 7 dias — pelo
-    `created_at` (gravado uma vez), não pelo `scraped_at`, que é
-    atualizado toda vez que o RSS relista uma oportunidade antiga.
-  - type_counts: quantas abertas há de cada tipo (bloco "Explorar").
-
-Sem login (modo visitante do app), só type_counts vem preenchido: o resto
-depende do perfil e dos favoritos.
+Aba Início (GET /api/dashboard), numa chamada só: favoritos com prazo
+próximo, melhores matches, novidades compatíveis (pelo `created_at`) e
+contagem por tipo. Sem login, vem só a contagem por tipo.
 """
 
 from collections import Counter

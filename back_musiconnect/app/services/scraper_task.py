@@ -1,18 +1,7 @@
 """
-Wrapper assíncrono do pipeline de Scrapers + LLM Enrichment.
-
-Este módulo é a ponte entre o scheduler e os scrapers/enricher,
-seguindo o mesmo padrão do etl_task.py.
-
-Pipeline:
-  Etapa 1 — Scrapers: coleta oportunidades brutas das fontes externas e
-            desativa as que saíram da fonte
-  Etapa 2 — Enrichment: LLM (Gemini) transforma os dados brutos em campos estruturados
-  Etapa 3 — Resolução: vincula cada oportunidade ao pino da sua instituição no mapa
-  Etapa 4 — Limpeza: apaga oportunidades salvas que venceram/foram desativadas
-
-Fluxo diário:
-  scheduler → run_all_scrapers() → salva no DB → enriquece com LLM → disponível na API
+Coleta diária de oportunidades, chamada pelo agendador: 1) scrapers,
+2) enriquecimento pelo Gemini, 3) ligação ao mapa, 4) limpeza dos
+favoritos vencidos.
 """
 
 import logging
@@ -48,15 +37,8 @@ async def _upsert_raw(records: list[dict]) -> int:
 
 async def run_all_scrapers() -> None:
     """
-    Executa o pipeline completo de coleta e enriquecimento de oportunidades.
-
-    Etapa 1: Scrapers — coleta das fontes configuradas e desativa os
-             anúncios que saíram delas
-    Etapa 2: LLM Enrichment — processa registros pendentes (enriched_at IS NULL)
-    Etapa 3: Resolução — preenche institution_id (pino do mapa) das pendentes
-    Etapa 4: Limpeza — apaga oportunidades salvas que não estão mais visíveis
-
-    Captura todas as exceções para que uma falha não derrube a API.
+    Roda as quatro etapas da coleta. Captura todas as exceções para que uma
+    falha não derrube a API.
     """
     start = datetime.now(timezone.utc)
     logger.info("=" * 60)

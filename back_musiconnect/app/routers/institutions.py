@@ -144,14 +144,8 @@ def search_institutions(
     db: Session = Depends(get_db),
 ) -> List[InstitutionOut]:
     """
-    Busca da barra do mapa em TODAS as instituições do banco — o app só
-    carrega parte delas em memória (carga inicial + arredores da câmera),
-    então buscar só no que está carregado deixava ~2/3 de fora.
-
-    Sem diferenciar maiúsculas nem acentos. Ordem: nome que começa com o
-    termo, depois nome que contém, depois endereço; dentro de cada grupo,
-    as com oportunidades abertas primeiro.
-
+    Busca da barra do mapa em todas as instituições do banco (o app só tem
+    parte delas em memória), sem diferenciar maiúsculas nem acentos.
     Precisa vir ANTES de /{osm_id} no router.
     """
     sql = text(f"""

@@ -79,21 +79,9 @@ def _state_label(code: str, country: Optional[str]) -> str:
 
 def _upsert_opportunities(records: list[dict]) -> int:
     """
-    Faz upsert em lote na tabela opportunities.
-    Deduplicação por source_url — nunca duplica a mesma oportunidade.
-
-    Numa oportunidade NOVA, todos os campos são gravados (incluindo os
-    coletados na página de detalhe: instituição, prazo, descrição completa).
-
-    Numa oportunidade JÁ CONHECIDA (conflito por source_url), o RSS a
-    relista por vários dias seguidos com apenas o resumo curto — sem
-    revisitar a página de detalhe (ver `_enrich_with_details` no scraper).
-    Por isso, no conflito, só `scraped_at` é atualizado: sobrescrever
-    title/description/raw_text/institution/deadline com o resumo raso
-    apagaria dados melhores já coletados, e sobrescrever llm_confidence
-    resetaria oportunidades já enriquecidas para 0.0 (como `enriched_at`
-    não seria reposto para NULL, elas nunca mais seriam reenriquecidas e
-    sumiriam da listagem — bug encontrado durante esta revisão).
+    Upsert em lote, sem duplicar (chave: source_url). Numa oportunidade já
+    conhecida só o `scraped_at` muda: o RSS relista só o resumo, que apagaria
+    os dados completos e o enriquecimento já feitos.
     """
     if not records:
         return 0
@@ -183,17 +171,9 @@ def list_opportunities(
     current_user: Optional[User] = Depends(get_current_user_optional),
 ):
     """
-    Lista oportunidades musicais para a aba Matcher.
-    Retorna apenas oportunidades com llm_confidence >= 0.80.
-
-    Cada filtro aceita múltiplos valores (ex: ?instrument=Violino&instrument=Piano)
-    — dentro do mesmo campo é OR (qualquer um dos valores serve), entre campos
-    diferentes é AND (todos os campos informados precisam bater). A busca
-    livre `q` também entra como AND com os filtros.
-
-    O total real (antes do corte por `limit`) vai no header `X-Total-Count`,
-    já que o corpo da resposta é só a página pedida — o cliente não deve
-    usar o tamanho da lista retornada como se fosse o total.
+    Lista as oportunidades visíveis da aba Matcher. Filtros: OR dentro do mesmo
+    campo, AND entre campos. O total antes do `limit` vai no header
+    X-Total-Count.
     """
     query = _apply_filters(
         db.query(Opportunity),
@@ -239,15 +219,9 @@ def list_opportunities(
 
 def _apply_search(query, q: str):
     """
-    Busca livre da barra do Matcher: o termo pode aparecer em qualquer
-    parte do título, descrição, instituição organizadora, instrumentos,
-    cidade, estado ou país — sem diferenciar maiúsculas nem acentos
-    (mesma regra da busca de instituições do mapa).
-
-    Exceção: se o termo for o nome de um instrumento que aparece em algum
-    edital (ex: "piano"), a busca olha só os instrumentos e o título — senão
-    um edital de violino que cita "ensaios com piano" na descrição aparecia
-    como se pedisse piano.
+    Busca livre do Matcher em título, descrição, instituição, instrumentos e
+    local, sem diferenciar maiúsculas nem acentos. Se o termo for um
+    instrumento (ex: "piano"), olha só os instrumentos e o título.
     """
     raw = q.strip()
     # Escapa curingas do LIKE digitados pelo usuário
@@ -348,15 +322,9 @@ def get_filter_options(
     db: Session = Depends(get_db),
 ):
     """
-    Valores distintos disponíveis pra popular os seletores do modal de
-    filtros (Instrumento, País, Estado, Cidade) — busca facetada/cruzada:
-    cada campo é calculado aplicando os filtros JÁ escolhidos nos OUTROS
-    campos (nunca nele mesmo), pra que escolher um instrumento estreite as
-    opções de localização mostradas, e vice-versa. A busca livre `q`, se
-    houver, vale para todos os campos.
-
-    Precisa vir ANTES de /{opportunity_id} no router — senão o FastAPI
-    tentaria casar "filter-options" como opportunity_id (int) e falharia.
+    Opções dos seletores do filtro: cada campo aplica os filtros já escolhidos
+    nos outros campos (busca facetada). Precisa vir ANTES de /{opportunity_id}
+    no router.
     """
 
     def rows(*, exclude: str):

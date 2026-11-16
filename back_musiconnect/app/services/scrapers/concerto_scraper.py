@@ -1,24 +1,8 @@
 """
-Scraper da Revista CONCERTO — página "Cursos e outros eventos"
-(concerto.com.br), a melhor lista de oportunidades de música no Brasil:
-concursos, editais de orquestra, academias, processos seletivos, festivais,
-master classes. É uma página única, atualizada pela redação, com um
-parágrafo por item, em seções:
-
-  SÃO PAULO      — itens da capital paulista
-  BRASIL         — "Cidade, UF / NOME . texto"
-  INTERNACIONAL  — "CIDADE, PAÍS / NOME . texto"
-
-No topo, um bloco com os itens recentes ("[NOVO]") repete o que está na
-lista completa — fica a última ocorrência de cada um (a da lista completa).
-
-A página mistura oportunidades com temporadas de concertos, assinaturas e
-exposições: os casos óbvios são descartados aqui; o resto o Gemini decide
-(`is_open_call`).
-
-source_url = endereço da página + "#" + o nome do item: o link do app leva à
-CONCERTO (crédito à revista) e cada item tem um endereço próprio. Item que
-sai da página sai do app; item cujo texto mudou volta ao Gemini.
+Scraper da Revista CONCERTO (página "Cursos e outros eventos"): um parágrafo
+por item, nas seções São Paulo, Brasil e Internacional. Descarta os casos
+óbvios (temporadas, assinaturas); o resto o Gemini decide. source_url =
+página + "#" + nome do item; item que sai da página sai do app.
 """
 
 import logging

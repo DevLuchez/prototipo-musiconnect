@@ -1,16 +1,7 @@
 """
-Enriquecimento de oportunidades musicais via Google Gemini.
-
-Pipeline:
-  1. Busca oportunidades com enriched_at IS NULL (ainda não processadas)
-  2. Para cada uma, envia raw_text ao Gemini Flash 2.0
-  3. Gemini extrai campos estruturados em JSON
-  4. Atualiza o registro no banco com os dados limpos
-  5. Define enriched_at para marcar como processada
-
-Confiança (llm_confidence):
-  - >= 0.80 → oportunidade exibida ao usuário final
-  - < 0.80  → oportunidade mantida no banco mas não exibida (dado ruim)
+Enriquecimento das oportunidades pelo Google Gemini: as pendentes
+(enriched_at nulo) viram campos estruturados. Só as com llm_confidence
+>= 0.80 aparecem no app.
 """
 
 import asyncio

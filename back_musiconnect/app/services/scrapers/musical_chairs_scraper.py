@@ -1,32 +1,9 @@
 """
-Scraper do Musical Chairs — musicalchairs.info
-
-Estratégia em duas etapas:
-  1. Descoberta — o RSS por instrumento (https://www.musicalchairs.info/rss/en/{instrumento})
-     lista as oportunidades recentes, mas traz só título + um resumo solto
-     (sem campos de instituição, local ou prazo).
-  2. Detalhe — para cada oportunidade nova (source_url ainda não visto no banco),
-     a página individual é visitada uma única vez para extrair os campos
-     estruturados que o RSS não tem: instituição, local e prazo de inscrição
-     (classes CSS estáveis: post_item_name/post_item_location/post_item_closingdate).
-     Só oportunidades novas são buscadas — as já conhecidas não são revisitadas
-     a cada execução, para não sobrecarregar o site.
-
-Tipos inferidos pela URL da vaga — allowlist: só os segmentos abaixo são
-aceitos, qualquer outro (/sales/, /stolen/, ou qualquer tipo novo que o
-site venha a criar) é descartado por padrão. Evita repetir o que
-aconteceu com /stolen/ (furto de instrumento), que caiu num padrão antigo
-"desconhecido → edital" e virou oportunidade por engano, com um layout de
-página totalmente diferente do esperado.
-  /jobs/{id}          → 'audicao'
-  /competitions/{id}  → 'competicao'
-  /courses/{id}       → 'curso'
-  /degree-courses/{id} → 'curso' (dias abertos/divulgação de programas de
-                          graduação — mais próximo de "curso" entre as
-                          categorias existentes, mesmo não sendo uma
-                          masterclass de curta duração como os demais)
-  /teaching-jobs/{id} → 'emprego'
-  /admin-jobs/{id}    → 'emprego'
+Scraper do Musical Chairs (musicalchairs.info), em duas etapas: o RSS por
+instrumento descobre os anúncios, e a página de cada anúncio novo (visitada
+uma vez só) traz instituição, local e prazo. O tipo vem do caminho da URL,
+por lista fechada (_TYPE_MAP): caminhos desconhecidos, como /stolen/ (furto
+de instrumento), são descartados.
 """
 
 import asyncio
@@ -213,15 +190,9 @@ def _parse_site_date(text: str) -> Optional[date]:
 
 def _parse_detail_page(html_text: str) -> dict:
     """
-    Extrai os campos estruturados da página individual do anúncio
-    (ausentes no resumo RSS): instituição, local e prazo de inscrição.
-
-    Instituição só existe estruturalmente em páginas de vaga/emprego
-    (jobs, teaching-jobs, admin-jobs): lá, post_item_name embrulha um <h2>
-    e post_item_info (o <h1>) é o título. Em competições/cursos é o
-    inverso — post_item_name é o <h1> (título) e não há instituição
-    identificada na página; nesse caso retornamos None e deixamos o LLM
-    tentar como fallback best-effort.
+    Extrai instituição, local e prazo da página do anúncio. A instituição só
+    existe nas páginas de vaga; em competições e cursos retorna None (o Gemini
+    tenta depois).
     """
     soup = BeautifulSoup(html_text, "html.parser")
     result: dict = {"institution": None, "location_raw": None, "deadline": None, "description": None}
@@ -299,15 +270,8 @@ async def _enrich_with_details(
     client: httpx.AsyncClient, records: list[dict]
 ) -> set[str]:
     """
-    Para cada registro cujo source_url ainda não existe no banco, busca a
-    página individual e preenche institution/deadline/description/raw_text
-    com os dados estruturados de lá (muito mais confiáveis que o resumo RSS).
-    Modifica `records` in-place.
-
-    Retorna o conjunto de source_urls que já vieram mortas (404) — o anúncio
-    foi removido entre o RSS listar e a página de detalhe ser buscada. Essas
-    nunca chegam a ser gravadas como oportunidade (quem chama deve excluí-las
-    da lista antes do upsert).
+    Completa os registros novos (in-place) com os dados da página de cada
+    anúncio. Retorna os source_urls que já deram 404, que não devem ser gravados.
     """
     all_urls = [r["source_url"] for r in records]
     known = _fetch_known_source_urls(all_urls)
@@ -352,15 +316,8 @@ async def _enrich_with_details(
 
 async def scrape_musical_chairs() -> list[dict]:
     """
-    Busca oportunidades do Musical Chairs.
-
-    Etapa 1 — RSS por instrumento: descobre quais oportunidades existem.
-    Etapa 2 — página de detalhe (só para oportunidades novas): preenche
-    instituição, local e prazo com os campos estruturados do site.
-
-    Retorna lista de dicts prontos para upsert na tabela opportunities
-    (o restante do enrichment — título traduzido, tipo, nível, etc. —
-    continua a cargo do llm_enricher).
+    Busca as oportunidades do Musical Chairs (RSS + página dos anúncios novos)
+    e devolve os registros prontos para o upsert.
     """
     logger.info("[MC] Iniciando scraping do Musical Chairs...")
 
@@ -426,15 +383,9 @@ def _deactivate(urls: list[str]) -> None:
 
 async def deactivate_removed_listings(seen_urls: set[str]) -> int:
     """
-    Desativa as oportunidades cujo anúncio saiu do Musical Chairs.
-
-    O RSS não lista todos os anúncios abertos (conferido em 31/10/2026: de
-    24 ativos fora do RSS, 19 continuavam no ar) — não estar nele não quer
-    dizer ter saído do site. Por isso, cada oportunidade que ficou de fora
-    tem a página conferida: só um 404 (anúncio removido) desativa. Falha de
-    rede ou página no ar mantém a oportunidade.
-
-    Retorna quantas foram desativadas.
+    Desativa as oportunidades cujo anúncio saiu do site. O RSS não lista todos
+    os anúncios abertos, então só um 404 na página desativa. Retorna quantas
+    foram desativadas.
     """
     candidates = _listings_to_check(seen_urls)
     if not candidates:

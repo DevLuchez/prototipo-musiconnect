@@ -1,42 +1,11 @@
 """
-Scraper de sites em WordPress de instituições da região da SCAR — a
-cliente inicial do MusiConnect — pela API pública do WordPress
-(/wp-json/wp/v2/posts), sem raspar HTML.
-
-Fontes:
-  SCAR   — scar.art.br (Sociedade Cultura Artística, Jaraguá do Sul):
-           audições da Orquestra Jovem e da Filarmônica de Jaraguá,
-           inscrições em projetos (Música Para Todos, Big Band...).
-  FEMUSC — femusc.com.br (Festival de Música de Santa Catarina, Jaraguá
-           do Sul): a chamada anual de alunos.
-
-Os sites publicam sobretudo notícias (apresentações, prêmios, fotos). Por
-isso:
-  1. Só os posts recentes (POST_WINDOW) entram.
-  2. Só os que parecem chamada (inscrições, audição, seleção, vagas, bolsa,
-     edital...) viram oportunidade bruta — o resto nem chega ao Gemini.
-  3. O Gemini confirma se é mesmo uma chamada aberta a músicos
-     (`is_open_call`) e extrai tipo, instrumentos e prazo; notícia ou
-     chamada de outra área (dança, teatro) é desativada por ele.
-
-Post sem prazo some do app depois de NO_DEADLINE_MAX_AGE; post apagado do
-site (404) é desativado — mesma regra do Musical Chairs.
-
-Páginas fixas do FEMUSC (02/11/2026): o FEMUSC publica as chamadas nas
-páginas de cada programa (FEMUSC Jovem, Concurso Scheherazade, vagas
-remanescentes), não em notícias. As páginas que parecem chamada entram;
-voltam ao Gemini quando o texto muda (a edição seguinte entra sozinha) e
-saem se a página sumir ou deixar de parecer chamada. Sem prazo, saem
-NO_DEADLINE_MAX_AGE depois da última atualização da página (a entrada da
-oportunidade é a data dessa atualização) — página abandonada não fica no
-app para sempre.
-
-Cursos de música da SCAR (decisão da Laura, 01/11/2026): os cursos
-regulares da escola (Cordas, Piano, Metais...) entram como "curso" sem
-prazo — a matrícula é contínua. Ficam no app enquanto estiverem na página
-de cursos de música do site; são conferidos uma vez por mês
-(COURSES_REFRESH) e só voltam ao Gemini se o texto da página mudou (preço,
-professor...).
+Scraper dos sites em WordPress da SCAR e do FEMUSC (Jaraguá do Sul), pela
+API pública do WordPress, sem raspar HTML:
+- posts recentes que parecem chamada (o Gemini confirma);
+- páginas fixas do FEMUSC, onde ficam as chamadas de cada programa;
+- cursos regulares da SCAR, como "curso" sem prazo (matrícula contínua),
+  conferidos uma vez por mês.
+Sem prazo, saem depois de NO_DEADLINE_MAX_AGE; apagados do site, saem do app.
 """
 
 import asyncio

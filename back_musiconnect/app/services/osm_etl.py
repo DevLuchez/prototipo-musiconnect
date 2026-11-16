@@ -1,29 +1,9 @@
 """
-ETL: coleta instituições musicais do OpenStreetMap e persiste no
-PostgreSQL com PostGIS.
-
-Fonte: QLever (https://qlever.dev/api/osm-planet), da Universidade de
-Freiburg — uma cópia do planeta OSM inteiro consultável por SPARQL.
-Substituiu o Overpass em 10/2026: o Overpass público exigia dividir o mundo
-numa grade de células de 30°x45°, que estouravam o timeout do servidor
-(células inteiras puladas, inclusive todo o Brasil), cortava cada célula em
-1000 resultados e, quando estourava o tempo no servidor, devolvia lista
-vazia com HTTP 200 — o ETL só trazia ~16 mil das ~80 mil instituições.
-
-Estratégia:
-- Uma busca por tipo de instituição (OSM_TAGS), sem grade geográfica
-- Pinos (centróide calculado no servidor) e tags em consultas separadas:
-  juntar as duas numa consulta só, com muitos OPTIONAL, trava o servidor
-- Paginada (ORDER BY + LIMIT/OFFSET): respostas longas demais são cortadas
-  pelo servidor; o QLever guarda o resultado em cache entre as páginas
-- Faz upsert pelo osm_id (nunca duplica)
-- Instituições que saíram do OSM (apagadas, ou que deixaram de ser musicais
-  — ex: teatro que virou cinema) são removidas, depois de conferidas uma a
-  uma na API oficial do OSM: a cópia do QLever pode estar alguns dias
-  atrás do OSM, então não ter vindo na coleta não basta. As organizadoras
-  achadas pelo sistema no OSM só saem se foram apagadas
-- Roda em ~3 minutos para os pinos do mundo todo; os contatos (que testam
-  se cada site responde) levam mais, mas só para quem ainda não tem site
+ETL das instituições musicais do OpenStreetMap via QLever (cópia do OSM
+consultável por SPARQL; substituiu o Overpass, que estourava o tempo e
+cortava resultados). Uma consulta paginada por tipo de instituição, com
+pinos e tags em consultas separadas (juntas, travam o servidor); upsert
+pelo osm_id e remoção das que saíram do OSM.
 """
 
 import asyncio
@@ -395,19 +375,10 @@ def _is_musical(tags: dict) -> bool:
 async def remove_closed_institutions(db: Session, seen_ids: set[str]) -> int:
     """Remove as instituições que saíram do OpenStreetMap.
 
-    Cada candidata é conferida na API do OSM:
-      - as do ETL (source="osm") que não vieram na coleta desta noite saem se
-        foram apagadas ou deixaram de ser musicais (ex: virou cinema);
-      - as organizadoras de oportunidades achadas pelo sistema no OSM
-        (source="pipeline") nunca vêm na coleta — não têm a marcação musical
-        (ex: orquestra cujo lugar é um centro de convenções) —, então só se
-        confere se ainda existem. As sem objeto do OSM (id "pl_...") ficam.
-
-    Ao sair, a instituição some também dos favoritos (ON DELETE CASCADE) e
-    as oportunidades ligadas a ela perdem só o pino (ON DELETE SET NULL) — o
-    resolvedor as liga de novo ao lugar novo, ou à cidade, na mesma noite.
-
-    Retorna quantas foram removidas.
+    Cada candidata é conferida na API oficial (a cópia do QLever pode estar
+    atrasada); as achadas pelo sistema (source="pipeline") só saem se foram
+    apagadas. Os favoritos delas somem junto e as oportunidades perdem só o
+    pino. Retorna quantas foram removidas.
     """
     rows = (
         db.query(Institution.osm_id, Institution.source)

@@ -1,24 +1,7 @@
 """
-Router de autenticação — cadastro do app Flutter com confirmação por e-mail
-e sessão persistida por token.
-
-Endpoints:
-  POST /api/auth/signup           — cria/atualiza o usuário pendente e envia o e-mail
-  POST /api/auth/resend           — reenvia o e-mail de confirmação
-  POST /api/auth/confirm          — confirma o e-mail a partir do token (deep link)
-  GET  /api/auth/status           — consulta se um e-mail já foi confirmado
-  POST /api/auth/login            — autentica e devolve um token de sessão
-  POST /api/auth/forgot-password  — envia o e-mail de redefinição de senha
-  POST /api/auth/reset-password   — efetiva a nova senha a partir do token
-  GET  /api/auth/me               — dados do usuário logado (valida o token salvo no app)
-  PATCH /api/auth/me              — edita o perfil (nome/instrumentos/ramo/localização)
-  POST /api/auth/change-password  — troca de senha logado (pede a senha atual)
-  POST /api/auth/logout           — invalida o token de sessão
-  DELETE /api/auth/me             — exclui a conta (pede confirmação de senha)
-
-O token de sessão é opaco e não expira (mesmo padrão dos outros tokens
-deste router) — invalidado só no logout ou ao trocar de senha por
-qualquer via.
+Autenticação (/api/auth): cadastro com confirmação por e-mail, login,
+senhas, perfil e exclusão da conta. O token de sessão é opaco e não expira:
+só é invalidado no logout ou na troca de senha.
 """
 
 import logging
@@ -316,15 +299,11 @@ def login(data: LoginIn, db: Session = Depends(get_db)):
 )
 async def forgot_password(data: ForgotPasswordIn, db: Session = Depends(get_db)):
     """
-    Envia o e-mail de redefinição de senha (link válido por 15min).
+    Envia o e-mail de redefinição de senha (link válido por 15 min).
 
-    Resposta sempre genérica, exista o e-mail ou não — revelar isso
-    permitiria descobrir quais e-mails têm conta só tentando redefinir a
-    senha deles (enumeração de usuários).
-
-    Pedir de novo com um link ainda válido reenvia o mesmo link (com mais
-    15min): um token novo invalidaria o do e-mail anterior, e a pessoa
-    costuma tocar no primeiro e-mail que encontra.
+    A resposta é a mesma exista a conta ou não, para não revelar quais e-mails
+    estão cadastrados. Pedir de novo reenvia o mesmo link (com mais 15 min),
+    para o primeiro e-mail continuar valendo.
     """
     user = db.query(User).filter(User.email == data.email).first()
     if user:
