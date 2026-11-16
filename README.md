@@ -4,7 +4,7 @@
 
 <img src="front_musiconnect/assets/images/logo-extended.png" width="420" alt="MusiConnect">
 
-### MusiConnect — Conectando músicos a oportunidades no mundo todo
+### MusiConnect - Conectando músicos a oportunidades no mundo todo
 
 **Tema:** tecnologia para a inserção profissional de músicos, com uma plataforma que reúne oportunidades musicais e calcula a compatibilidade de cada uma com o perfil do músico.
 
