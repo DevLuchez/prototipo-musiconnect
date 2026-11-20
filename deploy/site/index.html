@@ -3,78 +3,954 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MusiConnect</title>
-  <meta name="description" content="Oportunidades para musicistas — audições, cursos, competições e empregos — e instituições musicais no mapa.">
+  <title>MusiConnect — oportunidades para músicos</title>
+  <meta name="description" content="Encontre audições, competições, cursos e empregos para músicos, com o match de cada oportunidade com o seu perfil, e as instituições musicais no mapa. Grátis para Android.">
   <link rel="icon" href="/favicon.png">
+  <meta name="theme-color" content="#C2185B">
+  <!-- Só tema claro, como o app: impede o "modo escuro automático" do navegador -->
+  <meta name="color-scheme" content="only light">
+  <!-- Prévia ao compartilhar o link (WhatsApp, redes sociais) -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://musiconnect.app.br/">
+  <meta property="og:title" content="MusiConnect">
+  <meta property="og:description" content="Oportunidades para músicos — audições, cursos, competições e empregos — e as instituições musicais no mapa. Grátis para Android.">
+  <meta property="og:image" content="https://musiconnect.app.br/img/compartilhar.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preload" href="/fonts/plus-jakarta-sans.woff2" as="font" type="font/woff2" crossorigin>
   <style>
+    /* Fonte hospedada no próprio site (sem Google Fonts). Licença em /fonts/LICENSE-OFL.txt */
+    @font-face {
+      font-family: "Plus Jakarta Sans";
+      src: url("/fonts/plus-jakarta-sans.woff2") format("woff2");
+      font-weight: 200 800;
+      font-display: swap;
+    }
     :root {
-      --pink: #DF2881;
-      --purple: #7C3AED;
-      --text: #111827;
-      --muted: #6B7280;
-      --bg: #FFFFFF;
-      --soft: #FDF2F8;
+      color-scheme: only light;
+      --pink: #C2185B;
+      --pink-2: #DF2881;
+      --purple: #8E24AA;
+      --violet: #7C3AED;
+      --ink: #111827;
+      --body: #374151;
+      --muted: #5B6170;
+      --bg: #F7F5FD;
+      --bg-2: #EFEBFB;
+      --card: #FFFFFF;
+      --soft-pink: #FCE4EF;
+      --soft-violet: #EDE7FB;
+      --line: #E7E2F5;
+      --code: #1F2937;
+      --radius: 20px;
+      --shadow: 0 10px 30px rgba(76, 29, 149, .08);
     }
     * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
     body {
       margin: 0;
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      color: var(--text);
+      font-family: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      color: var(--body);
       background: var(--bg);
-      line-height: 1.5;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
     }
-    main { max-width: 560px; margin: 0 auto; padding: 48px 20px 32px; }
-    header { text-align: center; }
-    h1 { margin: 8px 0 16px; line-height: 0; }
-    h1 img { width: 300px; max-width: 100%; height: auto; }
-    .tagline { color: var(--muted); margin: 0 0 32px; font-size: 17px; }
-    .download {
-      display: block; text-align: center; text-decoration: none;
-      background: linear-gradient(90deg, var(--pink), #EC4899);
-      color: #fff; font-weight: 700; font-size: 18px;
-      padding: 16px; border-radius: 28px;
+    img { max-width: 100%; height: auto; display: block; }
+    a { color: var(--pink); }
+    a:focus-visible, summary:focus-visible { outline: 3px solid var(--violet); outline-offset: 3px; border-radius: 8px; }
+    h1, h2, h3 { color: var(--ink); line-height: 1.2; letter-spacing: -.02em; }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+    section { padding: 88px 0; scroll-margin-top: 72px; }
+    .eyebrow {
+      display: block; font-size: 12px; font-weight: 800; letter-spacing: .12em;
+      text-transform: uppercase; color: var(--pink); margin-bottom: 8px;
     }
-    .note { text-align: center; color: var(--muted); font-size: 14px; margin: 8px 0 36px; }
-    section { background: var(--soft); border-radius: 16px; padding: 20px; margin-bottom: 16px; }
-    h2 { font-size: 17px; margin: 0 0 8px; }
-    ol, ul { margin: 0; padding-left: 20px; }
-    li + li { margin-top: 6px; }
-    footer { text-align: center; color: var(--muted); font-size: 13px; padding: 24px 20px 40px; }
-    footer a { color: var(--pink); }
+    .center { text-align: center; }
+    .section-title { font-size: clamp(28px, 4vw, 40px); margin: 0 0 12px; }
+    .lead { max-width: 620px; margin: 0 auto; color: var(--muted); }
+
+    /* Botões */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+      padding: 16px 28px; border-radius: 999px; font-weight: 700; text-decoration: none; white-space: nowrap;
+      transition: transform .15s ease, box-shadow .15s ease;
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .btn svg { width: 18px; height: 18px; flex: none; }
+    .btn-primary {
+      background: linear-gradient(90deg, var(--pink), var(--pink-2)); color: #fff;
+      box-shadow: 0 10px 24px rgba(194, 24, 91, .3);
+    }
+    .btn-soft { background: var(--soft-violet); color: var(--ink); }
+    .btn-dark { background: var(--ink); color: #fff; padding: 12px 22px; font-size: 14px; }
+    .btn-small { padding: 12px 22px; font-size: 14px; }
+
+    /* Cabeçalho */
+    header.top {
+      position: sticky; top: 0; z-index: 10;
+      background: rgba(247, 245, 253, .88); backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--line);
+    }
+    .top .wrap { display: flex; align-items: center; gap: 24px; height: 72px; }
+    .brand img { width: 150px; }
+    .menu { display: flex; gap: 28px; margin-left: auto; }
+    .menu a { color: var(--body); font-weight: 600; font-size: 15px; text-decoration: none; }
+    .menu a:hover { color: var(--pink); }
+    .top .btn { margin-left: 8px; }
+    /* Botão do menu (só no celular e tablet pequeno) */
+    .menu-toggle {
+      display: none; width: 44px; height: 44px; flex: none; place-items: center; cursor: pointer;
+      border: 0; border-radius: 12px; background: var(--soft-violet); color: var(--ink);
+    }
+    .menu-toggle svg { width: 22px; height: 22px; }
+    .menu-toggle .close, .top.open .menu-toggle .open { display: none; }
+    .top.open .menu-toggle .close { display: block; }
+    .menu-toggle:focus-visible { outline: 3px solid var(--violet); outline-offset: 2px; }
+
+    /* Carrosséis de cartões no celular (Como funciona e SCAR) */
+    .swipe-dots { display: none; }
+
+    /* Topo */
+    .hero {
+      padding: 72px 0 96px; overflow: hidden;
+      background:
+        radial-gradient(600px 400px at 0% 0%, #FBE3F1 0%, transparent 70%),
+        radial-gradient(700px 500px at 100% 30%, #EAE3FC 0%, transparent 70%);
+    }
+    .hero .wrap { display: grid; grid-template-columns: 1.15fr .85fr; gap: 48px; align-items: center; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px;
+      background: var(--soft-violet); color: var(--pink); font-size: 12px; font-weight: 800;
+      letter-spacing: .06em; text-transform: uppercase;
+    }
+    .badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--pink); }
+    .hero h1 { font-size: clamp(34px, 4.2vw, 48px); margin: 20px 0 20px; }
+    .hero h1 em { font-style: normal; background: linear-gradient(90deg, var(--pink-2), var(--purple)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .hero p.intro { font-size: 17px; margin: 0 0 32px; max-width: 560px; }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 14px; }
+    .hero-meta { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 24px; font-size: 13px; font-weight: 600; color: var(--muted); }
+    .hero-meta a { color: var(--purple); text-decoration: none; }
+    .hero-meta span, .hero-meta a { display: inline-flex; align-items: center; gap: 6px; }
+    .hero-meta svg { width: 16px; height: 16px; }
+
+    .showcase { position: relative; display: flex; justify-content: center; padding: 40px 0; text-align: left; }
+    .phone {
+      width: 300px; border-radius: 40px; padding: 10px; background: #1F1F24;
+      box-shadow: 0 30px 60px rgba(76, 29, 149, .25); transform: rotate(2deg);
+    }
+    .phone img { border-radius: 30px; }
+    .float {
+      position: absolute; background: var(--card); border-radius: 16px; box-shadow: var(--shadow);
+      padding: 12px 16px; font-size: 13px; color: var(--muted); line-height: 1.4;
+    }
+    .float strong { color: var(--ink); display: block; font-size: 14px; }
+    .float-match { top: 8px; left: 0; display: flex; align-items: center; gap: 12px; }
+    .ring {
+      width: 54px; height: 54px; border-radius: 50%; flex: none; display: grid; place-items: center;
+      background: conic-gradient(var(--pink-2) 0 100%); position: relative;
+      font-size: 11px; font-weight: 800; color: var(--pink); letter-spacing: -.03em;
+    }
+    .ring::before { content: ""; position: absolute; inset: 4px; border-radius: 50%; background: var(--card); }
+    .ring span { position: relative; }
+    .float-new { bottom: 16px; right: 0; display: flex; gap: 10px; align-items: center; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--pink); flex: none; }
+    .chips { position: absolute; right: -4px; top: 42%; display: grid; gap: 8px; }
+    .chip {
+      background: var(--card); border-radius: 999px; padding: 6px 14px 6px 12px; box-shadow: var(--shadow);
+      font-size: 13px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 8px;
+    }
+    .chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--purple); }
+
+    /* Números */
+    .stats { padding: 0; margin-top: -40px; position: relative; }
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+    .stat { background: var(--card); border-radius: var(--radius); padding: 28px 24px; box-shadow: var(--shadow); }
+    .stat b { display: block; font-size: 40px; line-height: 1.1; font-weight: 800; color: var(--pink); letter-spacing: -.02em; }
+    .stat:nth-child(even) b { color: var(--purple); }
+    .stat strong { display: block; color: var(--ink); margin-top: 8px; }
+    .stat small { display: block; color: var(--muted); font-size: 13px; line-height: 1.5; margin-top: 4px; }
+    .stats-note { text-align: right; color: var(--muted); font-size: 12px; margin: 12px 0 0; }
+
+    /* Como funciona */
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 48px; }
+    .card { background: var(--card); border-radius: var(--radius); padding: 32px; box-shadow: var(--shadow); }
+    .icon {
+      width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center;
+      background: var(--soft-pink); color: var(--pink);
+    }
+    .icon.violet { background: var(--soft-violet); color: var(--purple); }
+    .icon svg { width: 24px; height: 24px; }
+    .step { font-size: 12px; font-weight: 800; letter-spacing: .12em; color: var(--pink); margin: 20px 0 6px; }
+    .card h3 { font-size: 21px; margin: 0 0 12px; }
+    .card p { margin: 0; font-size: 15px; }
+    .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+    .tag { background: var(--soft-violet); color: var(--ink); border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 600; }
+    .card-link { display: inline-block; margin-top: 18px; font-size: 14px; font-weight: 700; color: var(--purple); text-decoration: none; }
+    .card .icon + h3 { margin-top: 20px; }
+    #como-funciona .card-link { color: var(--pink); }
+    /* Tags do perfil: instrumento, ramo de atuação e localização */
+    .tag { display: inline-flex; align-items: center; gap: 6px; }
+    .tag svg { width: 14px; height: 14px; color: var(--pink); flex: none; }
+
+    /* O que você vê ao abrir o app: celular + lista das telas */
+    .alt { background: var(--bg-2); }
+    .split-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 32px; }
+    .split-head p { max-width: 360px; margin: 0; color: var(--muted); }
+    .tour { display: grid; grid-template-columns: .85fr 1.15fr; gap: 56px; align-items: center; margin-top: 48px; }
+    .tour-phone { display: flex; justify-content: center; }
+    .tour .phone { transform: none; width: 290px; }
+    /* Carrossel: as telas deslizam dentro do celular */
+    .slides {
+      display: flex; overflow-x: auto; scroll-snap-type: x mandatory; border-radius: 30px;
+      scrollbar-width: none; overscroll-behavior-x: contain;
+    }
+    .slides::-webkit-scrollbar { display: none; }
+    .slides:focus-visible { outline: 3px solid var(--violet); outline-offset: 4px; }
+    .slides img { flex: 0 0 100%; width: 100%; scroll-snap-align: center; border-radius: 0; }
+    .tour-card { padding: 40px; }
+    .tour-card h3 { font-size: 28px; margin: 0 0 12px; }
+    .tour-card p { font-size: 17px; min-height: 5.1em; }
+    .tour-nav { display: flex; align-items: center; gap: 16px; margin-top: 28px; }
+    .arrow {
+      width: 48px; height: 48px; border-radius: 50%; border: 0; cursor: pointer; flex: none;
+      display: grid; place-items: center; background: var(--soft-pink); color: var(--pink);
+    }
+    .arrow:hover { background: #F8CFE2; }
+    .arrow svg { width: 22px; height: 22px; }
+    .arrow:focus-visible, .dots button:focus-visible { outline: 3px solid var(--violet); outline-offset: 3px; }
+    .dots { display: flex; gap: 8px; flex: 1; justify-content: center; }
+    .dots button { width: 10px; height: 10px; padding: 0; border: 0; border-radius: 999px; background: #E3DCF3; cursor: pointer; transition: width .2s, background .2s; }
+    .dots button[aria-current="true"] { width: 28px; background: var(--pink); }
+
+    /* Vídeo */
+    .video {
+      position: relative; display: grid; place-items: center; margin-top: 40px; min-height: 420px;
+      border-radius: 28px; overflow: hidden; text-decoration: none;
+      background: radial-gradient(700px 400px at 70% 30%, #5B2A86 0%, #1E1B2E 60%, #14121D 100%);
+      box-shadow: 0 30px 60px rgba(194, 24, 91, .18);
+    }
+    .video-phones { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; gap: 28px; opacity: .55; }
+    .video-phones img { width: 190px; border-radius: 22px; border: 6px solid #2B2838; }
+    .video-phones img:nth-child(2) { transform: translateY(-24px); }
+    .play {
+      position: relative; width: 88px; height: 88px; border-radius: 50%; display: grid; place-items: center;
+      background: linear-gradient(135deg, var(--pink), var(--pink-2)); box-shadow: 0 0 0 14px rgba(223, 40, 129, .25);
+      transition: transform .15s ease;
+    }
+    .video:hover .play { transform: scale(1.06); }
+    .play svg { width: 34px; height: 34px; color: #fff; margin-left: 4px; }
+    .video-bar {
+      position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; gap: 12px;
+      padding: 18px 24px; color: #fff; font-size: 14px; font-weight: 700;
+      background: linear-gradient(0deg, rgba(0, 0, 0, .55), transparent);
+    }
+    .pill { background: rgba(255, 255, 255, .16); border-radius: 999px; padding: 2px 10px; font-size: 12px; }
+
+    /* Feito com a SCAR */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 48px; }
+    .quote-card h3 { font-size: 19px; }
+    .who { display: flex; align-items: center; gap: 12px; margin-top: 20px; font-size: 13px; color: var(--muted); }
+    .who strong { color: var(--ink); display: block; font-size: 14px; }
+
+    /* Chamada para baixar */
+    .cta {
+      display: flex; justify-content: space-between; align-items: center; gap: 32px;
+      padding: 48px 56px; border-radius: 28px; color: #E5E7EB;
+      background: linear-gradient(110deg, #2A1F33 0%, #3B2A4F 55%, #8E44C9 100%);
+      box-shadow: 0 30px 60px rgba(76, 29, 149, .2);
+    }
+    .cta h2 { color: #fff; font-size: clamp(26px, 3.4vw, 36px); margin: 0 0 12px; }
+    .cta p { margin: 0; max-width: 520px; }
+    .cta .eyebrow { color: #F9A8D4; }
+
+    /* Desenvolvedores */
+    .dev { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 48px; align-items: start; }
+    .code {
+      background: var(--code); color: #E5E7EB; border-radius: 22px; overflow: hidden;
+      box-shadow: 0 20px 40px rgba(17, 24, 39, .25);
+    }
+    .code-bar { display: flex; align-items: center; gap: 8px; padding: 14px 18px; font: 600 12px ui-monospace, Consolas, monospace; color: #9CA3AF; white-space: nowrap; }
+    .code-bar i { width: 11px; height: 11px; border-radius: 50%; background: #EF4444; }
+    .code-bar i:nth-child(2) { background: #F9A8D4; }
+    .code-bar i:nth-child(3) { background: #FBCFE8; margin-right: 8px; }
+    .code-bar .ok { margin-left: auto; color: #F9A8D4; background: rgba(223, 40, 129, .2); border-radius: 6px; padding: 2px 8px; }
+    .code pre { margin: 0; padding: 4px 22px 24px; overflow-x: auto; font: 13px/1.7 ui-monospace, Consolas, monospace; }
+    .k { color: #F9A8D4; } .s { color: #FDE68A; } .n { color: #A5B4FC; } .c { color: #9CA3AF; }
+    .dev-list { display: grid; gap: 16px; }
+    .dev-item { display: flex; gap: 16px; align-items: flex-start; padding: 22px 24px; text-decoration: none; color: inherit; }
+    .dev-item:hover { box-shadow: 0 14px 34px rgba(76, 29, 149, .14); }
+    .dev-item h3 { font-size: 17px; margin: 0 0 4px; }
+    .dev-item p { font-size: 14px; color: var(--muted); }
+    .dev-item .icon { width: 40px; height: 40px; border-radius: 50%; flex: none; }
+    .dev-item .icon svg { width: 18px; height: 18px; }
+    .dev-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
+
+    /* Fontes */
+    .sources {
+      display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap;
+      background: var(--soft-violet); border-radius: var(--radius); padding: 22px 28px; margin-top: 56px;
+    }
+    .sources-title { display: flex; gap: 12px; align-items: center; }
+    .sources-title svg { width: 26px; height: 26px; color: var(--pink); flex: none; }
+    .sources-title strong { color: var(--ink); display: block; }
+    .sources-title small { color: var(--muted); }
+    .sources ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px; }
+    .sources a { display: block; background: #fff; border-radius: 999px; padding: 6px 16px; font-size: 14px; font-weight: 700; color: var(--ink); text-decoration: none; }
+    .sources a:hover { color: var(--pink); }
+
+    /* IA ética */
+    .ethics { display: grid; grid-template-columns: auto 1fr; gap: 40px; align-items: center; padding: 48px; position: relative; overflow: hidden; }
+    .ethics::after {
+      content: ""; position: absolute; right: -80px; bottom: -80px; width: 240px; height: 240px;
+      border-radius: 50%; background: var(--soft-pink); opacity: .7;
+    }
+    .ethics > * { position: relative; z-index: 1; }
+    .ethics .big-icon { width: 120px; height: 120px; border-radius: 28px; display: grid; place-items: center; background: #F3E3FA; color: var(--purple); }
+    .ethics .big-icon svg { width: 52px; height: 52px; }
+    .ethics h2 { font-size: clamp(26px, 3.2vw, 34px); margin: 12px 0; }
+    .ethics p { margin: 0 0 12px; }
+    .ethics .badge { text-transform: uppercase; }
+    .ethics .badge::before { display: none; }
+    .ethics .tags .tag { display: inline-flex; gap: 6px; align-items: center; }
+    .ethics .tags svg { width: 14px; height: 14px; color: var(--pink); }
+
+    /* Perguntas frequentes */
+    .faq { max-width: 860px; margin: 48px auto 0; }
+    .faq-list { display: grid; gap: 14px; }
+    details { background: var(--card); border-radius: 16px; box-shadow: var(--shadow); padding: 0 24px; }
+    summary {
+      list-style: none; cursor: pointer; padding: 20px 0; font-weight: 700; color: var(--ink);
+      display: flex; justify-content: space-between; gap: 16px; align-items: center;
+    }
+    summary::-webkit-details-marker { display: none; }
+    summary::after { content: ""; width: 9px; height: 9px; border-right: 2px solid var(--pink); border-bottom: 2px solid var(--pink); transform: rotate(45deg); transition: transform .2s; flex: none; margin-top: -4px; }
+    details[open] summary::after { transform: rotate(-135deg); margin-top: 4px; }
+    details > div { padding: 0 0 20px; font-size: 15px; }
+    details p { margin: 0 0 10px; }
+    details h4 { color: var(--ink); margin: 14px 0 4px; font-size: 15px; }
+    details ol { margin: 0 0 8px; padding-left: 22px; }
+    /* Contato: faixa abaixo das perguntas */
+    .contact { display: flex; align-items: center; gap: 24px; margin-top: 24px; }
+    .contact h3 { font-size: 20px; margin: 0 0 4px; }
+    .contact p { margin: 0; font-size: 15px; }
+    .contact > div:nth-child(2) { flex: 1; }
+    .contact-action { text-align: center; flex: none; }
+    .contact small { display: block; margin-top: 8px; font-weight: 700; color: var(--muted); }
+
+    /* Rodapé */
+    footer { background: #fff; border-top: 1px solid var(--line); padding: 64px 0 32px; font-size: 14px; }
+    .foot { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1.2fr; gap: 40px; }
+    .foot img { width: 150px; margin-bottom: 14px; }
+    .foot p { margin: 0; color: var(--muted); }
+    .foot h4 { color: var(--ink); font-size: 13px; letter-spacing: .1em; text-transform: uppercase; margin: 0 0 14px; }
+    .foot ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+    .foot a { color: var(--body); text-decoration: none; }
+    .foot a:hover { color: var(--pink); }
+    .foot .btn { margin-top: 14px; }
+    .foot .btn-soft { color: var(--ink); }
+    .legal { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+    .legal nav { display: flex; gap: 20px; }
+    .legal a { color: var(--body); font-weight: 600; }
+
+    /* Tablet */
+    @media (max-width: 1024px) {
+      .menu { gap: 18px; }
+      .menu a { font-size: 14px; }
+      .hero .wrap { grid-template-columns: 1fr; text-align: center; }
+      .hero p.intro { margin-left: auto; margin-right: auto; }
+      .hero-actions, .hero-meta { justify-content: center; }
+      .showcase { max-width: 460px; margin: 0 auto; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .stats { margin-top: 0; }
+      .grid-3 { grid-template-columns: 1fr; max-width: 640px; margin-left: auto; margin-right: auto; }
+      .dev { grid-template-columns: 1fr; }
+      .tour { grid-template-columns: 1fr; gap: 32px; max-width: 640px; margin-left: auto; margin-right: auto; }
+      .tour-card { order: -1; } /* empilhado: a descrição vem antes do celular */
+      .foot { grid-template-columns: 1fr 1fr; }
+    }
+    /* Menu: vira um botão que abre a lista de seções */
+    @media (max-width: 860px) {
+      .menu { display: none; }
+      .top .btn { margin-left: auto; }
+      .menu-toggle { display: grid; }
+      .top.open .menu {
+        display: flex; flex-direction: column; gap: 0; position: absolute; top: 100%; left: 0; right: 0;
+        background: #fff; padding: 4px 24px 16px; border-bottom: 1px solid var(--line);
+        box-shadow: 0 16px 30px rgba(76, 29, 149, .12);
+      }
+      .top.open .menu a { padding: 14px 0; font-size: 16px; border-bottom: 1px solid var(--line); }
+      .top.open .menu a:last-child { border-bottom: 0; }
+    }
+    /* Celular */
+    @media (max-width: 640px) {
+      .wrap { padding: 0 16px; }
+      section { padding: 64px 0; }
+      .brand img { width: 120px; }
+      .top .btn { padding: 10px 16px; }
+      .hero { padding: 40px 0 64px; }
+      .hero p.intro { font-size: 16px; }
+      .hero-actions .btn { width: 100%; }
+      .phone { width: 230px; border-radius: 32px; padding: 8px; }
+      .phone img { border-radius: 24px; }
+      .badge { font-size: 10px; letter-spacing: .04em; padding: 6px 12px; text-align: center; }
+      .float { font-size: 12px; padding: 10px 12px; }
+      .float strong { font-size: 13px; }
+      .code-bar .ok { display: none; }
+      .code pre { font-size: 12px; padding: 4px 16px 20px; }
+      .float-match { left: -4px; top: 0; }
+      .float-new { right: -4px; bottom: 8px; }
+      .chips { right: -8px; }
+      .chip { font-size: 12px; padding: 5px 10px; }
+      .stats-grid { gap: 12px; }
+      .stat { padding: 20px 16px; }
+      .stat b { font-size: 30px; }
+      .stats-note { text-align: center; }
+      .card { padding: 24px; }
+      .split-head { flex-direction: column; align-items: flex-start; }
+      .video { min-height: 300px; border-radius: 22px; }
+      .video-phones img { width: 120px; border-width: 4px; border-radius: 16px; }
+      .video-phones img:nth-child(3) { display: none; }
+      .video-bar { flex-direction: column; gap: 6px; padding: 14px 18px; }
+      .grid-2 { grid-template-columns: 1fr; }
+      .cta { flex-direction: column; align-items: stretch; text-align: left; padding: 32px 24px; }
+      .ethics { grid-template-columns: 1fr; padding: 32px 24px; gap: 20px; }
+      .ethics .big-icon { width: 80px; height: 80px; border-radius: 20px; }
+      .ethics .big-icon svg { width: 36px; height: 36px; }
+      .sources { padding: 20px; }
+      details { padding: 0 18px; }
+      .tour .phone { width: 230px; }
+      .slides { border-radius: 24px; }
+      .tour-card { padding: 24px; }
+      .tour-card h3 { font-size: 22px; }
+      .tour-card p { font-size: 15px; min-height: 6.4em; }
+      .top .wrap { gap: 12px; }
+      .top.open .menu { padding: 4px 16px 12px; }
+      /* Cartões viram carrossel: desliza de lado, com o próximo aparecendo na borda */
+      .swipe {
+        display: grid; grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 86%;
+        gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none;
+        max-width: none; margin: 32px -16px 0; padding: 4px 16px 20px; scroll-padding: 0 16px;
+      }
+      .swipe::-webkit-scrollbar { display: none; }
+      .swipe > * { scroll-snap-align: start; }
+      .swipe-dots { display: flex; justify-content: center; gap: 8px; margin-top: 4px; }
+      .swipe-dots button { width: 8px; height: 8px; padding: 0; border: 0; border-radius: 999px; background: #E3DCF3; cursor: pointer; transition: width .2s, background .2s; }
+      .swipe-dots button[aria-current="true"] { width: 22px; background: var(--pink); }
+      .contact { flex-direction: column; align-items: flex-start; }
+      .contact-action { width: 100%; }
+      .contact-action .btn { width: 100%; }
+      .foot { grid-template-columns: 1fr; gap: 28px; }
+      .legal { flex-direction: column; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .btn, .play { transition: none; }
+    }
   </style>
 </head>
 <body>
-  <main>
-    <header>
-      <h1><img src="/logo-extended.png" alt="MusiConnect"></h1>
-      <p class="tagline">Audições, cursos, competições e empregos para musicistas — e as instituições musicais perto de você, no mapa.</p>
-    </header>
+  <header class="top">
+    <div class="wrap">
+      <a class="brand" href="#inicio" aria-label="MusiConnect, início"><img src="/logo-extended.png" alt="MusiConnect" width="150" height="37"></a>
+      <nav class="menu" id="menu" aria-label="Seções">
+        <a href="#como-funciona">Como funciona</a>
+        <a href="#telas">Telas e recursos</a>
+        <a href="#video">Vídeo</a>
+        <a href="#desenvolvedores">Sobre desenvolvimento</a>
+        <a href="#faq">Dúvidas</a>
+      </nav>
+      <a class="btn btn-primary btn-small" href="https://github.com/DevLuchez/prototipo-musiconnect/releases/latest/download/musiconnect.apk">Baixar app</a>
+      <button class="menu-toggle" type="button" aria-controls="menu" aria-expanded="false" aria-label="Abrir o menu">
+        <svg class="open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        <svg class="close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+  </header>
 
-    <a class="download" href="https://github.com/DevLuchez/prototipo-musiconnect/releases/latest/download/musiconnect.apk">Baixar para Android</a>
-    <p class="note">Por enquanto, disponível só para Android.</p>
+  <main id="inicio">
+    <section class="hero">
+      <div class="wrap">
+        <div>
+          <span class="badge">Conectando músicos a oportunidades no mundo todo</span>
+          <h1>Encontre oportunidades profissionais e educacionais <em>sob medida</em> para você.</h1>
+          <p class="intro">O MusiConnect reúne centenas de audições, competições, cursos e vagas de emprego do mundo todo, interpretadas por inteligência artificial, e mostra o quanto cada uma combina com os seus instrumentos, o seu ramo de atuação e a sua localização.</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="https://github.com/DevLuchez/prototipo-musiconnect/releases/latest/download/musiconnect.apk">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+              Instalar aplicativo
+            </a>
+            <a class="btn btn-soft" href="https://youtu.be/NZR6LDNfiSg" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 8.5l5 3.5-5 3.5z" fill="currentColor"/></svg>
+              Ver demonstração em vídeo
+            </a>
+          </div>
+          <div class="hero-meta">
+            <a href="#desenvolvedores">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 9l-4 3 4 3M16 9l4 3-4 3M14 5l-4 14"/></svg>
+              Código aberto e API documentada
+            </a>
+            <span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>
+              Grátis · Android 6 ou superior · cerca de 56 MB
+            </span>
+          </div>
+        </div>
 
-    <section>
-      <h2>Como instalar</h2>
-      <ol>
-        <li>Toque em <strong>Baixar para Android</strong> e abra o arquivo baixado.</li>
-        <li>Se o celular pedir, permita instalar apps desta fonte (o navegador ou o app de arquivos). Isso acontece com apps baixados fora da loja.</li>
-        <li>Toque em <strong>Instalar</strong> e abra o MusiConnect.</li>
-      </ol>
+        <div class="showcase" aria-hidden="true">
+          <div class="phone"><img src="/img/app-matcher.webp" alt="" width="540" height="1040"></div>
+          <div class="float float-match">
+            <div class="ring"><span>100%</span></div>
+            <div><strong>Curso de Canto na SCAR</strong>100% de match · Jaraguá do Sul</div>
+          </div>
+          <div class="chips">
+            <span class="chip">Piano</span>
+            <span class="chip">Violino</span>
+            <span class="chip">Vocal</span>
+          </div>
+          <div class="float float-new">
+            <span class="dot"></span>
+            <div><strong>Coleta diária</strong>5 fontes especializadas</div>
+          </div>
+        </div>
+      </div>
     </section>
 
-    <section>
-      <h2>O que o app faz</h2>
-      <ul>
-        <li>Mostra oportunidades abertas e o quanto cada uma combina com o seu perfil (match).</li>
-        <li>Mapa com escolas de música, teatros, salas de concerto e outras instituições.</li>
-        <li>Salve oportunidades e instituições favoritas e acompanhe os prazos.</li>
-      </ul>
+    <section class="stats" aria-label="Números do MusiConnect">
+      <div class="wrap">
+        <div class="stats-grid">
+          <div class="stat"><b>+ 441</b><strong>Oportunidades abertas</strong><small>Audições, competições, cursos e vagas de emprego</small></div>
+          <div class="stat"><b>+ 82 mil</b><strong>Instituições no mapa</strong><small>Escolas de música, teatros, salas de concerto e mais</small></div>
+          <div class="stat"><b>38</b><strong>Países</strong><small>Oportunidades em 209 cidades, inclusive no Brasil</small></div>
+          <div class="stat"><b>643</b><strong>Testes automatizados</strong><small>Cobertura de 99,8% na API e de 89,4% no app</small></div>
+        </div>
+        <p class="stats-note">Dados de 16/11/2026. As oportunidades são atualizadas todos os dias.</p>
+      </div>
+    </section>
+
+    <section id="como-funciona">
+      <div class="wrap center">
+        <span class="eyebrow">Como funciona</span>
+        <h2 class="section-title">Como o MusiConnect te oferece as melhores oportunidades</h2>
+        <p class="lead">Feito para a rotina de quem estuda e vive de música: menos tempo procurando editais, mais tempo tocando.</p>
+      </div>
+      <div class="wrap">
+        <div class="grid-3 swipe" aria-label="Como funciona (deslize para ver os passos)">
+          <article class="card">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="3"/><circle cx="12" cy="10" r="3"/><path d="M7.5 17c1-2 2.6-3 4.5-3s3.5 1 4.5 3"/></svg></div>
+            <h3>1. Cadastre seu perfil e instrumentos</h3>
+            <p>Escolha os instrumentos que você toca (quantos quiser), o seu ramo de atuação — estudante ou profissional — e a sua localização. Sem currículo: o perfil fica pronto em poucos toques.</p>
+            <div class="tags">
+              <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>Piano</span>
+              <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c3 2 9 2 12 0v-5"/></svg>Estudante</span>
+              <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>Brasil</span>
+            </div>
+          </article>
+          <article class="card">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.6L18 9.4l-4.2 1.8L12 16l-1.8-4.8L6 9.4l4.2-1.8z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg></div>
+            <h3>2. Deixe que a IA leia editais por você</h3>
+            <p>Todos os dias, o MusiConnect coleta editais de cinco fontes especializadas. A inteligência artificial lê cada um, traduz para o português e identifica o tipo, os instrumentos, o local e o prazo.</p>
+            <a class="card-link" href="#faq-match">Como o match é calculado →</a>
+          </article>
+          <article class="card">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l16-8-6 16-2.5-6.5z"/></svg></div>
+            <h3>3. Obtenha oportunidades que combinam com você</h3>
+            <p>Veja o match de cada oportunidade, salve as que interessam e receba avisos quando o prazo estiver acabando. O botão “Saiba mais” leva direto ao edital oficial, para você fazer a inscrição.</p>
+            <a class="card-link" href="#etica">Link oficial em toda oportunidade →</a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="telas" class="alt">
+      <div class="wrap">
+        <div class="split-head">
+          <div>
+            <span class="eyebrow">Telas e recursos</span>
+            <h2 class="section-title">O que você vê ao abrir o app</h2>
+          </div>
+          <p>Tudo em português, com foco no que decide uma inscrição: o tipo, os instrumentos, o local e o prazo.</p>
+        </div>
+        <div class="tour">
+          <div class="tour-phone">
+            <div class="phone">
+              <div class="slides" id="slides" tabindex="0" role="region" aria-roledescription="carrossel" aria-label="Telas do app (deslize para ver as outras)">
+                <img src="/img/app-inicio.webp" width="540" height="1040" alt="Tela Início do MusiConnect" data-title="Início" data-desc="O seu melhor match do dia, as oportunidades abertas por tipo e os favoritos que fecham nos próximos 7 dias.">
+                <img src="/img/app-matcher.webp" width="540" height="1040" loading="lazy" alt="Tela Matcher do MusiConnect" data-title="Matcher" data-desc="Todas as oportunidades com o percentual de match, separadas por tipo, com busca e filtros por instrumento e local.">
+                <img src="/img/app-edital.webp" width="540" height="1040" loading="lazy" alt="Detalhe de uma oportunidade, aba Sobre o edital" data-title="Sobre o edital" data-desc="O essencial do edital em português — descrição, instrumentos, tipo, prazo e local — e o botão “Saiba mais” para a fonte oficial.">
+                <img src="/img/app-match.webp" width="540" height="1040" loading="lazy" alt="Detalhe de uma oportunidade, aba Matcher com o match explicado" data-title="Match explicado" data-desc="De onde vem o percentual: instrumentos, tipo de oportunidade, localização e confiança da leitura do edital pela IA.">
+                <img src="/img/app-mapa.webp" width="540" height="1040" loading="lazy" alt="Tela Mapa do MusiConnect" data-title="Mapa" data-desc="Mais de 82 mil instituições musicais — escolas, teatros, salas de concerto — e as oportunidades abertas perto de você.">
+              </div>
+            </div>
+          </div>
+          <div class="card tour-card">
+            <span class="eyebrow" id="tour-count">Tela 1 de 5</span>
+            <div aria-live="polite">
+              <h3 id="tour-title">Início</h3>
+              <p id="tour-desc">O seu melhor match do dia, as oportunidades abertas por tipo e os favoritos que fecham nos próximos 7 dias.</p>
+            </div>
+            <div class="tour-nav">
+              <button class="arrow" type="button" id="tour-prev" aria-label="Tela anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+              <div class="dots" id="tour-dots"></div>
+              <button class="arrow" type="button" id="tour-next" aria-label="Próxima tela"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="video">
+      <div class="wrap center">
+        <span class="eyebrow">Vídeo de demonstração</span>
+        <h2 class="section-title">Veja o MusiConnect em ação</h2>
+        <p class="lead">Um tour completo pelo app: cadastro, match, mapa, favoritos e notificações, com capítulos para ir direto ao que interessa.</p>
+        <a class="video" href="https://youtu.be/NZR6LDNfiSg" target="_blank" rel="noopener" aria-label="Assistir à demonstração do MusiConnect no YouTube (11 minutos)">
+          <div class="video-phones" aria-hidden="true">
+            <img src="/img/app-inicio.webp" alt="" width="540" height="1040" loading="lazy">
+            <img src="/img/app-match.webp" alt="" width="540" height="1040" loading="lazy">
+            <img src="/img/app-mapa.webp" alt="" width="540" height="1040" loading="lazy">
+          </div>
+          <span class="play"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg></span>
+          <span class="video-bar"><span>Demonstração do aplicativo (11 min)</span><span><span class="pill">14 capítulos</span> <span class="pill">YouTube</span></span></span>
+        </a>
+      </div>
+    </section>
+
+    <section class="alt" aria-labelledby="scar">
+      <div class="wrap center">
+        <span class="eyebrow">Feito com quem vive a música</span>
+        <h2 class="section-title" id="scar">Construído com a SCAR</h2>
+        <p class="lead">O MusiConnect nasceu de uma necessidade real da <a href="https://scar.art.br" target="_blank" rel="noopener">Sociedade Cultura Artística (SCAR)</a>, de Jaraguá do Sul: ajudar os seus alunos a encontrar oportunidades para seguir na música.</p>
+      </div>
+      <div class="wrap">
+        <div class="grid-2 swipe" aria-label="Construído com a SCAR (deslize para ver mais)">
+          <article class="card quote-card">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V6l10-2v12"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg></div>
+            <h3>O problema</h3>
+            <p>Os editais ficam espalhados em dezenas de sites, muitas vezes em outros idiomas. Procurar um a um toma tempo, e muitos estudantes acabam desistindo antes de encontrar a oportunidade certa.</p>
+            <div class="who"><div><strong>Pesquisa com a SCAR</strong>Reuniões e entrevistas com o coordenador de música</div></div>
+          </article>
+          <article class="card quote-card">
+            <div class="icon violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></div>
+            <h3>O que veio da validação</h3>
+            <p>A validação com o coordenador trouxe o tutorial de primeiro uso e o modo visitante, para conhecer o app sem criar conta. Os cursos regulares da SCAR também aparecem no app.</p>
+            <div class="who"><div><strong>Validação com o cliente</strong>Sociedade Cultura Artística, Jaraguá do Sul (SC)</div></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section aria-label="Baixar o aplicativo">
+      <div class="wrap">
+        <div class="cta">
+          <div>
+            <span class="eyebrow">Leve seus ensaios além</span>
+            <h2>Pronto para encontrar sua próxima audição ou festival?</h2>
+            <p>Baixe o MusiConnect gratuitamente para Android e receba avisos diários das novas oportunidades que combinam com você e dos prazos dos seus favoritos.</p>
+          </div>
+          <a class="btn btn-primary" href="https://github.com/DevLuchez/prototipo-musiconnect/releases/latest/download/musiconnect.apk">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+            Instalar MusiConnect
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section id="desenvolvedores" class="alt">
+      <div class="wrap">
+        <div class="split-head">
+          <div>
+            <span class="eyebrow">Sobre desenvolvimento</span>
+            <h2 class="section-title">Explore nosso software de perto</h2>
+          </div>
+          <p>Código aberto e API REST documentada: o mesmo que o app usa para buscar as oportunidades.</p>
+        </div>
+        <div class="dev">
+          <div class="code" role="img" aria-label="Exemplo de resposta da API do MusiConnect para uma oportunidade">
+            <div class="code-bar"><i></i><i></i><i></i>GET /api/opportunities/1615<span class="ok">HTTP 200 OK</span></div>
+<pre>{
+  <span class="k">"id"</span>: <span class="n">1615</span>,
+  <span class="k">"title"</span>: <span class="s">"Concurso de Violino, Violoncelo e…"</span>,
+  <span class="k">"type"</span>: <span class="s">"competicao"</span>,
+  <span class="k">"instruments"</span>: [<span class="s">"Violino"</span>, <span class="s">"Violoncelo"</span>],
+  <span class="k">"city"</span>: <span class="s">"Harbin"</span>,
+  <span class="k">"country"</span>: <span class="s">"China"</span>,
+  <span class="k">"deadline"</span>: <span class="s">"2027-02-01"</span>,
+  <span class="k">"source_name"</span>: <span class="s">"WFIMC"</span>,
+  <span class="k">"llm_confidence"</span>: <span class="n">1.0</span>,
+  <span class="k">"match_percentage"</span>: <span class="n">null</span>,  <span class="c">// preenchido com login</span>
+  …
+}</pre>
+          </div>
+          <div class="dev-list">
+            <a class="card dev-item" href="https://github.com/DevLuchez/prototipo-musiconnect" target="_blank" rel="noopener">
+              <span class="icon violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 9l-4 3 4 3M16 9l4 3-4 3"/></svg></span>
+              <div><h3>Repositório aberto no GitHub</h3><p>Código do app (Flutter) e da API (FastAPI), coletores das fontes, testes e pipeline de CI/CD.</p></div>
+            </a>
+            <a class="card dev-item" href="https://github.com/DevLuchez/prototipo-musiconnect#readme" target="_blank" rel="noopener">
+              <span class="icon violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h8M8 17h5"/></svg></span>
+              <div><h3>Documentação do projeto</h3><p>Requisitos funcionais e não funcionais, arquitetura de software, modelagem de dados, casos de uso e outros tópicos.</p></div>
+            </a>
+            <a class="card dev-item" href="https://api.musiconnect.app.br/docs" target="_blank" rel="noopener">
+              <span class="icon violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg></span>
+              <div><h3>Documentação OpenAPI e Swagger</h3><p>Todas as rotas da API, com exemplos e teste direto no navegador.</p></div>
+            </a>
+            <div class="dev-actions">
+              <a class="btn btn-dark" href="https://github.com/DevLuchez/prototipo-musiconnect" target="_blank" rel="noopener">Acessar o GitHub</a>
+              <a class="btn btn-soft btn-small" href="https://api.musiconnect.app.br/docs" target="_blank" rel="noopener">Explorar a documentação da API</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="sources">
+          <div class="sources-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>
+            <div><strong>Fontes especializadas, consultadas todos os dias</strong><small>Editais de sites oficiais e de referência na música</small></div>
+          </div>
+          <ul>
+            <li><a href="https://www.musicalchairs.info" target="_blank" rel="noopener">Musical Chairs</a></li>
+            <li><a href="https://www.wfimc.org" target="_blank" rel="noopener">WFIMC</a></li>
+            <li><a href="https://www.concerto.com.br" target="_blank" rel="noopener">Revista CONCERTO</a></li>
+            <li><a href="https://femusc.com.br" target="_blank" rel="noopener">FEMUSC</a></li>
+            <li><a href="https://scar.art.br" target="_blank" rel="noopener">SCAR</a></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="etica">
+      <div class="wrap">
+        <div class="card ethics">
+          <div class="big-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M5 7h14M7 7l-3 7a3 3 0 0 0 6 0zM17 7l-3 7a3 3 0 0 0 6 0z"/></svg></div>
+          <div>
+            <span class="badge">Transparência e respeito às fontes</span>
+            <h2>IA transparente, dados verificáveis e respeito aos editais</h2>
+            <p>O MusiConnect ajuda a encontrar oportunidades, mas <strong>não substitui o edital oficial</strong>: toda oportunidade tem o link da fonte original, e só aparecem no app as que a inteligência artificial interpretou com pelo menos 80% de confiança. Ainda assim, ela pode errar — confira sempre o edital antes de se inscrever.</p>
+            <p>Seus dados não são vendidos nem usados para publicidade. Saiba mais na <a href="/privacidade">Política de privacidade</a>.</p>
+            <div class="tags">
+              <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 6 .5l3-3a4 4 0 0 0-5.7-5.7l-1.5 1.5M14 10a4 4 0 0 0-6-.5l-3 3a4 4 0 0 0 5.7 5.7l1.5-1.5"/></svg>Link oficial em toda oportunidade</span>
+              <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>Confiança mínima de 80%</span>
+              <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>Sem publicidade</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="faq" class="alt">
+      <div class="wrap center">
+        <span class="eyebrow">Tire suas dúvidas</span>
+        <h2 class="section-title">Perguntas frequentes</h2>
+        <p class="lead">Como o app funciona, como o match é calculado e o que fazer se a instalação não der certo.</p>
+      </div>
+      <div class="wrap">
+        <div class="faq">
+          <div class="faq-list">
+            <details open>
+              <summary>O MusiConnect é gratuito?</summary>
+              <div><p>Sim. O aplicativo é gratuito para estudantes e profissionais da música, sem anúncios e sem compras dentro do app.</p></div>
+            </details>
+            <details>
+              <summary>Como o match é calculado?</summary>
+              <div id="faq-match">
+                <p>O match soma quatro fatores: os <strong>instrumentos</strong> do seu perfil e os do edital (45%), o seu <strong>ramo de atuação</strong> e o tipo de oportunidade (20%), a <strong>localização</strong> (20%) e a <strong>confiança</strong> da leitura do edital pela IA (15%).</p>
+                <p>O detalhamento aparece na aba Matcher de cada oportunidade. Oportunidades com match a partir de 85% entram em “Minhas oportunidades” e podem gerar notificações.</p>
+              </div>
+            </details>
+            <details>
+              <summary>Posso cadastrar mais de um instrumento?</summary>
+              <div><p>Pode. Escolha quantos quiser, entre instrumentos de cordas, sopros, percussão e teclados, vozes, regência e composição. O match considera todos eles.</p></div>
+            </details>
+            <details>
+              <summary>Preciso criar uma conta?</summary>
+              <div><p>Não para começar: no modo visitante, você explora as oportunidades e o mapa sem cadastro. Com a conta, você libera o match, os favoritos e as notificações.</p></div>
+            </details>
+            <details>
+              <summary>Encontrei uma informação errada em uma oportunidade. E agora?</summary>
+              <div><p>As informações são extraídas por inteligência artificial e podem conter erros. Confira sempre o edital oficial pelo botão “Saiba mais” e, se quiser avisar, escreva para <a href="mailto:laura.luchez@gmail.com?subject=Informa%C3%A7%C3%A3o%20errada%20em%20uma%20oportunidade">laura.luchez@gmail.com</a>. As oportunidades são conferidas de novo todos os dias, e as que saem da fonte saem do app.</p></div>
+            </details>
+            <details>
+              <summary>Não consegui instalar. O que faço?</summary>
+              <div>
+                <p>Alguns celulares bloqueiam apps baixados fora da loja. Você pode liberar a instalação e religar a proteção depois — o app continua funcionando. Os nomes podem mudar um pouco conforme o modelo.</p>
+                <h4>Samsung</h4>
+                <ol>
+                  <li>Abra <strong>Configurações › Segurança e privacidade › Bloqueador automático</strong>.</li>
+                  <li>Desligue o <strong>Bloqueador automático</strong>, instale o MusiConnect e, se quiser, ligue de novo.</li>
+                </ol>
+                <h4>Xiaomi, Redmi e Poco</h4>
+                <ol>
+                  <li>Na tela de instalação, toque no ícone de <strong>configurações</strong> (engrenagem, no alto).</li>
+                  <li>Desligue o <strong>Modo de segurança</strong> e confirme. O celular pode pedir a conta Xiaomi e um tempo de espera.</li>
+                  <li>Abra o arquivo baixado de novo e toque em <strong>Instalar</strong>.</li>
+                </ol>
+                <h4>Outros celulares</h4>
+                <p>Se o celular pedir, permita instalar apps da fonte (o navegador ou o app de arquivos). Se aparecer um aviso do Google Play Protect, toque em <strong>Mais detalhes › Instalar mesmo assim</strong>.</p>
+              </div>
+            </details>
+            <details>
+              <summary>Tem versão para iPhone?</summary>
+              <div><p>Por enquanto, o MusiConnect está disponível só para Android (6 ou superior). A publicação no Google Play está em andamento.</p></div>
+            </details>
+          </div>
+
+          <aside class="card contact">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13v-1a8 8 0 0 1 16 0v1"/><rect x="3" y="13" width="4" height="6" rx="2"/><rect x="17" y="13" width="4" height="6" rx="2"/></svg></div>
+            <div>
+              <h3>Ainda tem dúvidas? Fale conosco</h3>
+              <p>O MusiConnect é desenvolvido e mantido por Laura Heloísa Luchez, que responde pessoalmente à dúvidas, sugestões de melhoria ou problemas funcionais.</p>
+            </div>
+            <div class="contact-action">
+              <a class="btn btn-primary" href="mailto:laura.luchez@gmail.com?subject=MusiConnect">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+                Fale conosco
+              </a>
+              <small>laura.luchez@gmail.com</small>
+            </div>
+          </aside>
+        </div>
+      </div>
     </section>
   </main>
 
   <footer>
-    Trabalho de Conclusão de Curso de Engenharia de Software — Católica SC.<br>
-    <a href="/privacidade">Política de privacidade</a> · <a href="https://github.com/DevLuchez/prototipo-musiconnect">Código no GitHub</a>
+    <div class="wrap">
+      <div class="foot">
+        <div>
+          <img src="/logo-extended.png" alt="MusiConnect" width="150" height="37" loading="lazy">
+          <p>Conectando músicos a oportunidades do mundo todo. Trabalho de Conclusão de Curso (TCC) de Engenharia de Software do Centro Universitário Católica de Santa Catarina.</p>
+        </div>
+        <div>
+          <h4>Plataforma</h4>
+          <ul>
+            <li><a href="#como-funciona">Como funciona</a></li>
+            <li><a href="#telas">Telas e recursos</a></li>
+            <li><a href="#video">Vídeo de demonstração</a></li>
+            <li><a href="#faq">Perguntas frequentes</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Projeto</h4>
+          <ul>
+            <li><a href="https://github.com/DevLuchez/prototipo-musiconnect" target="_blank" rel="noopener">Código no GitHub</a></li>
+            <li><a href="https://github.com/DevLuchez/prototipo-musiconnect#readme" target="_blank" rel="noopener">Documentação do projeto</a></li>
+            <li><a href="https://api.musiconnect.app.br/docs" target="_blank" rel="noopener">Documentação da API</a></li>
+            <li><a href="mailto:laura.luchez@gmail.com?subject=MusiConnect">Contato</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Aplicativo</h4>
+          <p>Disponível para Android 6 ou superior. Grátis, sem anúncios.</p>
+          <a class="btn btn-soft btn-small" href="https://github.com/DevLuchez/prototipo-musiconnect/releases/latest/download/musiconnect.apk">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+            Baixar o MusiConnect
+          </a>
+        </div>
+      </div>
+      <div class="legal">
+        <span>© 2026 Laura Heloísa Luchez · TCC de Engenharia de Software</span>
+        <nav aria-label="Documentos"><a href="/privacidade">Política de privacidade</a></nav>
+      </div>
+    </div>
   </footer>
+  <script>
+    // Carrossel das telas do app: setas, bolinhas e deslizar; o cartão mostra a tela atual.
+    (function () {
+      var track = document.getElementById("slides");
+      var slides = track.querySelectorAll("img");
+      var dots = document.getElementById("tour-dots");
+      var count = document.getElementById("tour-count");
+      var title = document.getElementById("tour-title");
+      var desc = document.getElementById("tour-desc");
+      var current = 0;
+
+      slides.forEach(function (slide, i) {
+        var dot = document.createElement("button");
+        dot.type = "button";
+        dot.setAttribute("aria-label", "Ir para a tela " + (i + 1) + ": " + slide.dataset.title);
+        dot.addEventListener("click", function () { go(i); });
+        dots.appendChild(dot);
+      });
+
+      function show(i) {
+        current = i;
+        count.textContent = "Tela " + (i + 1) + " de " + slides.length;
+        title.textContent = slides[i].dataset.title;
+        desc.textContent = slides[i].dataset.desc;
+        dots.querySelectorAll("button").forEach(function (d, j) {
+          d.setAttribute("aria-current", j === i ? "true" : "false");
+        });
+      }
+
+      function go(i) {
+        i = (i + slides.length) % slides.length;
+        track.scrollTo({ left: i * track.clientWidth, behavior: "smooth" });
+        show(i);
+      }
+
+      document.getElementById("tour-prev").addEventListener("click", function () { go(current - 1); });
+      document.getElementById("tour-next").addEventListener("click", function () { go(current + 1); });
+      track.addEventListener("keydown", function (e) {
+        if (e.key === "ArrowRight") { e.preventDefault(); go(current + 1); }
+        if (e.key === "ArrowLeft") { e.preventDefault(); go(current - 1); }
+      });
+
+      // Ao deslizar com o dedo, o cartão acompanha a tela que ficou visível.
+      var timer;
+      track.addEventListener("scroll", function () {
+        clearTimeout(timer);
+        timer = setTimeout(function () {
+          var i = Math.round(track.scrollLeft / track.clientWidth);
+          if (i !== current) show(i);
+        }, 80);
+      });
+
+      show(0);
+    })();
+
+    // Menu do celular: abre e fecha a lista de seções.
+    (function () {
+      var header = document.querySelector("header.top");
+      var toggle = header.querySelector(".menu-toggle");
+      function setOpen(open) {
+        header.classList.toggle("open", open);
+        toggle.setAttribute("aria-expanded", String(open));
+        toggle.setAttribute("aria-label", open ? "Fechar o menu" : "Abrir o menu");
+      }
+      toggle.addEventListener("click", function () { setOpen(!header.classList.contains("open")); });
+      header.querySelectorAll(".menu a").forEach(function (a) {
+        a.addEventListener("click", function () { setOpen(false); });
+      });
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && header.classList.contains("open")) { setOpen(false); toggle.focus(); }
+      });
+    })();
+
+    // Carrosséis de cartões no celular: bolinhas que mostram e levam ao cartão.
+    document.querySelectorAll(".swipe").forEach(function (track) {
+      var cards = Array.prototype.slice.call(track.children);
+      var dots = document.createElement("div");
+      dots.className = "swipe-dots";
+      cards.forEach(function (card, i) {
+        var dot = document.createElement("button");
+        dot.type = "button";
+        dot.setAttribute("aria-label", "Ir para o cartão " + (i + 1) + " de " + cards.length);
+        dot.addEventListener("click", function () {
+          track.scrollTo({ left: card.offsetLeft - cards[0].offsetLeft, behavior: "smooth" });
+        });
+        dots.appendChild(dot);
+      });
+      track.after(dots);
+      function update() {
+        var step = cards.length > 1 ? cards[1].offsetLeft - cards[0].offsetLeft : 1;
+        var i = Math.min(cards.length - 1, Math.round(track.scrollLeft / step));
+        dots.querySelectorAll("button").forEach(function (d, j) {
+          d.setAttribute("aria-current", j === i ? "true" : "false");
+        });
+      }
+      track.addEventListener("scroll", update, { passive: true });
+      update();
+    });
+  </script>
 </body>
 </html>
