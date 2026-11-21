@@ -3,17 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MusiConnect — oportunidades para músicos</title>
-  <meta name="description" content="Encontre audições, competições, cursos e empregos para músicos, com o match de cada oportunidade com o seu perfil, e as instituições musicais no mapa. Grátis para Android.">
+  <title>MusiConnect — audições, competições, cursos e empregos para músicos</title>
+  <meta name="description" content="Instituições de música e oportunidades profissionais e educacionais que combinam com você: audições, competições, cursos e empregos para músicos. Grátis para Android.">
   <link rel="icon" href="/favicon.png">
   <meta name="theme-color" content="#C2185B">
   <!-- Só tema claro, como o app: impede o "modo escuro automático" do navegador -->
-  <meta name="color-scheme" content="only light">
+  <meta name="color-scheme" content="light only">
   <!-- Prévia ao compartilhar o link (WhatsApp, redes sociais) -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://musiconnect.app.br/">
   <meta property="og:title" content="MusiConnect">
-  <meta property="og:description" content="Oportunidades para músicos — audições, cursos, competições e empregos — e as instituições musicais no mapa. Grátis para Android.">
+  <meta property="og:description" content="Conectando músicos a oportunidades do mundo todo.">
   <meta property="og:image" content="https://musiconnect.app.br/img/compartilhar.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
@@ -28,7 +28,7 @@
       font-display: swap;
     }
     :root {
-      color-scheme: only light;
+      color-scheme: light only;
       --pink: #C2185B;
       --pink-2: #DF2881;
       --purple: #8E24AA;
@@ -133,6 +133,15 @@
     .hero-meta a { color: var(--purple); text-decoration: none; }
     .hero-meta span, .hero-meta a { display: inline-flex; align-items: center; gap: 6px; }
     .hero-meta svg { width: 16px; height: 16px; }
+    /* Aviso para computador (com QR Code) ou iPhone */
+    .device-note {
+      display: flex; align-items: center; gap: 16px; margin-top: 24px; max-width: 480px; text-align: left;
+      background: var(--card); border-radius: 16px; padding: 14px 18px; box-shadow: var(--shadow);
+    }
+    .device-note[hidden] { display: none; }
+    .device-note img { width: 96px; height: 96px; flex: none; border-radius: 8px; }
+    .device-note p { margin: 0; font-size: 14px; line-height: 1.5; }
+    .device-note strong { color: var(--ink); }
 
     .showcase { position: relative; display: flex; justify-content: center; padding: 40px 0; text-align: left; }
     .phone {
@@ -361,6 +370,7 @@
       .hero p.intro { margin-left: auto; margin-right: auto; }
       .hero-actions, .hero-meta { justify-content: center; }
       .showcase { max-width: 460px; margin: 0 auto; }
+      .device-note { margin-left: auto; margin-right: auto; }
       .stats-grid { grid-template-columns: repeat(2, 1fr); }
       .stats { margin-top: 0; }
       .grid-3 { grid-template-columns: 1fr; max-width: 640px; margin-left: auto; margin-right: auto; }
@@ -494,6 +504,14 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>
               Grátis · Android 6 ou superior · cerca de 56 MB
             </span>
+          </div>
+          <!-- Avisos para quem não está num Android (o script abaixo mostra o certo) -->
+          <div class="device-note" id="nota-computador" hidden>
+            <img src="/img/qrcode-site.svg" alt="QR Code que abre musiconnect.app.br no celular" width="96" height="96">
+            <p><strong>Está no computador?</strong> Aponte a câmera do celular para o QR Code e baixe o MusiConnect direto no Android.</p>
+          </div>
+          <div class="device-note" id="nota-iphone" hidden>
+            <p><strong>Por enquanto, o MusiConnect está disponível só para Android.</strong> A versão para iPhone ainda não existe.</p>
           </div>
         </div>
 
@@ -906,6 +924,14 @@
       });
 
       show(0);
+    })();
+
+    // Fora do Android: no iPhone avisa que ainda não há versão; no computador mostra o QR Code.
+    (function () {
+      var ua = navigator.userAgent;
+      if (/Android/i.test(ua)) return;
+      var ios = /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+      document.getElementById(ios ? "nota-iphone" : "nota-computador").hidden = false;
     })();
 
     // Menu do celular: abre e fecha a lista de seções.
