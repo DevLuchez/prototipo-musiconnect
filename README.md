@@ -1083,19 +1083,19 @@ Em segurança, destacam-se:
 
 ### 16.1 Resultados
 
-O MusiConnect está em produção, com o aplicativo Android disponível para download em [musiconnect.app.br](https://musiconnect.app.br) (em breve, também no Google Play) e a API pública em funcionamento contínuo. Em 16/11/2026, o sistema apresentava os seguintes resultados:
+O MusiConnect está em produção, com o aplicativo Android disponível para download em [musiconnect.app.br](https://musiconnect.app.br) (em breve, também no Google Play) e a API pública em funcionamento contínuo. Em 23/11/2026, o sistema apresentava os seguintes resultados:
 
 | Indicador | Resultado |
 |---|---|
-| Oportunidades abertas | 441, sendo 211 audições, 124 competições, 83 cursos e 23 vagas de emprego |
-| Abrangência das oportunidades | 38 países e 209 cidades, com 40 instrumentos distintos; 21 oportunidades no Brasil |
-| Fontes de oportunidades | 5, coletadas diariamente: Musical Chairs (355), WFIMC (62), Revista CONCERTO (17), SCAR (7) e FEMUSC (nenhuma aberta no momento) |
-| Instituições no mapa | 82.648 instituições musicais, das quais 32 com oportunidades abertas |
+| Oportunidades abertas | 456, sendo 225 audições, 129 competições, 85 cursos e 17 vagas de emprego |
+| Abrangência das oportunidades | 39 países e 220 cidades, com 42 instrumentos distintos; 19 oportunidades no Brasil |
+| Fontes de oportunidades | 5, coletadas diariamente: Musical Chairs (370), WFIMC (64), Revista CONCERTO (15), SCAR (7) e FEMUSC (nenhuma aberta no momento) |
+| Instituições no mapa | 82.651 instituições musicais, das quais 30 com oportunidades abertas |
 | Atualização dos dados | Automática e diária: mapa às 00h, oportunidades às 06h e notificações às 09h, sem intervenção manual |
 | Versões publicadas | 12 versões do aplicativo (v1.0.0 a v1.2.9) |
-| Uso do aplicativo | 23 instalações ativas nos últimos 30 dias, incluindo as de teste da desenvolvedora e o modo visitante (Firebase Analytics, que contabiliza aparelhos, e não contas) |
+| Uso do aplicativo | 24 instalações ativas nos últimos 30 dias, incluindo as de teste da desenvolvedora e o modo visitante (Firebase Analytics, que contabiliza aparelhos, e não contas), com tempo médio de uso de 19 minutos por usuário e 86 aberturas de detalhes de oportunidades |
 | Estabilidade | 100% dos usuários e 100% das sessões sem falhas nos últimos 7 dias (Firebase Crashlytics) |
-| Disponibilidade | 100% da API e do site nas últimas 24 horas (UptimeRobot) |
+| Disponibilidade | 99,8% nas últimas 24 horas: 100% do site e 99,6% da API, com uma indisponibilidade breve (UptimeRobot) |
 | Qualidade do código | Quality Gate aprovado na API e no aplicativo, sem bugs, vulnerabilidades ou *code smells* (SonarCloud) |
 | Testes automatizados | 375 no backend (99,8% de cobertura) e 268 no aplicativo (89,4% de cobertura) |
 
