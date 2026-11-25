@@ -261,6 +261,24 @@
     .quote-card h3 { font-size: 19px; }
     .who { display: flex; align-items: center; gap: 12px; margin-top: 20px; font-size: 13px; color: var(--muted); }
     .who strong { color: var(--ink); display: block; font-size: 14px; }
+    .testimonial { max-width: 900px; margin: 48px auto 0; }
+    .testimonial blockquote {
+      position: relative; margin: 0; padding: 36px 84px 36px 96px;
+      background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+    }
+    .testimonial blockquote::after {
+      content: ""; position: absolute; left: 72px; bottom: -26px;
+      border-width: 28px 0 0 34px; border-style: solid; border-color: var(--card) transparent transparent transparent;
+    }
+    .testimonial .q { position: absolute; width: 44px; height: 44px; color: var(--pink); }
+    .testimonial .q-open { left: 32px; top: 30px; }
+    .testimonial .q-close { right: 28px; bottom: 26px; transform: rotate(180deg); }
+    .testimonial-title { margin: 0 0 28px; text-align: center; font-size: 19px; }
+    .testimonial-title::after { content: ""; display: block; width: 56px; height: 3px; margin: 12px auto 0; border-radius: 3px; background: var(--pink); }
+    .testimonial blockquote p { margin: 0; font-size: 15px; text-align: justify; hyphens: auto; }
+    .testimonial figcaption { display: flex; align-items: center; gap: 12px; margin: 38px 0 0 64px; font-size: 13px; color: var(--muted); }
+    .testimonial figcaption strong { color: var(--ink); display: block; font-size: 14px; }
+    .testimonial .avatar { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--soft-pink); color: var(--pink); font-weight: 800; }
 
     /* Chamada para baixar */
     .cta {
@@ -423,6 +441,12 @@
       .video-phones img:nth-child(3) { display: none; }
       .video-bar { flex-direction: column; gap: 6px; padding: 14px 18px; }
       .grid-2 { grid-template-columns: 1fr; }
+      .testimonial blockquote { padding: 72px 24px 64px; }
+      .testimonial blockquote::after { left: 36px; }
+      .testimonial .q { width: 34px; height: 34px; }
+      .testimonial .q-open { left: 22px; top: 24px; }
+      .testimonial .q-close { right: 20px; bottom: 20px; }
+      .testimonial figcaption { margin-left: 28px; }
       .cta { flex-direction: column; align-items: stretch; text-align: left; padding: 32px 24px; }
       .ethics { grid-template-columns: 1fr; padding: 32px 24px; gap: 20px; }
       .ethics .big-icon { width: 80px; height: 80px; border-radius: 20px; }
@@ -638,7 +662,7 @@
       <div class="wrap center">
         <span class="eyebrow">Uma dor real, uma solução própria</span>
         <h2 class="section-title" id="scar">Aprovado pela SCAR</h2>
-        <p class="lead">O problema foi relatado pela <a href="https://scar.art.br" target="_blank" rel="noopener">Sociedade Cultura Artística (SCAR)</a>, de Jaraguá do Sul: muitos alunos desistem da música por não encontrarem oportunidades para seguir na carreira. A partir dessa dor, Laura Heloísa Luchez idealizou e desenvolveu o MusiConnect, com a SCAR participando como instituição parceira na pesquisa e na validação.</p>
+        <p class="lead">O problema foi relatado pela <a href="https://scar.art.br" target="_blank" rel="noopener">Sociedade Cultura Artística (SCAR)</a>, de Jaraguá do Sul: muitos alunos desistem da música por não encontrarem oportunidades para seguir na carreira. A partir dessa dor, Laura Heloísa Luchez idealizou e desenvolveu o MusiConnect, com a SCAR participando como instituição parceira na validação.</p>
       </div>
       <div class="wrap">
         <div class="grid-3 swipe" aria-label="Aprovado pela SCAR (deslize para ver mais)">
@@ -661,6 +685,15 @@
             <div class="who"><div><strong>Validação com o cliente</strong>Sociedade Cultura Artística (SCAR), Jaraguá do Sul (SC)</div></div>
           </article>
         </div>
+        <figure class="testimonial">
+          <h3 class="testimonial-title">Depoimento do cliente</h3>
+          <blockquote>
+            <svg class="q q-open" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 11H6a4 4 0 0 1 4-4V5a6 6 0 0 0-6 6v6h6zM20 11h-4a4 4 0 0 1 4-4V5a6 6 0 0 0-6 6v6h6z"/></svg>
+            <p><strong>O MusiConnect atende a uma demanda real do mercado musical</strong>, conectando profissionais a oportunidades de forma inteligente, prática e acessível. O aplicativo apresenta excelente potencial de crescimento e aplicação comercial. <strong>Aprovo o projeto desenvolvido</strong> e acredito na sua continuidade e evolução como ferramenta de transformação do mercado musical.</p>
+            <svg class="q q-close" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10 11H6a4 4 0 0 1 4-4V5a6 6 0 0 0-6 6v6h6zM20 11h-4a4 4 0 0 1 4-4V5a6 6 0 0 0-6 6v6h6z"/></svg>
+          </blockquote>
+          <figcaption><span class="avatar" aria-hidden="true">S</span><div><strong>Samuel Chiodini</strong>Coordenador de música · Sociedade Cultura Artística (SCAR)</div></figcaption>
+        </figure>
       </div>
     </section>
 
