@@ -101,7 +101,7 @@ Desenvolver um aplicativo mobile que integre curadoria inteligente de dados e re
 2. Coletar diariamente, de forma automatizada, oportunidades mundiais de música publicadas em fontes especializadas.
 3. Empregar Inteligência Artificial na interpretação de cada edital, extraindo descrição, categoria/tipo de oportunidade, instrumentos, localização e prazo de inscrição, e gerando um resumo em português.
 4. Calcular a compatibilidade (*match*) entre o perfil do músico e cada oportunidade, notificando-o às 9h (UTC-3) sobre as oportunidades mais compatíveis, os prazos próximos do encerramento e a versão mais atualizada do app.
-5. Validar a usabilidade do aplicativo junto a estudantes e ao coordenador de música da SCAR, coletando feedbacks para o refinamento da solução.
+5. Validar o aplicativo junto ao coordenador de música da SCAR, coletando feedbacks para o refinamento da solução.
 
 ---
 
@@ -586,7 +586,7 @@ flowchart TB
 
     subgraph vps["Servidor virtual privado (Hostinger) — Docker Compose"]
         caddy["<b>Servidor web</b><br/>[Caddy 2]<br/>HTTPS automático e proxy reverso"]
-        site["<b>Site</b><br/>[HTML estático]<br/>Download do APK, política de<br/>privacidade e links dos e-mails"]
+        site["<b>Site</b><br/>[HTML estático]<br/>Apresentação do projeto, download do APK,<br/>política de privacidade e links dos e-mails"]
         api["<b>API REST</b><br/>[Python 3.12, FastAPI]<br/>Autenticação, oportunidades, match,<br/>mapa, favoritos e notificações"]
         agendador["<b>Agendador</b><br/>[APScheduler, no processo da API]<br/>ETL às 00h, coleta às 06h,<br/>notificações às 09h"]
         db[("<b>Banco de dados</b><br/>[PostgreSQL 16 + PostGIS]<br/>Usuários, oportunidades,<br/>instituições e favoritos")]
@@ -926,6 +926,7 @@ Ao longo do desenvolvimento, parte do que foi previsto na proposta original (RFC
 | Clean Architecture | **Arquitetura MVVM** no aplicativo | É o padrão recomendado pela documentação oficial do Flutter e separa interface, estado e dados; a camada de casos de uso seria redundante, pois as regras de negócio estão no backend | **Ganho:** menos camadas e código mais direto; **Perda:** a independência total das regras em relação ao framework, que no projeto residem no servidor |
 | Overpass API | **QLever** (SPARQL) para obter as instituições do OpenStreetMap | O serviço público do Overpass excedia o tempo limite em regiões extensas, limitava os resultados por consulta e retornava listas vazias sem indicar erro; a base ficava restrita a cerca de 16 mil instituições | **Ganho:** cobertura (mais de 82 mil instituições) com consultas paginadas; **Perda:** dependência de um serviço acadêmico, sem garantia formal de disponibilidade |
 | Sugestão da avaliação: aprovação manual de cada edital pela coordenação da SCAR antes da publicação | **Controle de qualidade automático** dos editais | O volume diário de editais tornaria inviável a revisão individual; a qualidade é assegurada pela nota de confiança da IA (mínimo de 80%), pelo descarte do que não é chamada aberta ou participação ativa e pelo aviso "O Matcher é uma IA e pode cometer erros", com link para a fonte oficial | **Ganho:** atualização contínua e independência de revisão humana; **Perda:** possibilidade de que um erro pontual de interpretação chegue ao usuário |
+| Validação da usabilidade com estudantes e com o coordenador de música da SCAR (objetivo específico 5) | **Validação com o coordenador de música da SCAR**; o teste com estudantes fica para a publicação no Google Play | O teste estruturado com estudantes depende do teste fechado do Google Play, que exige a verificação de identidade da desenvolvedora e um período mínimo de testes, incompatível com o prazo do projeto | **Ganho:** validação concluída com o cliente dentro do prazo, com depoimento registrado; **Perda:** ausência de feedback estruturado dos estudantes, compensada em parte pelo uso real medido no Firebase Analytics |
 
 ### 13.2 Demais decisões técnicas
 
@@ -962,15 +963,17 @@ Cada mudança passa pelos testes automatizados do backend (375) e do aplicativo 
 ### 14.2 Controle de versão
 
 - **Ramo único (*trunk-based development*):** todo o desenvolvimento ocorre diretamente na `main`, protegida pela integração contínua; cada *push* aprovado pelo pipeline é implantado automaticamente.
-- **Conventional Commits:** as mensagens seguem um padrão que identifica o tipo de cada alteração. Até 07/11/2026, o histórico soma 117 *commits*, dos quais 56 de novas funcionalidades (`feat`), 24 de correções (`fix`), 11 de testes (`test`), 8 de refatorações (`refactor`) e os demais de documentação, configuração e pipeline (`docs`, `chore`, `ci`, `build`).
+- **Conventional Commits:** as mensagens seguem um padrão que identifica o tipo de cada alteração. Até 25/11/2026, o histórico soma 145 *commits*, dos quais 61 de novas funcionalidades (`feat`), 28 de correções (`fix`), 12 de testes (`test`), 8 de refatorações (`refactor`) e os demais de documentação, estilo, configuração e pipeline (`docs`, `style`, `chore`, `ci`, `build`).
 - **Versionamento semântico do aplicativo:** cada versão publicada recebe uma *tag* (`v1.0.0` a `v1.2.9`), que gera automaticamente o APK assinado disponível para download.
 
 <p align="center">
   <a href="https://github.com/DevLuchez/prototipo-musiconnect"><img src="docs/img/plataformas/github-repositorio.png" width="800" alt="Repositório do MusiConnect no GitHub"></a><br>
-  <sub>Repositório do projeto, com ramo único, 117 commits, 9 tags e 9 releases. Fonte: GitHub, captura em 07/11/2026. Disponível em: <a href="https://github.com/DevLuchez/prototipo-musiconnect">github.com/DevLuchez/prototipo-musiconnect</a>.</sub>
+  <sub>Repositório do projeto, com ramo único, 145 commits, 12 tags e 12 releases. Fonte: GitHub, captura em 25/11/2026. Disponível em: <a href="https://github.com/DevLuchez/prototipo-musiconnect">github.com/DevLuchez/prototipo-musiconnect</a>.</sub>
 </p>
 
 ### 14.3 Participação do cliente
+
+O problema foi relatado pela SCAR, a partir da experiência com os seus alunos; a ideia, o projeto e o desenvolvimento do MusiConnect são autorais, de Laura Heloísa Luchez, como Trabalho de Conclusão de Curso. A SCAR participou como instituição parceira, na definição do problema e na validação.
 
 A SCAR participou em dois momentos principais:
 - O primeiro encontro com o coordenador de música, em **13 de março de 2026**, definiu o problema e o escopo do projeto.
@@ -991,11 +994,11 @@ O projeto utiliza dois *workflows* do **GitHub Actions**:
   2. **Aplicativo:** executa a análise estática do Flutter (`flutter analyze`) e os testes com cobertura; verifica também se a página pública da política de privacidade está idêntica ao texto exibido no aplicativo.
   3. **SonarCloud:** envia o código e a cobertura para análise de qualidade e segurança, em dois projetos separados (API e aplicativo).
   4. **Implantação (CD):** se o backend e o aplicativo forem aprovados, o servidor é atualizado automaticamente por SSH, com uma chave restrita a executar apenas o script de atualização (`deploy/update.sh`), que reconstrói e reinicia os contêineres.
-- **Publicação do aplicativo (`release.yml`)**, executada a cada *tag* de versão (`v*`): gera o APK assinado com a chave de *release* e o publica no GitHub Releases. A página de download aponta sempre para a versão mais recente.
+- **Publicação do aplicativo (`release.yml`)**, executada a cada *tag* de versão (`v*`): gera o APK assinado com a chave de *release* e o publica no GitHub Releases. O botão de download do site aponta sempre para a versão mais recente.
 
 <p align="center">
   <a href="https://github.com/DevLuchez/prototipo-musiconnect/actions"><img src="docs/img/plataformas/github-actions.png" width="800" alt="Execuções do GitHub Actions"></a><br>
-  <sub>Execuções dos workflows de integração e entrega contínuas. Fonte: GitHub Actions, captura em 07/11/2026. Disponível em: <a href="https://github.com/DevLuchez/prototipo-musiconnect/actions">github.com/DevLuchez/prototipo-musiconnect/actions</a>.</sub>
+  <sub>Execuções dos workflows de integração e entrega contínuas. Fonte: GitHub Actions, captura em 25/11/2026. Disponível em: <a href="https://github.com/DevLuchez/prototipo-musiconnect/actions">github.com/DevLuchez/prototipo-musiconnect/actions</a>.</sub>
 </p>
 
 As credenciais utilizadas pelos *workflows* (chave de assinatura, configuração do Firebase, token do SonarCloud e chave de implantação) ficam armazenadas como *secrets* do repositório, fora do código.
@@ -1027,8 +1030,8 @@ A análise estática é feita pelo **SonarCloud**, com o Quality Gate aplicado s
 
 <table>
   <tr>
-    <td align="center"><a href="https://sonarcloud.io/summary/overall?id=DevLuchez_prototipo-musiconnect"><img src="docs/img/plataformas/sonarcloud-api.png" alt="Painel do SonarCloud da API"></a><br><sub>Análise de qualidade da API. Fonte: SonarCloud, captura em 07/11/2026. Disponível em: <a href="https://sonarcloud.io/summary/overall?id=DevLuchez_prototipo-musiconnect">sonarcloud.io (API)</a>.</sub></td>
-    <td align="center"><a href="https://sonarcloud.io/summary/overall?id=DevLuchez_prototipo-musiconnect-app"><img src="docs/img/plataformas/sonarcloud-app.png" alt="Painel do SonarCloud do aplicativo"></a><br><sub>Análise de qualidade do aplicativo. Fonte: SonarCloud, captura em 07/11/2026. Disponível em: <a href="https://sonarcloud.io/summary/overall?id=DevLuchez_prototipo-musiconnect-app">sonarcloud.io (aplicativo)</a>.</sub></td>
+    <td align="center"><a href="https://sonarcloud.io/summary/overall?id=DevLuchez_prototipo-musiconnect"><img src="docs/img/plataformas/sonarcloud-api.png" alt="Painel do SonarCloud da API"></a><br><sub>Análise de qualidade da API. Fonte: SonarCloud, captura em 25/11/2026. Disponível em: <a href="https://sonarcloud.io/summary/overall?id=DevLuchez_prototipo-musiconnect">sonarcloud.io (API)</a>.</sub></td>
+    <td align="center"><a href="https://sonarcloud.io/summary/overall?id=DevLuchez_prototipo-musiconnect-app"><img src="docs/img/plataformas/sonarcloud-app.png" alt="Painel do SonarCloud do aplicativo"></a><br><sub>Análise de qualidade do aplicativo. Fonte: SonarCloud, captura em 25/11/2026. Disponível em: <a href="https://sonarcloud.io/summary/overall?id=DevLuchez_prototipo-musiconnect-app">sonarcloud.io (aplicativo)</a>.</sub></td>
   </tr>
 </table>
 
@@ -1038,7 +1041,7 @@ Em segurança, destacam-se:
 - **Autenticação:** senhas armazenadas com *hash* bcrypt e sujeitas a uma política mínima; tokens de sessão aleatórios, guardados no armazenamento seguro do aparelho e invalidados ao sair da conta ou trocar a senha; links de confirmação e de redefinição de senha com validade limitada (24 horas e 15 minutos).
 - **Administração:** rotas administrativas protegidas por chave, comparada em tempo constante.
 - **Servidor:** acesso SSH somente por chave, firewall (UFW) com apenas as portas 22, 80 e 443 abertas, bloqueio de tentativas de acesso indevido (fail2ban) e banco de dados sem porta exposta à internet.
-- **Credenciais:** chaves e senhas fora do repositório (arquivo `.env` no servidor e *secrets* do GitHub); a chave do Google Maps, embutida no aplicativo, é restrita ao pacote do MusiConnect e às impressões digitais das suas chaves de assinatura.
+- **Credenciais:** chaves e senhas fora do repositório (arquivo `.env` no servidor e *secrets* do GitHub); a chave do Google Maps, embutida no aplicativo, é restrita ao pacote do MusiConnect, às impressões digitais das suas chaves de assinatura e somente à API de mapas para Android (Maps SDK for Android).
 
 ### 15.4 Privacidade e LGPD
 
@@ -1069,8 +1072,8 @@ Em segurança, destacam-se:
 
 <table>
   <tr>
-    <td align="center"><img src="docs/img/plataformas/uptimerobot.png" alt="Monitores do UptimeRobot"><br><sub>Disponibilidade da API e do site. Fonte: UptimeRobot (painel privado), captura em 07/11/2026.</sub></td>
-    <td align="center"><img src="docs/img/plataformas/hostinger-vps.png" alt="Painel do servidor na Hostinger"><br><sub>Uso de recursos do servidor (dados de acesso ocultados). Fonte: Hostinger (painel privado), captura em 07/11/2026.</sub></td>
+    <td align="center"><img src="docs/img/plataformas/uptimerobot.png" alt="Monitores do UptimeRobot"><br><sub>Disponibilidade da API e do site. Fonte: UptimeRobot (painel privado), captura em 25/11/2026.</sub></td>
+    <td align="center"><img src="docs/img/plataformas/hostinger-vps.png" alt="Painel do servidor na Hostinger"><br><sub>Uso de recursos do servidor (dados de acesso ocultados). Fonte: Hostinger (painel privado), captura em 25/11/2026.</sub></td>
     <td align="center"><img src="docs/img/plataformas/resend.png" alt="E-mails enviados pelo Resend"><br><sub>E-mails enviados pelo sistema (destinatários ocultados). Fonte: Resend (painel privado), captura em 07/11/2026.</sub></td>
   </tr>
 </table>
@@ -1083,14 +1086,14 @@ Em segurança, destacam-se:
 
 ### 16.1 Resultados
 
-O MusiConnect está em produção, com o aplicativo Android disponível para download em [musiconnect.app.br](https://musiconnect.app.br) (em breve, também no Google Play) e a API pública em funcionamento contínuo. Em 23/11/2026, o sistema apresentava os seguintes resultados:
+O MusiConnect está em produção, com o aplicativo Android disponível para download em [musiconnect.app.br](https://musiconnect.app.br) (em breve, também no Google Play) e a API pública em funcionamento contínuo. Em 25/11/2026, o sistema apresentava os seguintes resultados (os indicadores de uso, estabilidade e disponibilidade são de 23/11/2026):
 
 | Indicador | Resultado |
 |---|---|
-| Oportunidades abertas | 456, sendo 225 audições, 129 competições, 85 cursos e 17 vagas de emprego |
-| Abrangência das oportunidades | 39 países e 220 cidades, com 42 instrumentos distintos; 19 oportunidades no Brasil |
-| Fontes de oportunidades | 5, coletadas diariamente: Musical Chairs (370), WFIMC (64), Revista CONCERTO (15), SCAR (7) e FEMUSC (nenhuma aberta no momento) |
-| Instituições no mapa | 82.651 instituições musicais, das quais 30 com oportunidades abertas |
+| Oportunidades abertas | 484, sendo 240 audições, 132 competições, 94 cursos e 18 vagas de emprego |
+| Abrangência das oportunidades | 41 países e 226 cidades, com 43 instrumentos distintos; 21 oportunidades no Brasil |
+| Fontes de oportunidades | 5, coletadas diariamente: Musical Chairs (396), WFIMC (64), Revista CONCERTO (17), SCAR (7) e FEMUSC (nenhuma aberta no momento) |
+| Instituições no mapa | 82.654 instituições musicais, das quais 34 com oportunidades abertas |
 | Atualização dos dados | Automática e diária: mapa às 00h, oportunidades às 06h e notificações às 09h, sem intervenção manual |
 | Versões publicadas | 12 versões do aplicativo (v1.0.0 a v1.2.9) |
 | Uso do aplicativo | 24 instalações ativas nos últimos 30 dias, incluindo as de teste da desenvolvedora e o modo visitante (Firebase Analytics, que contabiliza aparelhos, e não contas), com tempo médio de uso de 19 minutos por usuário e 86 aberturas de detalhes de oportunidades |
@@ -1103,7 +1106,16 @@ Em termos de entrega ao público beneficiado, o aplicativo reúne em um único l
 
 ### 16.2 Validação com o cliente
 
-> 🚧 Em construção: relato da validação com o coordenador de música da SCAR.
+A validação foi conduzida com Samuel, coordenador de música da SCAR, cliente do projeto, nos encontros descritos na seção [14.3](#143-participação-do-cliente). No segundo encontro, em 10 de outubro de 2026, o aplicativo foi apresentado já construído e teve as funcionalidades implementadas validadas. Desse encontro resultaram duas sugestões, incorporadas ao aplicativo em seguida:
+
+- **Tutorial no primeiro acesso:** apresentação guiada das principais telas, que pode ser revista a qualquer momento em Ajuda e suporte.
+- **Modo visitante:** acesso às oportunidades e ao mapa sem cadastro, para conhecer o aplicativo antes de criar uma conta.
+
+Ao final do projeto, o coordenador declarou:
+
+> "O MusiConnect atende a uma demanda real do mercado musical, conectando profissionais a oportunidades de forma inteligente, prática e acessível. O aplicativo apresenta excelente potencial de crescimento e aplicação comercial. Aprovo o projeto desenvolvido e acredito na sua continuidade e evolução como ferramenta de transformação do mercado musical."
+>
+> — Samuel, coordenador de música da Sociedade Cultura Artística (SCAR)
 
 ---
 
@@ -1121,7 +1133,7 @@ As tabelas a seguir relacionam os critérios da [linha de projeto de Aplicaçõe
 | Funcionalidades reais e completas, alinhadas ao escopo do RFC | Oportunidades coletadas diariamente, match, mapa, favoritos e notificações em funcionamento; alterações em relação ao RFC justificadas | [3](#3-funcionalidades-e-diferencial), [5.3](#53-rastreabilidade-com-o-rfc), [13](#13-decisões-técnicas-e-mudanças-em-relação-ao-rfc) | ✅ |
 | Arquitetura mobile compatível (ex.: MVC, MVVM, Clean Architecture) | MVVM, padrão recomendado pela documentação oficial do Flutter | [9.2](#92-arquitetura-do-aplicativo-mvvm) | ✅ |
 | Código-fonte em repositório versionado, com histórico de commits e organização de branches | Repositório público no GitHub, com *trunk-based development* na `main`, Conventional Commits e versões marcadas por *tags* | [14.2](#142-controle-de-versão) | ✅ |
-| Interface funcional e navegável, testável em dispositivo real, com QR Code no pôster | Aplicativo conferido em dispositivo Android real a cada entrega; QR Code apontando para a página de download | [3.1](#31-funcionalidades), [8](#8-estrutura-de-navegação) | ✅ |
+| Interface funcional e navegável, testável em dispositivo real, com QR Code no pôster | Aplicativo conferido em dispositivo Android real a cada entrega; QR Code apontando para a página de links do projeto (download do app, site, vídeo, código e documentação) | [3.1](#31-funcionalidades), [8](#8-estrutura-de-navegação) | ✅ |
 | Documentação: requisitos funcionais | Requisitos funcionais RF01 a RF26 | [5.1](#51-requisitos-funcionais) | ✅ |
 | Documentação: casos de uso ou *user stories* | Atores, diagramas e descrição dos casos de uso UC01 a UC19 | [6](#6-casos-de-uso) | ✅ |
 | Documentação: estrutura de navegação | Padrões de navegação, mapa de navegação e elementos de navegação | [8](#8-estrutura-de-navegação) | ✅ |
@@ -1154,7 +1166,7 @@ As tabelas a seguir relacionam os critérios da [linha de projeto de Aplicaçõe
 | Métricas de uso e comportamento integradas | Firebase Analytics com eventos de cadastro, login, modo visitante, tutorial, filtros, visualização e favoritos | [15.5](#155-monitoramento) | ✅ |
 | Interface multilíngue | Interface somente em português; os editais em outros idiomas são traduzidos e resumidos pela IA | [2.3](#23-limitações) | ❌ |
 | Arquitetura modular ou micro frontends | Organização em camadas (MVVM), sem módulos independentes | [9.2](#92-arquitetura-do-aplicativo-mvvm) | ❌ |
-| Testes com usuários reais e feedback documentado | Validação com o coordenador de música da SCAR; teste com estudantes previsto no teste fechado do Google Play | [16.2](#162-validação-com-o-cliente) | ⏳ |
+| Testes com usuários reais e feedback documentado | Validação com o coordenador de música da SCAR, com depoimento registrado, e uso real do aplicativo medido pelo Firebase Analytics | [16.2](#162-validação-com-o-cliente), [16.1](#161-resultados) | ✅ |
 | Design System ou biblioteca de componentes reutilizáveis | Componentes reutilizados em várias telas (cartão de oportunidade, indicador de match, botão de favorito, filtros, convite ao visitante) e tema com cores e avisos padronizados | [10](#10-diagrama-de-classes) | ⚠️ |
 | Infraestrutura como Código ou automação de deploy mobile | Infraestrutura descrita em arquivos Docker Compose e Caddyfile; APK assinado gerado e publicado automaticamente a cada versão | [15.1](#151-cicd) | ✅ |
 | Mensageria e notificações assíncronas | Notificações *push* pelo Firebase Cloud Messaging, enviadas diariamente pelo agendador | [3.1](#31-funcionalidades), [9.4](#94-pipeline-de-dados-e-fontes) | ✅ |
@@ -1193,19 +1205,19 @@ A partir das limitações identificadas (seção [2.3](#23-limitações)), das d
 O MusiConnect está disponível para Android 6.0 ou superior (o APK tem cerca de 56 MB).
 
 <p align="center">
-  <a href="https://musiconnect.app.br"><img src="docs/img/qrcode-musiconnect.png" width="180" alt="QR Code para a página de download do MusiConnect"></a><br>
-  <sub>QR Code de acesso à página de download. Fonte: elaborado pela autora (2026). Disponível em: <a href="https://musiconnect.app.br">musiconnect.app.br</a>.</sub>
+  <a href="https://musiconnect.app.br"><img src="docs/img/qrcode-musiconnect.png" width="180" alt="QR Code para o site do MusiConnect"></a><br>
+  <sub>QR Code de acesso ao site do MusiConnect. Fonte: elaborado pela autora (2026). Disponível em: <a href="https://musiconnect.app.br">musiconnect.app.br</a>.</sub>
 </p>
 
-1. No celular, leia o QR Code acima ou acesse [musiconnect.app.br](https://musiconnect.app.br) e toque em **Baixar para Android**.
+1. No celular, leia o QR Code acima ou acesse [musiconnect.app.br](https://musiconnect.app.br) e toque em **Baixar app** ou em **Baixar app para Android**.
 2. Quando o download terminar, toque em **Abrir** no aviso do navegador.
-3. Se o Android perguntar com qual aplicativo abrir o arquivo, escolha o **Instalador do pacote**. Se solicitar, permita a instalação de aplicativos desta fonte — a permissão é exigida para aplicativos instalados fora da loja.
+3. Se o Android perguntar com qual aplicativo abrir o arquivo, escolha o **Instalador do pacote**. Se solicitar, permita a instalação de aplicativos desta fonte — a permissão é exigida para aplicativos instalados fora da loja. Se o celular bloquear a instalação, a seção "Não consegui instalar" das perguntas frequentes do site mostra como liberar.
 4. Toque em **Instalar** e, ao final, em **Abrir**.
 5. Crie uma conta, entre com uma conta existente ou toque em **Entrar sem uma conta cadastrada** para conhecer o aplicativo como visitante.
 
 <table>
   <tr>
-    <td align="center"><img src="docs/img/telas/comum/instalacao-1-site.jpg" width="150" alt="Página de download"><br><sub>1. Página de download</sub></td>
+    <td align="center"><img src="docs/img/telas/comum/instalacao-1-site.jpg" width="150" alt="Site do MusiConnect"><br><sub>1. Site do MusiConnect</sub></td>
     <td align="center"><img src="docs/img/telas/comum/instalacao-2-download-concluido.jpg" width="150" alt="Download concluído"><br><sub>2. Download concluído</sub></td>
     <td align="center"><img src="docs/img/telas/comum/instalacao-3-abrir-com.jpg" width="150" alt="Abrir com o instalador do pacote"><br><sub>3. Instalador do pacote</sub></td>
     <td align="center"><img src="docs/img/telas/comum/instalacao-4-instalar.jpg" width="150" alt="Confirmação da instalação"><br><sub>4. Instalar</sub></td>
@@ -1213,7 +1225,7 @@ O MusiConnect está disponível para Android 6.0 ou superior (o APK tem cerca de
   </tr>
 </table>
 
-Quando uma nova versão é publicada, o aplicativo exibe um aviso de atualização obrigatória e encaminha o usuário à página de download; basta instalar por cima da versão atual, sem perder o acesso à conta. A publicação no Google Play está em andamento.
+Quando uma nova versão é publicada, o aplicativo exibe um aviso de atualização obrigatória e encaminha o usuário ao site para baixar a versão nova; basta instalar por cima da versão atual, sem perder o acesso à conta. A publicação no Google Play está em andamento.
 
 ### 19.2 Publicação de uma nova versão do aplicativo
 
@@ -1224,7 +1236,7 @@ git tag vX.Y.Z
 git push origin vX.Y.Z
 ```
 
-O *workflow* `release.yml` compila o APK com o número da versão e a chave de assinatura de *release* (armazenada nos *secrets* do repositório) e o publica no GitHub Releases. A página de download aponta sempre para o APK da versão mais recente, e os aplicativos instalados passam a avisar sobre a atualização.
+O *workflow* `release.yml` compila o APK com o número da versão e a chave de assinatura de *release* (armazenada nos *secrets* do repositório) e o publica no GitHub Releases. O botão de download do site aponta sempre para o APK da versão mais recente, e os aplicativos instalados passam a avisar sobre a atualização.
 
 Os *workflows* dependem dos seguintes *secrets*, cadastrados em *Settings → Secrets and variables → Actions* do repositório:
 
